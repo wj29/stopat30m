@@ -1,0 +1,144 @@
+project:
+  name: stopat30m
+  version: "1.0.0"
+
+qlib:
+  provider_uri: "~/.qlib/qlib_data/cn_data"
+  region: "cn"
+  data_dir: "~/.qlib/qlib_data"
+
+data:
+  download_start: "2005-01-01"
+  train_start: "2012-01-01"
+  train_end: "2023-12-31"
+  valid_start: "2024-01-01"
+  valid_end: "2024-12-31"
+  test_start: "2025-01-01"
+  # test_end: 留空则自动使用今天的日期
+  benchmark: "SH000300"
+  universe: "csi300"
+
+tushare:
+  token: ""  # Tushare Pro API token (https://tushare.pro/register)
+
+factors:
+  base: "alpha158"
+  enable_momentum: true
+  enable_volatility: true
+  enable_volume: true
+  enable_technical: true
+  enable_microstructure: true
+  enable_trend: true
+  enable_cross_sectional: true
+  enable_multiscale: true
+  enable_distribution: true
+  enable_reversal: true
+  enable_tail_risk: true
+  enable_price_pattern: true
+  enable_volume_price: true
+  enable_mean_reversion: true
+  enable_relative_strength: true
+  enable_weighted_momentum: true
+  enable_higher_order: true
+  enable_atr: true
+  enable_efficiency: true
+  enable_open_price: true
+  enable_serial_dependence: true
+  enable_conditional: true
+  enable_volume_shape: true
+  enable_pivot: true
+  enable_detrended: true
+  enable_sign_change: true
+  enable_interaction: true
+  enable_log_features: true
+  enable_dispersion: true
+  label: "Ref($close,-5)/$close - 1"
+  label_name: "LABEL0"
+
+model:
+  type: "lgbm"
+  output_dir: "./output/models"
+  params:
+    lgbm:
+      loss: "mse"
+      num_boost_round: 2000
+      early_stopping_rounds: 200
+      num_leaves: 128
+      learning_rate: 0.01
+      max_depth: 7
+      subsample: 0.8
+      bagging_freq: 1
+      colsample_bytree: 0.4
+      reg_alpha: 0.5
+      reg_lambda: 2.0
+      min_child_samples: 100
+      path_smooth: 10
+    xgboost:
+      objective: "reg:squarederror"
+      max_depth: 7
+      learning_rate: 0.01
+      n_estimators: 2000
+      subsample: 0.8
+      colsample_bytree: 0.4
+      reg_alpha: 0.5
+      reg_lambda: 2.0
+      min_child_weight: 100
+      early_stopping_rounds: 200
+    mlp:
+      hidden_size: 512
+      num_layers: 3
+      dropout: 0.3
+      learning_rate: 0.0005
+      epochs: 200
+      batch_size: 4096
+
+backtest:
+  top_k: 10
+  rebalance_freq: 5
+  buy_cost: 0.0003       # 买入佣金 0.03%
+  sell_cost: 0.0013      # 卖出佣金 0.03% + 印花税 0.1%
+  benchmark: "SH000300"
+  deal_price: "open"     # open=开盘价执行(真实), close=收盘价执行(乐观)
+
+signal:
+  top_k: 10
+  method: "top_k"
+  output_dir: "./output/signals"
+  output_format: "csv"
+  rebalance_freq: 5
+
+trading:
+  gateway: "xtp"
+  account: ""
+  password: ""
+  broker_host: ""
+  broker_port: 0
+  paper_trading: true
+  max_position_pct: 0.05
+  max_total_position_pct: 0.95
+  stop_loss_pct: 0.08
+  take_profit_pct: 0.15
+
+risk:
+  max_drawdown: 0.15
+  max_daily_loss: 0.03
+  max_single_loss: 0.05
+  max_concentration: 0.10
+  circuit_breaker_loss: 0.08
+
+redis:
+  host: "localhost"
+  port: 6379
+  db: 0
+  signal_channel: "alpha_signals"
+
+web:
+  host: "0.0.0.0"
+  port: 8501
+  refresh_interval: 30
+
+logging:
+  level: "INFO"
+  file: "./output/logs/stopat30m.log"
+  rotation: "10 MB"
+  retention: "30 days"

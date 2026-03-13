@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Output (models, logs, signals, trades are generated data)
+output/
+mlruns/
+
+# Stray directory
+Users/
+
+# Qlib local data
+.qlib/
+
+# Secrets / credentials
+.env
+*.pem
+*.key
