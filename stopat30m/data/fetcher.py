@@ -1351,13 +1351,9 @@ def _worker_fetch_with_subprocesses(
         is_delisted = sm is not None and sm.status == "delisted"
         work_with_flags.append((code, start, end, is_delisted))
 
-    chunk_size = max(1, len(work_with_flags) // concurrency)
-    chunks: list[list[tuple[str, str | None, str, bool]]] = []
-    for i in range(0, len(work_with_flags), chunk_size):
-        chunks.append(work_with_flags[i : i + chunk_size])
-    while len(chunks) > concurrency:
-        chunks[-2].extend(chunks[-1])
-        chunks.pop()
+    chunks: list[list[tuple[str, str | None, str, bool]]] = [[] for _ in range(concurrency)]
+    for idx, item in enumerate(work_with_flags):
+        chunks[idx % concurrency].append(item)
 
     ctag = _colored_src(src)
     logger.opt(colors=True).info(
