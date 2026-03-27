@@ -11,8 +11,11 @@ format (calendars, instruments, features/*.day.bin).
 from __future__ import annotations
 
 import struct
+import threading
 import time
 from abc import ABC, abstractmethod
+from typing import NamedTuple
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 
@@ -26,6 +29,16 @@ QLIB_FIELDS = ("open", "close", "high", "low", "volume", "change", "factor")
 # Qlib instrument naming: SH600000, SZ000001
 _SH_PREFIXES = ("6",)
 _SZ_PREFIXES = ("0", "3")
+
+
+class _FetchResult(NamedTuple):
+    """Result from a subprocess fetch worker (must be picklable)."""
+    code: str
+    status: str  # "ok" | "empty" | "skip" | "error"
+    data_start: str  # empty string if N/A
+    data_end: str
+    n_rows: int
+    error: str  # empty string if no error
 
 
 def _to_qlib_symbol(code: str) -> str:
@@ -78,6 +91,16 @@ class DataFetcher(ABC):
     @abstractmethod
     def name(self) -> str:
         """Human-readable source name."""
+
+    @property
+    def concurrency(self) -> int:
+        """Max parallel sub-workers for intra-source parallelism.
+
+        Override in subclasses that support multiple independent connections
+        (e.g. BaoStock with no rate limit). Sources with rate limits should
+        keep the default of 1.
+        """
+        return 1
 
 
 # ---------------------------------------------------------------------------
@@ -219,11 +242,17 @@ class BaoStockFetcher(DataFetcher):
 
     Best choice for bulk historical data downloads.
     Install: pip install baostock
+
+    Args:
+        workers: Number of parallel sub-processes for fetching. Each subprocess
+            creates its own BaoStock TCP connection (the baostock module is a
+            module-level singleton, so threading doesn't work — multiprocessing
+            is required for true parallelism). Default 4.
     """
 
     name = "baostock"
 
-    def __init__(self):
+    def __init__(self, workers: int = 4):
         try:
             import baostock as bs
         except ImportError:
@@ -232,6 +261,11 @@ class BaoStockFetcher(DataFetcher):
         self._logged_in = False
         self._request_count = 0
         self._relogin_every = 200
+        self._workers = max(1, workers)
+
+    @property
+    def concurrency(self) -> int:
+        return self._workers
 
     def _login(self) -> None:
         if not self._logged_in:
@@ -285,6 +319,43 @@ class BaoStockFetcher(DataFetcher):
         codes = [self._from_bs_code(c) for c in df["code"].tolist()]
         return [c for c in codes if c[:1] in ("0", "3", "6")]
 
+    def fetch_stock_list_with_info(self) -> dict[str, dict]:
+        """Fetch stock list with IPO/delist dates and status.
+
+        Returns {bare_code: {"ipo_date":..., "delist_date":..., "status":...}}.
+        """
+        self._login()
+        rs = self._bs.query_stock_basic()
+        df = rs.get_data()
+        if df.empty:
+            return {}
+
+        if "type" in df.columns:
+            df = df[df["type"] == "1"]
+
+        info: dict[str, dict] = {}
+        for _, row in df.iterrows():
+            code = self._from_bs_code(str(row.get("code", "")))
+            if not code or code[:1] not in ("0", "3", "6"):
+                continue
+
+            ipo = str(row.get("ipoDate", "")).strip() or None
+            out = str(row.get("outDate", "")).strip() or None
+            if out == "" or out == "None":
+                out = None
+            bs_status = str(row.get("status", "1")).strip()
+            status = "delisted" if (bs_status == "0" or out) else "active"
+
+            info[code] = {
+                "ipo_date": ipo,
+                "delist_date": out,
+                "status": status,
+            }
+        logger.info(f"Stock listing info: {len(info)} stocks "
+                     f"({sum(1 for v in info.values() if v['status'] == 'active')} active, "
+                     f"{sum(1 for v in info.values() if v['status'] == 'delisted')} delisted)")
+        return info
+
     def fetch_trade_calendar(self, start: str, end: str) -> list[str]:
         self._login()
         rs = self._bs.query_trade_dates(start_date=start, end_date=end)
@@ -314,7 +385,8 @@ class BaoStockFetcher(DataFetcher):
         if df_hfq is None or df_hfq.empty:
             return None
 
-        df_hfq = df_hfq.replace("", np.nan).dropna(subset=["close"])
+        with pd.option_context("future.no_silent_downcasting", True):
+            df_hfq = df_hfq.replace("", np.nan).dropna(subset=["close"])
         if df_hfq.empty:
             return None
 
@@ -599,6 +671,270 @@ class QlibDumper:
 
 
 # ---------------------------------------------------------------------------
+# Data meta: per-stock metadata + rolling trusted watermark
+# ---------------------------------------------------------------------------
+
+import json
+from dataclasses import asdict, dataclass, field as dc_field
+
+
+@dataclass
+class StockMeta:
+    """Per-stock metadata tracking data coverage and listing status."""
+    code: str
+    ipo_date: str | None = None
+    delist_date: str | None = None
+    data_start: str | None = None
+    data_end: str | None = None
+    status: str = "active"  # active / delisted / suspended
+
+
+@dataclass
+class DataMeta:
+    """Persistent metadata for the local Qlib dataset.
+
+    Per-stock watermark design: each stock's ``data_end`` IS its watermark.
+    The global ``trusted_until`` is a **computed property** — always derived
+    from per-stock ``data_end`` values, never manually set or stored as
+    source of truth.
+
+    Fields:
+    - qlib_base_end: static date marking the end of Qlib's official snapshot.
+    - last_append: timestamp of last append operation.
+    - listing_updated: date when stock listing was last refreshed from API.
+    - stocks: per-stock tracking keyed by bare code ("600000").
+    """
+    qlib_base_end: str = ""
+    last_append: str = ""
+    listing_updated: str = ""
+    stocks: dict[str, StockMeta] = dc_field(default_factory=dict)
+
+    # -- computed global watermark --
+
+    _DELIST_TOLERANCE_DAYS = 5
+
+    @property
+    def trusted_until(self) -> str:
+        """Global watermark = min(data_end) across **active** stocks only.
+
+        Delisted stocks are excluded entirely — their individual coverage is
+        tracked per-stock via data_end and reported separately in check-data.
+        They don't affect the ability to trade current stocks.
+
+        Active stocks with no local data are also excluded (they haven't
+        entered the tracking pipeline yet, e.g. new IPOs).
+
+        Returns "" if no active stocks have data.
+        """
+        constraining: list[str] = []
+        for sm in self.stocks.values():
+            if not sm.data_end:
+                continue
+            if sm.status == "delisted":
+                continue
+            constraining.append(sm.data_end)
+        return min(constraining) if constraining else ""
+
+    @classmethod
+    def _delisted_complete(cls, sm: StockMeta) -> bool:
+        """A delisted stock is complete if data_end is within tolerance of delist_date.
+
+        The delist_date from exchanges is the administrative removal date,
+        which is typically 1-3 days after the last actual trading day.
+        A tolerance of 5 calendar days covers weekends/holidays around delisting.
+        """
+        if not sm.delist_date or not sm.data_end:
+            return False
+        from datetime import timedelta
+        delist = datetime.strptime(sm.delist_date, "%Y-%m-%d")
+        cutoff = (delist - timedelta(days=cls._DELIST_TOLERANCE_DAYS)).strftime("%Y-%m-%d")
+        return sm.data_end >= cutoff
+
+    # -- persistence --
+
+    def save(self, path: Path) -> None:
+        payload = {
+            "qlib_base_end": self.qlib_base_end,
+            "trusted_until": self.trusted_until,  # computed, saved for display/external tools
+            "last_append": self.last_append,
+            "listing_updated": self.listing_updated,
+            "stocks": {code: asdict(sm) for code, sm in self.stocks.items()},
+        }
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=1))
+        tmp.replace(path)
+
+    @classmethod
+    def load(cls, path: Path) -> "DataMeta":
+        raw = json.loads(path.read_text())
+        stocks = {
+            code: StockMeta(**vals)
+            for code, vals in raw.get("stocks", {}).items()
+        }
+        return cls(
+            qlib_base_end=raw.get("qlib_base_end", ""),
+            last_append=raw.get("last_append", ""),
+            listing_updated=raw.get("listing_updated", ""),
+            stocks=stocks,
+        )
+
+    # -- query helpers --
+
+    @staticmethod
+    def _fetch_end(sm: StockMeta, target_date: str) -> str:
+        """Data completeness goal: delist_date for delisted, target_date for active."""
+        if sm.status == "delisted" and sm.delist_date:
+            return sm.delist_date
+        return target_date
+
+    def needs_fetch(self, code: str, target_date: str) -> tuple[bool, str | None, str]:
+        """Decide whether *code* needs a fetch, from which start, and to which end.
+
+        Returns (should_fetch, fetch_start_or_None, fetch_end).
+        """
+        sm = self.stocks.get(code)
+        if sm is None:
+            return (True, None, target_date)
+
+        fetch_target = self._fetch_end(sm, target_date)
+
+        if sm.data_end and sm.data_end >= fetch_target:
+            return (False, None, fetch_target)
+
+        if sm.status == "delisted" and self._delisted_complete(sm):
+            return (False, None, fetch_target)
+
+        if sm.data_end:
+            start = _next_day_str(sm.data_end)
+        elif sm.ipo_date:
+            start = sm.ipo_date
+        else:
+            start = None
+        return (True, start, fetch_target)
+
+    def needs_listing_refresh(self) -> bool:
+        """True if stock listing hasn't been refreshed today."""
+        today = datetime.now().strftime("%Y-%m-%d")
+        return self.listing_updated != today
+
+
+def _next_day_str(date_str: str) -> str:
+    from datetime import timedelta
+    d = datetime.strptime(date_str, "%Y-%m-%d") + timedelta(days=1)
+    return d.strftime("%Y-%m-%d")
+
+
+META_FILENAME = "data_meta.json"
+
+
+def build_meta_from_scan(
+    data_dir: Path,
+    stock_info: dict[str, dict] | None = None,
+) -> DataMeta:
+    """Build DataMeta by scanning existing binary files + optional listing info.
+
+    Args:
+        data_dir: Qlib data root (e.g. ~/.qlib/qlib_data/cn_data).
+        stock_info: Optional {bare_code: {"ipo_date":..., "delist_date":..., "status":...}}.
+    """
+    cal_path = data_dir / "calendars" / "day.txt"
+    if not cal_path.exists():
+        raise FileNotFoundError(f"No calendar at {cal_path}")
+
+    cal_dates = [d.strip() for d in cal_path.read_text().strip().split("\n") if d.strip()]
+    cal_len = len(cal_dates)
+    last_cal_date = cal_dates[-1]
+
+    feat_dir = data_dir / "features"
+    stocks: dict[str, StockMeta] = {}
+
+    if feat_dir.exists():
+        for sym_dir in sorted(feat_dir.iterdir()):
+            if not sym_dir.is_dir():
+                continue
+            qlib_sym = sym_dir.name  # e.g. "sh600000"
+            bare = qlib_sym[2:] if len(qlib_sym) > 2 else qlib_sym
+
+            close_bin = sym_dir / "close.day.bin"
+            data_start_date = None
+            data_end_date = None
+
+            if close_bin.exists() and close_bin.stat().st_size >= 8:
+                try:
+                    start_idx, data = _read_bin_file(close_bin)
+                    end_idx = start_idx + len(data) - 1
+                    if 0 <= start_idx < cal_len:
+                        data_start_date = cal_dates[start_idx]
+                    if 0 <= end_idx < cal_len:
+                        data_end_date = cal_dates[end_idx]
+                except Exception:
+                    pass
+
+            info = (stock_info or {}).get(bare, {})
+            stocks[bare] = StockMeta(
+                code=bare,
+                ipo_date=info.get("ipo_date"),
+                delist_date=info.get("delist_date"),
+                data_start=data_start_date,
+                data_end=data_end_date,
+                status=info.get("status", "active"),
+            )
+
+    # Add stocks from stock_info that are NOT in local features
+    if stock_info:
+        local_missing = 0
+        for bare, info in stock_info.items():
+            if bare not in stocks:
+                stocks[bare] = StockMeta(
+                    code=bare,
+                    ipo_date=info.get("ipo_date"),
+                    delist_date=info.get("delist_date"),
+                    data_start=None,
+                    data_end=None,
+                    status=info.get("status", "active"),
+                )
+                if info.get("status") != "delisted":
+                    local_missing += 1
+        if local_missing:
+            logger.warning(f"{local_missing} active stocks have NO local data")
+
+    no_data_active = sum(1 for sm in stocks.values() if not sm.data_end and sm.status != "delisted")
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    meta = DataMeta(
+        qlib_base_end=last_cal_date,
+        last_append=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        listing_updated=today if stock_info else "",
+        stocks=stocks,
+    )
+
+    logger.info(
+        f"Built meta: {len(stocks)} stocks, "
+        f"trusted_until={meta.trusted_until or '(none)'}"
+        f"{f', {no_data_active} active stocks without local data' if no_data_active else ''}"
+    )
+    return meta
+
+
+def fetch_stock_listing_info(fetcher: "DataFetcher") -> dict[str, dict]:
+    """Fetch IPO/delist dates from a DataFetcher's stock list.
+
+    Returns {bare_code: {"ipo_date":..., "delist_date":..., "status":...}}.
+    """
+    info: dict[str, dict] = {}
+    try:
+        if hasattr(fetcher, "fetch_stock_list_with_info"):
+            return fetcher.fetch_stock_list_with_info()
+
+        codes = fetcher.fetch_stock_list()
+        for code in codes:
+            info[code] = {"ipo_date": None, "delist_date": None, "status": "active"}
+    except Exception as e:
+        logger.warning(f"Failed to fetch stock listing info: {e}")
+    return info
+
+
+# ---------------------------------------------------------------------------
 # Binary file helpers for append mode
 # ---------------------------------------------------------------------------
 
@@ -835,184 +1171,385 @@ def _stock_needs_data(feat_dir: Path, cal_len: int) -> bool:
         return True
 
 
-def append_with_source(
-    fetcher: DataFetcher,
-    target_dir: str | Path,
-    end_date: str | None = None,
-    retry_skipped: bool = False,
-) -> None:
-    """Append new data to an existing Qlib dataset.
+class AppendError(RuntimeError):
+    """Raised on unrecoverable data-pipeline errors."""
 
-    Reads the existing calendar to find the last available date, then fetches
-    only new data from (last_date + 1) to end_date.  Binary files for each
-    stock are extended in place; new stocks get fresh files.
 
-    Supports **resume on failure**: progress is tracked in a checkpoint file
-    (.append_progress).  If the process is interrupted and restarted, already-
-    completed stocks are skipped automatically.
+@dataclass
+class WorkerResult:
+    """Outcome of a single parallel fetch worker."""
+    source_name: str
+    success: int = 0
+    empty: int = 0
+    resumed: int = 0
+    errors: int = 0
+    error_codes: list[str] = dc_field(default_factory=list)
+    instruments: dict[str, tuple[str, str]] = dc_field(default_factory=dict)
 
-    When ``retry_skipped=True``, re-attempts stocks whose binary data doesn't
-    cover the full calendar range (likely skipped due to rate limiting in a
-    previous run).
+
+# ---------------------------------------------------------------------------
+# Subprocess worker for intra-source parallelism
+# ---------------------------------------------------------------------------
+
+def _subprocess_fetch_batch(
+    source_name: str,
+    work: list[tuple[str, str | None, str, bool]],
+    cal_to_idx: dict[str, int],
+    target_str: str,
+    done_codes: list[str],
+    fallback_start: str,
+    worker_id: int,
+) -> list[_FetchResult]:
+    """Fetch a batch of stocks in a subprocess with its own data source connection.
+
+    Each subprocess creates an independent fetcher instance (and thus an
+    independent TCP/HTTP connection), enabling true parallel I/O.  This is
+    necessary for BaoStock whose module-level singleton connection makes
+    threading unsafe.
 
     Args:
-        fetcher: DataFetcher instance
-        target_dir: Existing Qlib data directory
-        end_date: End date (defaults to today)
-        retry_skipped: If True, retry stocks with incomplete data
+        source_name: Fetcher type ("baostock", "akshare", etc.).
+        work: List of (code, fetch_start_or_None, fetch_end, is_delisted).
+        cal_to_idx: Calendar date → index mapping for binary writes.
+        target_str: Qlib data directory path (str for pickling).
+        done_codes: Already-completed codes (list for pickling).
+        fallback_start: Default start date when stock has no prior data.
+        worker_id: Worker index for logging.
+
+    Returns:
+        List of _FetchResult for each processed stock.
     """
-    from datetime import timedelta
+    import sys as _sys
+    from loguru import logger as _log
+    _log.remove()
+    _log.add(
+        _sys.stderr, level="INFO",
+        format="<green>{time:HH:mm:ss}</green> | <level>{level:<7}</level> | {message}",
+        colorize=True,
+    )
 
-    target = Path(target_dir).expanduser()
-    checkpoint_path = target / ".append_progress"
-
-    cal_path = target / "calendars" / "day.txt"
-    if not cal_path.exists():
-        raise FileNotFoundError(
-            f"No existing calendar at {cal_path}. "
-            "Run a full download first (without --append)."
-        )
-
-    if end_date is None:
-        end_date = datetime.now().strftime("%Y-%m-%d")
-
-    # --- Resume or fresh start ---
-    done_codes: set[str] = set()
-
-    existing_cal = [d.strip() for d in cal_path.read_text().strip().split("\n") if d.strip()]
-
-    if checkpoint_path.exists() and not retry_skipped:
-        # Resume an interrupted run
-        fetch_start, end_date, done_codes = _load_checkpoint(checkpoint_path)
-        logger.info(
-            f"Resuming interrupted append: {len(done_codes)} stocks already done, "
-            f"range {fetch_start} ~ {end_date}"
-        )
-        merged_cal = existing_cal
+    if source_name == "baostock":
+        fetcher = BaoStockFetcher(workers=1)
+    elif source_name == "akshare":
+        fetcher = AKShareFetcher()
     else:
-        # Normal append: extend calendar if there are new dates
-        last_date = existing_cal[-1]
-        next_day = (
-            datetime.strptime(last_date, "%Y-%m-%d") + timedelta(days=1)
-        ).strftime("%Y-%m-%d")
+        raise ValueError(f"Subprocess fetch not supported for source: {source_name}")
 
-        calendar_extended = False
-        if next_day <= end_date:
-            new_dates = fetcher.fetch_trade_calendar(next_day, end_date)
-            if new_dates:
-                logger.info(f"Extending calendar: {len(new_dates)} new days ({new_dates[0]} ~ {new_dates[-1]})")
-                merged_cal = sorted(set(existing_cal) | set(new_dates))
-                cal_dir = target / "calendars"
-                cal_dir.mkdir(parents=True, exist_ok=True)
-                (cal_dir / "day.txt").write_text("\n".join(merged_cal) + "\n")
-                existing_cal = merged_cal
-                calendar_extended = True
+    tag = f"<{_SOURCE_COLOR.get(source_name, 'white')}>[{source_name}#{worker_id}]</{_SOURCE_COLOR.get(source_name, 'white')}>"
 
-        if not calendar_extended:
-            merged_cal = existing_cal
-
-        if retry_skipped:
-            # Retry mode: find the fetch_start from stock binary data gaps
-            logger.info("Scanning stocks for incomplete data...")
-            features_dir = target / "features"
-            sample_start = None
-            if features_dir.exists():
-                for sym_dir in sorted(features_dir.iterdir())[:50]:
-                    close_bin = sym_dir / "close.day.bin"
-                    if close_bin.exists():
-                        try:
-                            si, data = _read_bin_file(close_bin)
-                            data_end_idx = si + len(data)
-                            if data_end_idx < len(merged_cal):
-                                sample_start = merged_cal[data_end_idx]
-                                break
-                        except Exception:
-                            continue
-            fetch_start = sample_start or next_day
-            logger.info(f"Retry-skipped mode: re-fetching incomplete stocks")
-            logger.info(f"Fetch range: {fetch_start} ~ {end_date}")
-            checkpoint_path.unlink(missing_ok=True)
-            _write_checkpoint_header(checkpoint_path, fetch_start, end_date)
-        else:
-            # Pure append mode
-            if not calendar_extended:
-                logger.info(f"Data already up to date (last date: {last_date}). Nothing to append.")
-                return
-            fetch_start = next_day
-            logger.info(f"Data source: {fetcher.name} (append mode)")
-            logger.info(f"Existing data ends: {last_date}")
-            logger.info(f"Fetching new data: {fetch_start} ~ {end_date}")
-            _write_checkpoint_header(checkpoint_path, fetch_start, end_date)
-
-    cal_to_idx = {d: i for i, d in enumerate(merged_cal)}
-
-    # --- Stock list & index components ---
-    logger.info("Fetching stock list...")
-    stock_codes = fetcher.fetch_stock_list()
-    logger.info(f"Active stocks: {len(stock_codes)}")
-
-    logger.info("Fetching index components...")
-    csi300 = fetcher.fetch_index_components("000300")
-    csi500 = fetcher.fetch_index_components("000905")
-    logger.info(f"CSI300: {len(csi300)}, CSI500: {len(csi500)}")
-
-    # --- Load existing instrument metadata ---
-    instruments: dict[str, tuple[str, str]] = {}
-    inst_path = target / "instruments" / "all.txt"
-    if inst_path.exists():
-        for line in inst_path.read_text().strip().split("\n"):
-            parts = line.strip().split("\t")
-            if len(parts) >= 3:
-                instruments[parts[0]] = (parts[1], parts[2])
-
-    # --- In retry mode, filter to only stocks that need data ---
-    if retry_skipped:
-        needs_retry = []
-        for code in stock_codes:
-            qlib_sym = _to_qlib_symbol(code)
-            feat_dir = target / "features" / qlib_sym.lower()
-            if _stock_needs_data(feat_dir, len(merged_cal)):
-                needs_retry.append(code)
-        logger.info(f"Stocks needing retry: {len(needs_retry)} / {len(stock_codes)}")
-        stock_codes = needs_retry
-
-    # --- Download & append stock-by-stock ---
-    total = len(stock_codes)
-    success = 0
-    skipped = 0
-    resumed = 0
-    failed = 0
+    target = Path(target_str)
+    done_set = set(done_codes)
+    results: list[_FetchResult] = []
+    total = len(work)
     t0 = time.time()
-    log_interval = 20 if total < 500 else 100
-    logger.info(f"Starting download: {total} stocks to process...")
+    ok_count = 0
+    err_count = 0
 
-    for i, code in enumerate(stock_codes, 1):
-        if i % log_interval == 0 or i == total or i == 1:
-            elapsed = time.time() - t0
-            processed = success + skipped + failed
-            rate = processed / elapsed if elapsed > 0 else 0
-            remaining = total - i
-            eta = remaining / rate if rate > 0 else 0
-            logger.info(
-                f"[{i}/{total}] {success} ok, {skipped} skip, {failed} fail"
-                f"{f', {resumed} resumed' if resumed else ''}"
-                f" | {rate:.1f} stocks/s, ETA {eta / 60:.0f}min"
-            )
+    def _pace() -> str:
+        done = ok_count + err_count
+        elapsed = time.time() - t0
+        if done > 0 and elapsed > 0:
+            rate = done / elapsed
+            eta_m = (total - i) / rate / 60
+            return f"{rate:.1f}/s ETA {eta_m:.0f}m"
+        return ""
 
-        if code in done_codes:
-            resumed += 1
+    for i, (code, stock_start, stock_end, is_delisted) in enumerate(work, 1):
+        if code in done_set:
             continue
 
+        fetch_from = stock_start or fallback_start
+        if fetch_from > stock_end:
+            results.append(_FetchResult(code, "skip", "", "", 0, ""))
+            continue
+
+        pct = i * 100 // total
+
         try:
-            df = fetcher.fetch_daily(code, fetch_start, end_date)
+            df = fetcher.fetch_daily(code, fetch_from, stock_end)
         except Exception as e:
-            logger.debug(f"Exception for {code}: {e}")
-            failed += 1
+            err_count += 1
+            results.append(_FetchResult(code, "error", "", "", 0, str(e)))
+            _log.opt(colors=True).warning(f"{tag} {pct:>3d}% {i}/{total} {code} error: {e}")
             continue
 
         if df is None or df.empty:
-            skipped += 1
-            _checkpoint_stock(checkpoint_path, code)
+            if is_delisted:
+                results.append(_FetchResult(code, "empty", "", stock_end, 0, ""))
+                _log.opt(colors=True).info(f"{tag} {pct:>3d}% {i}/{total} {code} empty(delisted)")
+                continue
+            err_count += 1
+            results.append(_FetchResult(
+                code, "error", "", "", 0, "empty data for active stock",
+            ))
+            _log.opt(colors=True).warning(f"{tag} {pct:>3d}% {i}/{total} {code} error(empty active)")
+            continue
+
+        qlib_sym = _to_qlib_symbol(code)
+        feat_dir = target / "features" / qlib_sym.lower()
+        if feat_dir.exists():
+            _append_binary(feat_dir, df, cal_to_idx)
+        else:
+            feat_dir.mkdir(parents=True, exist_ok=True)
+            _write_fresh_binary(feat_dir, df, cal_to_idx)
+
+        dates = sorted(df["date"].tolist())
+        results.append(_FetchResult(
+            code, "ok", dates[0], dates[-1], len(df), "",
+        ))
+        ok_count += 1
+        _log.opt(colors=True).info(f"{tag} {pct:>3d}% {i}/{total} {code} ok +{len(df)}d {_pace()}")
+
+    elapsed = time.time() - t0
+    _log.opt(colors=True).info(
+        f"{tag} batch done: {ok_count} ok, {err_count} errors in {elapsed / 60:.1f}min"
+    )
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Subprocess-parallel coordinator
+# ---------------------------------------------------------------------------
+
+def _worker_fetch_with_subprocesses(
+    fetcher: DataFetcher,
+    work: list[tuple[str, str | None, str]],
+    meta: "DataMeta",
+    cal_to_idx: dict[str, int],
+    target: Path,
+    checkpoint_path: Path,
+    meta_lock: threading.Lock,
+    meta_path: Path,
+    done_codes: set[str],
+    fallback_start: str = "2005-01-01",
+    save_interval: int = 200,
+) -> "WorkerResult":
+    """Fetch stocks using multiple sub-processes for a single source.
+
+    Splits *work* into sub-chunks and dispatches each to a subprocess via
+    ProcessPoolExecutor.  Each subprocess creates its own fetcher instance
+    (own TCP connection), enabling true parallel I/O.
+
+    Binary file writes are safe: each stock goes to its own feature directory,
+    so there's no cross-process conflict.  Meta/checkpoint updates are
+    serialized in this coordinator thread after each subprocess completes.
+    """
+    src = fetcher.name
+    concurrency = min(fetcher.concurrency, len(work))
+    result = WorkerResult(source_name=src)
+
+    if concurrency <= 1:
+        return _worker_fetch(
+            fetcher, work, meta, cal_to_idx, target,
+            checkpoint_path, meta_lock, meta_path,
+            done_codes, fallback_start, save_interval,
+        )
+
+    work_with_flags: list[tuple[str, str | None, str, bool]] = []
+    for code, start, end in work:
+        sm = meta.stocks.get(code)
+        is_delisted = sm is not None and sm.status == "delisted"
+        work_with_flags.append((code, start, end, is_delisted))
+
+    chunk_size = max(1, len(work_with_flags) // concurrency)
+    chunks: list[list[tuple[str, str | None, str, bool]]] = []
+    for i in range(0, len(work_with_flags), chunk_size):
+        chunks.append(work_with_flags[i : i + chunk_size])
+    while len(chunks) > concurrency:
+        chunks[-2].extend(chunks[-1])
+        chunks.pop()
+
+    ctag = _colored_src(src)
+    logger.opt(colors=True).info(
+        f"{ctag} Launching {len(chunks)} sub-processes "
+        f"({len(work)} stocks total)"
+    )
+
+    done_list = sorted(done_codes)
+    target_str = str(target)
+    t0 = time.time()
+
+    with ProcessPoolExecutor(max_workers=concurrency) as pool:
+        futures = {
+            pool.submit(
+                _subprocess_fetch_batch,
+                src, chunk, cal_to_idx, target_str,
+                done_list, fallback_start, wid,
+            ): wid
+            for wid, chunk in enumerate(chunks)
+        }
+
+        for future in as_completed(futures):
+            wid = futures[future]
+            try:
+                batch = future.result()
+            except Exception as e:
+                logger.opt(colors=True).error(f"{_colored_src(f'{src}#{wid}')} subprocess crashed: {e}")
+                result.errors += 1
+                result.error_codes.append(f"subprocess#{wid}")
+                continue
+
+            batch_errors = 0
+            with meta_lock:
+                for fr in batch:
+                    if fr.status == "ok":
+                        result.success += 1
+                        _checkpoint_stock(checkpoint_path, fr.code)
+
+                        qlib_sym = _to_qlib_symbol(fr.code)
+                        if qlib_sym in result.instruments:
+                            old_s, old_e = result.instruments[qlib_sym]
+                            result.instruments[qlib_sym] = (
+                                min(old_s, fr.data_start),
+                                max(old_e, fr.data_end),
+                            )
+                        else:
+                            result.instruments[qlib_sym] = (
+                                fr.data_start, fr.data_end,
+                            )
+
+                        sm = meta.stocks.get(fr.code)
+                        if sm:
+                            sm.data_end = fr.data_end
+                            if not sm.data_start:
+                                sm.data_start = fr.data_start
+
+                    elif fr.status == "empty":
+                        result.empty += 1
+                        _checkpoint_stock(checkpoint_path, fr.code)
+                        sm = meta.stocks.get(fr.code)
+                        if sm and fr.data_end:
+                            sm.data_end = fr.data_end
+
+                    elif fr.status == "skip":
+                        _checkpoint_stock(checkpoint_path, fr.code)
+
+                    elif fr.status == "error":
+                        batch_errors += 1
+                        result.errors += 1
+                        result.error_codes.append(fr.code)
+
+                meta.last_append = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                meta.save(meta_path)
+
+            elapsed = time.time() - t0
+            logger.opt(colors=True).info(
+                f"{_colored_src(f'{src}#{wid}')} batch collected: "
+                f"{result.success} ok, {result.empty} empty, "
+                f"{batch_errors} errors ({elapsed / 60:.1f}min)"
+            )
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Per-worker fetch loop (sequential, single-connection)
+# ---------------------------------------------------------------------------
+
+_SOURCE_COLOR = {
+    "baostock": "cyan",
+    "akshare": "yellow",
+    "tushare": "magenta",
+}
+
+
+def _colored_src(src: str) -> str:
+    """Wrap source name in loguru color tags for terminal output."""
+    color = _SOURCE_COLOR.get(src.split("#")[0], "white")
+    return f"<{color}>[{src}]</{color}>"
+
+
+def _log_stock(
+    src: str, i: int, total: int, code: str, status: str,
+    t0: float, result: "WorkerResult",
+) -> None:
+    """Log one-line progress for a single stock."""
+    elapsed = time.time() - t0
+    done = result.success + result.empty
+    if done > 0 and elapsed > 0:
+        rate = done / elapsed
+        eta_m = (total - i) / rate / 60
+        pace = f"{rate:.1f}/s ETA {eta_m:.0f}m"
+    else:
+        pace = ""
+    pct = i * 100 // total
+    tag = _colored_src(src)
+    logger.opt(colors=True).info(f"{tag} {pct:>3d}% {i}/{total} {code} {status} {pace}")
+
+
+def _worker_fetch(
+    fetcher: DataFetcher,
+    work: list[tuple[str, str | None, str]],
+    meta: DataMeta,
+    cal_to_idx: dict[str, int],
+    target: Path,
+    checkpoint_path: Path,
+    meta_lock: threading.Lock,
+    meta_path: Path,
+    done_codes: set[str],
+    fallback_start: str = "2005-01-01",
+    save_interval: int = 200,
+) -> WorkerResult:
+    """Fetch assigned stocks using *fetcher*, writing binary features.
+
+    If the fetcher's concurrency > 1, delegates to subprocess-parallel mode
+    (ProcessPoolExecutor) for true parallel I/O.  Otherwise falls through to
+    the sequential single-connection loop below.
+
+    Thread-safe by design:
+      - Each worker operates on a disjoint set of stock codes.
+      - Binary writes go to per-stock directories (no cross-stock conflict).
+      - meta.stocks[code] updates are on disjoint keys.
+      - Checkpoint and meta file writes are serialized via *meta_lock*.
+    """
+    if fetcher.concurrency > 1 and len(work) > 1:
+        return _worker_fetch_with_subprocesses(
+            fetcher, work, meta, cal_to_idx, target,
+            checkpoint_path, meta_lock, meta_path,
+            done_codes, fallback_start, save_interval,
+        )
+
+    src = fetcher.name
+    result = WorkerResult(source_name=src)
+    total = len(work)
+    t0 = time.time()
+
+    for i, (code, stock_start, stock_end) in enumerate(work, 1):
+
+        if code in done_codes:
+            result.resumed += 1
+            continue
+
+        fetch_from = stock_start or fallback_start
+        if fetch_from > stock_end:
+            with meta_lock:
+                _checkpoint_stock(checkpoint_path, code)
+            continue
+
+        try:
+            df = fetcher.fetch_daily(code, fetch_from, stock_end)
+        except Exception as e:
+            result.errors += 1
+            result.error_codes.append(code)
+            _log_stock(src, i, total, code, f"error: {e}", t0, result)
+            continue
+
+        sm = meta.stocks.get(code)
+        is_delisted = sm and sm.status == "delisted"
+
+        if df is None or df.empty:
+            if is_delisted:
+                result.empty += 1
+                if sm:
+                    sm.data_end = stock_end
+                with meta_lock:
+                    _checkpoint_stock(checkpoint_path, code)
+                _log_stock(src, i, total, code, "empty(delisted)", t0, result)
+                continue
+
+            result.errors += 1
+            result.error_codes.append(code)
+            _log_stock(src, i, total, code, "error(empty active)", t0, result)
             continue
 
         qlib_sym = _to_qlib_symbol(code)
@@ -1026,16 +1563,314 @@ def append_with_source(
             _write_fresh_binary(feat_dir, df, cal_to_idx)
 
         dates_in_data = sorted(df["date"].tolist())
-        if qlib_sym in instruments:
-            old_s, old_e = instruments[qlib_sym]
-            instruments[qlib_sym] = (min(old_s, dates_in_data[0]), max(old_e, dates_in_data[-1]))
+        if qlib_sym in result.instruments:
+            old_s, old_e = result.instruments[qlib_sym]
+            result.instruments[qlib_sym] = (
+                min(old_s, dates_in_data[0]),
+                max(old_e, dates_in_data[-1]),
+            )
         else:
-            instruments[qlib_sym] = (dates_in_data[0], dates_in_data[-1])
+            result.instruments[qlib_sym] = (dates_in_data[0], dates_in_data[-1])
 
-        success += 1
-        _checkpoint_stock(checkpoint_path, code)
+        if sm:
+            sm.data_end = dates_in_data[-1]
+            if not sm.data_start:
+                sm.data_start = dates_in_data[0]
 
-    # --- Finalize: write instruments ---
+        result.success += 1
+        with meta_lock:
+            _checkpoint_stock(checkpoint_path, code)
+
+        n_rows = len(df)
+        _log_stock(src, i, total, code, f"ok +{n_rows}d", t0, result)
+
+        if result.success % save_interval == 0:
+            with meta_lock:
+                meta.last_append = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                meta.save(meta_path)
+                logger.debug(f"[{src}] Periodic meta save after {result.success} stocks")
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Stock partitioning across multiple fetchers
+# ---------------------------------------------------------------------------
+
+_SOURCE_WEIGHT = {
+    "baostock": 5,
+    "akshare": 1,
+    "tushare": 2,
+}
+
+
+def _partition_work(
+    work: list[tuple[str, str | None, str]],
+    fetchers: list[DataFetcher],
+) -> list[list[tuple[str, str | None, str]]]:
+    """Distribute stocks across fetchers weighted by aggregate throughput.
+
+    Weights reflect actual aggregate speed so both sources finish at ~same time:
+      BaoStock: ~4.5 stocks/s (4 sub-processes × ~1.2/s) → weight 5
+      AkShare:  ~0.9 stocks/s (rate-limited, single connection) → weight 1
+      TuShare:  ~1.5 stocks/s (API quota-limited) → weight 2
+
+    Each source gets a contiguous chunk (better for checkpoint resume).
+    """
+    if len(fetchers) == 1:
+        return [work]
+
+    weights = [_SOURCE_WEIGHT.get(f.name, 3) for f in fetchers]
+    total_w = sum(weights)
+    n = len(work)
+
+    partitions: list[list[tuple[str, str | None, str]]] = []
+    offset = 0
+    for i, w in enumerate(weights):
+        if i == len(weights) - 1:
+            chunk = work[offset:]
+        else:
+            count = round(n * w / total_w)
+            chunk = work[offset:offset + count]
+            offset += count
+        partitions.append(chunk)
+
+    return partitions
+
+
+# ---------------------------------------------------------------------------
+# Main entry point — 3-phase parallel append
+# ---------------------------------------------------------------------------
+
+def append_with_source(
+    fetchers: list[DataFetcher] | DataFetcher,
+    target_dir: str | Path,
+    end_date: str | None = None,
+) -> None:
+    """Append new data to an existing Qlib dataset (per-stock incremental).
+
+    Supports **multi-source parallel** fetching: pass a list of DataFetcher
+    instances and stocks will be partitioned across them, one thread per source.
+
+    For backward compatibility, a single DataFetcher is also accepted.
+
+    Uses data_meta.json to determine per-stock fetch ranges:
+    - Each stock is fetched from its own data_end+1 to its target date.
+    - Delisted stocks with sufficient data are skipped.
+    - API errors are logged and skipped; failed stocks retain their old
+      data_end and will be retried on the next run.
+    - Global trusted_until is auto-derived from per-stock data_end values.
+    """
+    from datetime import timedelta
+
+    if isinstance(fetchers, DataFetcher):
+        fetchers = [fetchers]
+
+    primary = fetchers[0]
+
+    target = Path(target_dir).expanduser()
+    checkpoint_path = target / ".append_progress"
+    meta_path = target / META_FILENAME
+
+    cal_path = target / "calendars" / "day.txt"
+    if not cal_path.exists():
+        raise FileNotFoundError(
+            f"No existing calendar at {cal_path}. "
+            "Run a full download first: py main.py download --full"
+        )
+
+    if end_date is None:
+        end_date = datetime.now().strftime("%Y-%m-%d")
+
+    existing_cal = [d.strip() for d in cal_path.read_text().strip().split("\n") if d.strip()]
+
+    # ── Phase 1: Prepare (sequential) ──────────────────────────────────────
+
+    # Extend calendar
+    last_date = existing_cal[-1]
+    next_day = (
+        datetime.strptime(last_date, "%Y-%m-%d") + timedelta(days=1)
+    ).strftime("%Y-%m-%d")
+
+    calendar_extended = False
+    if next_day <= end_date:
+        new_dates = primary.fetch_trade_calendar(next_day, end_date)
+        if new_dates:
+            logger.info(f"Extending calendar: {len(new_dates)} new days ({new_dates[0]} ~ {new_dates[-1]})")
+            merged_cal = sorted(set(existing_cal) | set(new_dates))
+            cal_dir = target / "calendars"
+            cal_dir.mkdir(parents=True, exist_ok=True)
+            (cal_dir / "day.txt").write_text("\n".join(merged_cal) + "\n")
+            existing_cal = merged_cal
+            calendar_extended = True
+
+    if not calendar_extended:
+        merged_cal = existing_cal
+
+    cal_to_idx = {d: i for i, d in enumerate(merged_cal)}
+
+    # Load or build meta
+    has_meta = meta_path.exists()
+    if has_meta:
+        meta = DataMeta.load(meta_path)
+        logger.info(f"Meta loaded: {len(meta.stocks)} stocks, trusted_until={meta.trusted_until}")
+    else:
+        logger.warning("data_meta.json not found. Building from scan...")
+        stock_info = fetch_stock_listing_info(primary)
+        meta = build_meta_from_scan(target, stock_info=stock_info)
+        meta.save(meta_path)
+        logger.info(f"Meta created: {len(meta.stocks)} stocks, trusted_until={meta.trusted_until}")
+
+    # Resume checkpoint (unified across all workers)
+    done_codes: set[str] = set()
+    if checkpoint_path.exists():
+        _, cp_end, done_codes = _load_checkpoint(checkpoint_path)
+        if cp_end != end_date:
+            logger.info(f"Stale checkpoint (end={cp_end}, target={end_date}). Discarding.")
+            checkpoint_path.unlink()
+            done_codes = set()
+        else:
+            logger.info(f"Resuming: {len(done_codes)} stocks already done")
+
+    # Refresh stock listing (once per day)
+    if meta.needs_listing_refresh():
+        logger.info("Refreshing stock listing info (daily)...")
+        stock_info = fetch_stock_listing_info(primary)
+        for code, info in stock_info.items():
+            sm = meta.stocks.get(code)
+            if sm is None:
+                meta.stocks[code] = StockMeta(
+                    code=code,
+                    ipo_date=info.get("ipo_date"),
+                    delist_date=info.get("delist_date"),
+                    status=info.get("status", "active"),
+                )
+            else:
+                sm.delist_date = info.get("delist_date") or sm.delist_date
+                sm.status = info.get("status", sm.status)
+                sm.ipo_date = info.get("ipo_date") or sm.ipo_date
+        meta.listing_updated = datetime.now().strftime("%Y-%m-%d")
+        meta.save(meta_path)
+        logger.info(f"Listing updated: {len(meta.stocks)} stocks")
+    else:
+        logger.info(f"Listing already refreshed today ({meta.listing_updated}), using cache")
+
+    # Index components (best-effort, from primary source)
+    logger.info("Fetching index components...")
+    csi300 = primary.fetch_index_components("000300")
+    csi500 = primary.fetch_index_components("000905")
+    logger.info(f"CSI300: {len(csi300)}, CSI500: {len(csi500)}")
+
+    # Load existing instrument metadata
+    instruments: dict[str, tuple[str, str]] = {}
+    inst_path = target / "instruments" / "all.txt"
+    if inst_path.exists():
+        for line in inst_path.read_text().strip().split("\n"):
+            parts = line.strip().split("\t")
+            if len(parts) >= 3:
+                instruments[parts[0]] = (parts[1], parts[2])
+
+    # Build work list
+    all_codes = sorted(meta.stocks.keys())
+    work: list[tuple[str, str | None, str]] = []
+    skip_delisted = 0
+    skip_complete = 0
+
+    for code in all_codes:
+        needs, start, stock_end = meta.needs_fetch(code, end_date)
+        if not needs:
+            sm = meta.stocks[code]
+            if sm.status == "delisted":
+                skip_delisted += 1
+            else:
+                skip_complete += 1
+        else:
+            work.append((code, start, stock_end))
+
+    total_work = len(work)
+    if not calendar_extended and total_work == 0:
+        logger.info(
+            f"Data already up to date (trusted_until={meta.trusted_until}). "
+            f"Nothing to append."
+        )
+        return
+
+    logger.info(
+        f"Work plan: {total_work} stocks to fetch, "
+        f"{skip_complete} already complete, {skip_delisted} delisted (skipped)"
+    )
+
+    # Write checkpoint header if new run
+    if not checkpoint_path.exists():
+        _write_checkpoint_header(checkpoint_path, meta.trusted_until or "0000-00-00", end_date)
+
+    # ── Phase 2: Parallel fetch ────────────────────────────────────────────
+
+    partitions = _partition_work(work, fetchers)
+    meta_lock = threading.Lock()
+    t0 = time.time()
+
+    source_names = [f.name for f in fetchers]
+    for fname, partition in zip(source_names, partitions):
+        logger.opt(colors=True).info(f"  {_colored_src(fname)} {len(partition)} stocks assigned")
+
+    if len(fetchers) == 1:
+        results = [_worker_fetch(
+            fetcher=fetchers[0],
+            work=partitions[0],
+            meta=meta,
+            cal_to_idx=cal_to_idx,
+            target=target,
+            checkpoint_path=checkpoint_path,
+            meta_lock=meta_lock,
+            meta_path=meta_path,
+            done_codes=done_codes,
+            fallback_start=next_day,
+        )]
+    else:
+        results: list[WorkerResult] = []
+        with ThreadPoolExecutor(max_workers=len(fetchers)) as pool:
+            futures = {
+                pool.submit(
+                    _worker_fetch,
+                    fetcher=f,
+                    work=p,
+                    meta=meta,
+                    cal_to_idx=cal_to_idx,
+                    target=target,
+                    checkpoint_path=checkpoint_path,
+                    meta_lock=meta_lock,
+                    meta_path=meta_path,
+                    done_codes=done_codes,
+                    fallback_start=next_day,
+                ): f.name
+                for f, p in zip(fetchers, partitions)
+            }
+            for future in as_completed(futures):
+                src_name = futures[future]
+                try:
+                    r = future.result()
+                    results.append(r)
+                    err_msg = f", {r.errors} errors" if r.errors else ""
+                    logger.opt(colors=True).info(
+                        f"{_colored_src(src_name)} finished: {r.success} ok, {r.empty} empty{err_msg}"
+                    )
+                except Exception as exc:
+                    logger.opt(colors=True).error(f"{_colored_src(src_name)} worker crashed: {exc}")
+                    results.append(WorkerResult(source_name=src_name, errors=1, error_codes=["CRASH"]))
+
+    # ── Phase 3: Finalize ──────────────────────────────────────────────────
+
+    # Merge instrument fragments from all workers
+    for r in results:
+        for sym, (s, e) in r.instruments.items():
+            if sym in instruments:
+                old_s, old_e = instruments[sym]
+                instruments[sym] = (min(old_s, s), max(old_e, e))
+            else:
+                instruments[sym] = (s, e)
+
+    # Write instruments files
     inst_dir = target / "instruments"
     inst_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1050,16 +1885,34 @@ def append_with_source(
         if subset:
             (inst_dir / filename).write_text("\n".join(subset) + "\n")
 
-    # Remove checkpoint — job fully done
+    # Aggregate stats
+    elapsed_total = time.time() - t0
+    total_success = sum(r.success for r in results)
+    total_empty = sum(r.empty for r in results)
+    total_resumed = sum(r.resumed for r in results)
+    total_errors = sum(r.errors for r in results)
+    all_error_codes = [c for r in results for c in r.error_codes]
+
     checkpoint_path.unlink(missing_ok=True)
 
-    elapsed_total = time.time() - t0
+    if total_errors:
+        logger.warning(
+            f"{total_errors} stocks failed (will retry next run): "
+            f"{', '.join(all_error_codes[:20])}"
+            f"{'...' if len(all_error_codes) > 20 else ''}"
+        )
+
+    meta.last_append = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    meta.save(meta_path)
+
     logger.info(
-        f"Append complete: {success} updated, {skipped} skipped, {failed} failed"
-        f"{f', {resumed} resumed' if resumed else ''}"
-        f" in {elapsed_total / 60:.1f}min"
+        f"Append done: "
+        f"{total_success} updated, {total_empty} empty, "
+        f"{total_errors} errors, {total_resumed} resumed "
+        f"({len(fetchers)} source{'s' if len(fetchers) > 1 else ''}) "
+        f"in {elapsed_total / 60:.1f}min"
     )
     logger.info(
         f"Calendar: {len(merged_cal)} days ({merged_cal[0]} ~ {merged_cal[-1]}), "
-        f"Instruments: {len(instruments)} stocks"
+        f"trusted_until: {meta.trusted_until or '(none)'}"
     )

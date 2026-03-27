@@ -248,7 +248,7 @@ IC > 0.03 通常表示因子/模型有效。
 
 ```
 每天（收盘后）:
-  1. 更新数据     py main.py download --source akshare --append
+  1. 更新数据     py main.py download
   2. 生成信号     py main.py signal --model-path ... --publish
   3. 自动交易     py main.py trade (持续运行)
   4. 监控         py main.py dashboard (持续运行)

@@ -1,9 +1,11 @@
 """Data download and management for Qlib.
 
 Supported sources:
-  - qlib:    Qlib public dataset (free, data to ~2020-09)
-  - akshare: AKShare (free, latest daily data, no auth)
-  - tushare: Tushare Pro (paid, needs token, higher quality)
+  - qlib:          Qlib public dataset (free, complete to ~2020-09)
+  - baostock:      BaoStock (free, no rate limit, full/incremental)
+  - akshare:       AKShare (free, latest daily data, no auth)
+  - tushare:       Tushare Pro (paid, needs token, higher quality)
+  - qlib+baostock: Recommended — Qlib base + BaoStock incremental to today
 """
 
 from __future__ import annotations
@@ -15,7 +17,7 @@ from loguru import logger
 from stopat30m.config import get
 
 
-VALID_SOURCES = ("qlib", "akshare", "baostock", "tushare")
+VALID_SOURCES = ("qlib", "akshare", "baostock", "tushare", "qlib+baostock")
 
 
 def get_data_dir() -> Path:
@@ -30,30 +32,31 @@ def data_exists() -> bool:
 
 
 def download_cn_data(
-    source: str = "qlib",
+    source: str = "baostock",
     target_dir: str | None = None,
     start_date: str | None = None,
     end_date: str | None = None,
-    append: bool = False,
-    retry_skipped: bool = False,
+    parallel: bool = True,
+    workers: int | None = None,
 ) -> None:
     """Download A-share data.
 
+    Default behavior is **incremental**: if local data already exists, only
+    fetch new data since the last trusted date (per-stock).  When *parallel*
+    is True (default), multiple data sources are used concurrently.
+
     Args:
-        source: Data source — 'qlib' (public), 'akshare' (free), 'tushare' (paid)
-        target_dir: Override target directory
-        start_date: Start date (akshare/tushare full-download only)
-        end_date: End date (akshare/tushare only, default today)
-        append: If True, read existing calendar and only fetch new data since
-                the last available date.  Requires an existing dataset on disk.
-        retry_skipped: If True, retry stocks that were skipped in a previous
-                       append (e.g. due to rate limiting).
+        source: Primary data source. 'baostock' (default), 'qlib+baostock'
+                (full rebuild), 'qlib' (base only), 'akshare', 'tushare'.
+        target_dir: Override target directory.
+        start_date: Start date (full download only, ignored for incremental).
+        end_date: End date (default today).
+        parallel: Use multiple sources in parallel (default True).
+        workers: Number of parallel sub-processes per source (BaoStock only).
+                 None → fetcher default (4 for BaoStock).
     """
     if source not in VALID_SOURCES:
         raise ValueError(f"Unknown source '{source}'. Choose from: {VALID_SOURCES}")
-
-    if (append or retry_skipped) and source == "qlib":
-        raise ValueError("--append/--retry-skipped is not supported with --source qlib (static snapshot).")
 
     target = target_dir or str(get_data_dir())
     target_path = Path(target).expanduser()
@@ -61,20 +64,28 @@ def download_cn_data(
 
     if source == "qlib":
         _download_qlib_public(target_path)
-    elif append or retry_skipped:
-        _append_from_fetcher(source, target_path, end_date, retry_skipped=retry_skipped)
+    elif source == "qlib+baostock":
+        _download_qlib_then_append(target_path, end_date, parallel=parallel, workers=workers)
     else:
-        _download_from_fetcher(source, target_path, start_date, end_date)
+        cal_path = target_path / "calendars" / "day.txt"
+        if cal_path.exists():
+            _append_from_fetcher(source, target_path, end_date, parallel=parallel, workers=workers)
+        else:
+            logger.info("No existing data found. Running full download...")
+            _download_from_fetcher(source, target_path, start_date, end_date)
 
 
-def _create_fetcher(source: str):
+def _create_fetcher(source: str, workers: int | None = None):
     """Instantiate the appropriate DataFetcher for the given source."""
     from stopat30m.data.fetcher import AKShareFetcher, BaoStockFetcher, TushareFetcher
 
     if source == "akshare":
         return AKShareFetcher()
     elif source == "baostock":
-        return BaoStockFetcher()
+        kwargs: dict = {}
+        if workers is not None:
+            kwargs["workers"] = workers
+        return BaoStockFetcher(**kwargs)
     elif source == "tushare":
         token = get("tushare", "token", "")
         if not token:
@@ -104,6 +115,49 @@ def _download_qlib_public(target_path: Path) -> None:
         raise
 
 
+def _download_qlib_then_append(
+    target_path: Path, end_date: str | None, parallel: bool = True,
+    workers: int | None = None,
+) -> None:
+    """Recommended download: Qlib complete base + BaoStock incremental to today.
+
+    Step 1: Download Qlib public snapshot (~2020-09, complete and verified).
+    Step 2: Build data_meta.json (per-stock metadata + trusted watermark).
+    Step 3: Append from BaoStock for dates after the Qlib snapshot to today.
+    """
+    from stopat30m.data.fetcher import (
+        META_FILENAME, build_meta_from_scan, fetch_stock_listing_info,
+    )
+
+    cal_path = target_path / "calendars" / "day.txt"
+    if cal_path.exists():
+        cal_dates = [d.strip() for d in cal_path.read_text().strip().split("\n") if d.strip()]
+        logger.info(f"Existing data found: {cal_dates[0]} ~ {cal_dates[-1]} ({len(cal_dates)} days)")
+        logger.info("Skipping Qlib base download.")
+    else:
+        logger.info("Step 1/3: Downloading Qlib official base data...")
+        _download_qlib_public(target_path)
+        logger.info("Step 1/3: Qlib base download complete.")
+
+    meta_path = target_path / META_FILENAME
+    if not meta_path.exists():
+        logger.info("Step 2/3: Building data_meta.json...")
+        fetcher = _create_fetcher("baostock")
+        stock_info = fetch_stock_listing_info(fetcher)
+        meta = build_meta_from_scan(target_path, stock_info=stock_info)
+        meta.save(meta_path)
+        logger.info(
+            f"Step 2/3: Meta created — {len(meta.stocks)} stocks, "
+            f"trusted_until={meta.trusted_until}"
+        )
+    else:
+        logger.info("Step 2/3: data_meta.json already exists, skipping.")
+
+    logger.info("Step 3/3: Appending latest data from BaoStock...")
+    _append_from_fetcher("baostock", target_path, end_date, parallel=parallel, workers=workers)
+    logger.info("All done. Data is now complete and up to date.")
+
+
 def _download_from_fetcher(
     source: str,
     target_path: Path,
@@ -126,22 +180,62 @@ def _download_from_fetcher(
     )
 
 
+def _create_available_fetchers(primary_source: str, workers: int | None = None) -> list:
+    """Create fetchers for parallel append: primary + any available secondary sources.
+
+    Always includes the primary source. Adds secondary sources that are
+    importable and configured (e.g. TuShare needs a token).
+    """
+    from stopat30m.data.fetcher import AKShareFetcher, BaoStockFetcher
+
+    primary = _create_fetcher(primary_source, workers=workers)
+    fetchers = [primary]
+
+    secondaries = {"baostock": BaoStockFetcher, "akshare": AKShareFetcher}
+    secondaries.pop(primary_source, None)
+
+    for name, cls in secondaries.items():
+        try:
+            fetchers.append(cls())
+            logger.info(f"Secondary source enabled: {name}")
+        except ImportError:
+            logger.debug(f"Secondary source {name} not available (not installed)")
+
+    tushare_token = get("tushare", "token", "")
+    if tushare_token and primary_source != "tushare":
+        try:
+            from stopat30m.data.fetcher import TushareFetcher
+            fetchers.append(TushareFetcher(token=tushare_token))
+            logger.info("Secondary source enabled: tushare")
+        except ImportError:
+            logger.debug("Secondary source tushare not available (not installed)")
+
+    return fetchers
+
+
 def _append_from_fetcher(
     source: str,
     target_path: Path,
     end_date: str | None,
-    retry_skipped: bool = False,
+    parallel: bool = True,
+    workers: int | None = None,
 ) -> None:
-    """Append new data to an existing Qlib dataset."""
+    """Append new data to an existing Qlib dataset (per-stock incremental).
+
+    When *parallel* is True (default), automatically detects additional
+    data sources and fetches stocks in parallel across multiple sources.
+    """
     from stopat30m.data.fetcher import append_with_source
 
-    fetcher = _create_fetcher(source)
+    if parallel:
+        fetchers = _create_available_fetchers(source, workers=workers)
+    else:
+        fetchers = [_create_fetcher(source, workers=workers)]
 
     append_with_source(
-        fetcher=fetcher,
+        fetchers=fetchers,
         target_dir=target_path,
         end_date=end_date,
-        retry_skipped=retry_skipped,
     )
 
 

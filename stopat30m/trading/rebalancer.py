@@ -45,29 +45,183 @@ def bare_code(instrument: str) -> str:
     return inst
 
 
+_spot_cache: dict = {}
+
+
+_BATCH_THRESHOLD = 50
+
+
 def fetch_spot_prices(instruments: list[str]) -> dict[str, float]:
-    """Fetch latest spot prices for given instruments via AKShare.
+    """Fetch latest spot prices from multiple sources with automatic failover.
+
+    For small lists (< 50 stocks): per-stock APIs first (fast, ~100ms).
+      Sina → Tencent → AKShare batch (fallback)
+
+    For large lists (>= 50 stocks): batch API first (efficient).
+      AKShare batch → fill missing with Sina → Tencent
 
     Returns {normalized_instrument: price}.
-    Tries multiple AKShare endpoints before giving up.
     """
     if not instruments:
         return {}
 
     needed = {bare_code(inst): normalize_instrument(inst) for inst in instruments}
+    prices: dict[str, float] = {}
+    names: dict[str, str] = {}
 
+    if len(needed) < _BATCH_THRESHOLD:
+        sources = [
+            ("Sina", lambda codes: _fetch_sina(codes)),
+            ("Tencent", lambda codes: _fetch_tencent(codes)),
+            ("AKShare", lambda codes: _fetch_via_batch(codes, needed)),
+        ]
+    else:
+        sources = [
+            ("AKShare", lambda codes: _fetch_via_batch(codes, needed)),
+            ("Sina", lambda codes: _fetch_sina(codes)),
+            ("Tencent", lambda codes: _fetch_tencent(codes)),
+        ]
+
+    missing_codes = dict(needed)
+    for source_name, fetch_fn in sources:
+        if not missing_codes:
+            break
+        try:
+            result = fetch_fn(list(missing_codes.keys()))
+            for code, (price, name) in result.items():
+                inst = missing_codes.get(code)
+                if inst and price > 0:
+                    prices[inst] = price
+                    if name:
+                        names[inst] = name
+            prev_missing = len(missing_codes)
+            missing_codes = {c: n for c, n in missing_codes.items() if n not in prices}
+            filled = prev_missing - len(missing_codes)
+            if filled > 0:
+                logger.info(f"{source_name}: got {filled} prices")
+        except Exception as e:
+            logger.warning(f"{source_name} failed: {e}")
+
+    if not prices:
+        logger.error("All real-time price sources failed")
+    elif len(prices) < len(needed):
+        logger.warning(f"Got prices for {len(prices)}/{len(needed)} instruments")
+
+    _spot_cache["prices"] = prices
+    _spot_cache["names"] = names
+    return prices
+
+
+def _fetch_via_batch(
+    codes: list[str], needed: dict[str, str],
+) -> dict[str, tuple[float, str]]:
+    """Adapter: fetch full-market AKShare data, return per-stock results."""
     df = _fetch_spot_dataframe()
     if df is None or df.empty:
         return {}
+    prices, names = _extract_from_dataframe(df, needed)
+    result: dict[str, tuple[float, str]] = {}
+    for code, inst in needed.items():
+        if inst in prices:
+            result[code] = (prices[inst], names.get(inst, ""))
+    return result
 
-    prices: dict[str, float] = {}
+
+def _name_cache_path() -> Path:
+    from stopat30m.data.provider import get_data_dir
+    return get_data_dir() / "stock_names.json"
+
+
+def _load_name_cache() -> dict[str, str]:
+    """Load {bare_code: name} from local JSON cache."""
+    import json
+    p = _name_cache_path()
+    if p.exists():
+        try:
+            return json.loads(p.read_text())
+        except Exception:
+            pass
+    return {}
+
+
+def _save_name_cache(cache: dict[str, str]) -> None:
+    """Persist {bare_code: name} to local JSON cache."""
+    import json
+    p = _name_cache_path()
+    try:
+        p.parent.mkdir(parents=True, exist_ok=True)
+        tmp = p.with_suffix(".tmp")
+        tmp.write_text(json.dumps(cache, ensure_ascii=False, indent=1))
+        tmp.replace(p)
+    except Exception as e:
+        logger.debug(f"Failed to save name cache: {e}")
+
+
+def fetch_stock_names(instruments: list[str]) -> dict[str, str]:
+    """Fetch stock names. Reads from local disk cache first, then API for misses.
+
+    Returns {normalized_instrument: name}.
+    """
+    if not instruments:
+        return {}
+
+    if _spot_cache.get("names"):
+        return _spot_cache["names"]
+
+    needed = {bare_code(inst): normalize_instrument(inst) for inst in instruments}
+    disk_cache = _load_name_cache()
+
+    result: dict[str, str] = {}
+    api_needed: dict[str, str] = {}
+    for bare, inst in needed.items():
+        if bare in disk_cache:
+            result[inst] = disk_cache[bare]
+        else:
+            api_needed[bare] = inst
+
+    if not api_needed:
+        return result
+
+    api_names: dict[str, str] = {}
+
+    df = _fetch_spot_dataframe()
+    if df is not None and not df.empty:
+        _, api_names = _extract_from_dataframe(df, api_needed)
+
+    if len(api_names) < len(api_needed):
+        try:
+            still_missing = {b: i for b, i in api_needed.items() if i not in api_names}
+            if still_missing:
+                sina_result = _fetch_sina(list(still_missing.keys()))
+                for c, (_, name) in sina_result.items():
+                    if c in still_missing and name:
+                        api_names[still_missing[c]] = name
+        except Exception:
+            pass
+
+    if api_names:
+        result.update(api_names)
+        for inst, name in api_names.items():
+            disk_cache[bare_code(inst)] = name
+        _save_name_cache(disk_cache)
+
+    return result
+
+
+def _extract_from_dataframe(
+    df: pd.DataFrame, needed: dict[str, str],
+) -> tuple[dict[str, float], dict[str, str]]:
+    """Extract prices and names from an AKShare-style DataFrame."""
     code_col = _find_col(df, ["代码", "code"])
     price_col = _find_col(df, ["最新价", "close", "当前价"])
+    name_col = _find_col(df, ["名称", "name"])
 
     if code_col is None or price_col is None:
         logger.warning(f"Unexpected columns in spot data: {list(df.columns)}")
-        return {}
+        return {}, {}
 
+    prices: dict[str, float] = {}
+    names: dict[str, str] = {}
     for _, row in df.iterrows():
         code = str(row[code_col]).strip()
         if code in needed:
@@ -77,38 +231,10 @@ def fetch_spot_prices(instruments: list[str]) -> dict[str, float]:
                     prices[needed[code]] = p
             except (ValueError, TypeError):
                 pass
+            if name_col is not None:
+                names[needed[code]] = str(row[name_col]).strip()
 
-    missing = set(needed.values()) - set(prices.keys())
-    if missing:
-        logger.warning(f"Missing prices for {len(missing)} instruments: {list(missing)[:5]}...")
-
-    return prices
-
-
-def fetch_stock_names(instruments: list[str]) -> dict[str, str]:
-    """Fetch stock names for given instruments via AKShare.
-
-    Returns {normalized_instrument: name}. Empty dict if AKShare unavailable.
-    """
-    if not instruments:
-        return {}
-
-    needed = {bare_code(inst): normalize_instrument(inst) for inst in instruments}
-    df = _fetch_spot_dataframe()
-    if df is None or df.empty:
-        return {}
-
-    code_col = _find_col(df, ["代码", "code"])
-    name_col = _find_col(df, ["名称", "name"])
-    if code_col is None or name_col is None:
-        return {}
-
-    names: dict[str, str] = {}
-    for _, row in df.iterrows():
-        code = str(row[code_col]).strip()
-        if code in needed:
-            names[needed[code]] = str(row[name_col]).strip()
-    return names
+    return prices, names
 
 
 _last_fetch_error: str = ""
@@ -118,10 +244,15 @@ def get_last_fetch_error() -> str:
     return _last_fetch_error
 
 
-def _fetch_spot_dataframe():
-    """Try multiple AKShare endpoints to get spot prices."""
+def _fetch_spot_dataframe() -> pd.DataFrame | None:
+    """Try AKShare batch endpoints for full-market spot data."""
     global _last_fetch_error
-    import akshare as ak
+
+    try:
+        import akshare as ak
+    except ImportError:
+        _last_fetch_error = "akshare not installed"
+        return None
 
     endpoints = [
         ("stock_zh_a_spot_em", lambda: ak.stock_zh_a_spot_em()),
@@ -140,8 +271,101 @@ def _fetch_spot_dataframe():
             logger.warning(f"AKShare {name} failed: {e}")
             continue
 
-    logger.error(f"All spot price endpoints failed. Last error: {_last_fetch_error}")
+    logger.warning(f"All AKShare endpoints failed. Last error: {_last_fetch_error}")
     return None
+
+
+def _instrument_to_sina_symbol(bare: str) -> str:
+    """Convert bare code '601006' to Sina symbol 'sh601006'."""
+    if bare.startswith(("6", "9")):
+        return f"sh{bare}"
+    return f"sz{bare}"
+
+
+def _fetch_sina(codes: list[str]) -> dict[str, tuple[float, str]]:
+    """Fetch real-time prices from Sina Finance HTTP API.
+
+    Returns {bare_code: (price, name)}.
+    """
+    import requests
+
+    symbols = [_instrument_to_sina_symbol(c) for c in codes]
+    url = f"https://hq.sinajs.cn/list={','.join(symbols)}"
+    headers = {"Referer": "https://finance.sina.com.cn"}
+
+    resp = requests.get(url, headers=headers, timeout=10)
+    resp.encoding = "gbk"
+
+    result: dict[str, tuple[float, str]] = {}
+    for line in resp.text.strip().split("\n"):
+        line = line.strip()
+        if not line or "=" not in line:
+            continue
+        # var hq_str_sh601006="大秦铁路,9.04,9.02,9.06,..."
+        var_part, _, data_part = line.partition("=")
+        symbol = var_part.split("_")[-1]
+        bare = symbol[2:]  # strip sh/sz prefix
+        data_part = data_part.strip('" ;')
+        if not data_part:
+            continue
+
+        fields = data_part.split(",")
+        if len(fields) < 4:
+            continue
+
+        name = fields[0]
+        try:
+            price = float(fields[3])  # field[3] = current price
+        except (ValueError, IndexError):
+            continue
+
+        if bare in codes and price > 0:
+            result[bare] = (price, name)
+
+    logger.info(f"Sina: got {len(result)}/{len(codes)} prices")
+    return result
+
+
+def _fetch_tencent(codes: list[str]) -> dict[str, tuple[float, str]]:
+    """Fetch real-time prices from Tencent Finance HTTP API.
+
+    Returns {bare_code: (price, name)}.
+    """
+    import requests
+
+    symbols = [_instrument_to_sina_symbol(c) for c in codes]  # same sh/sz format
+    url = f"https://qt.gtimg.cn/q={','.join(symbols)}"
+
+    resp = requests.get(url, timeout=10)
+    resp.encoding = "gbk"
+
+    result: dict[str, tuple[float, str]] = {}
+    for line in resp.text.strip().split("\n"):
+        line = line.strip()
+        if not line or "=" not in line:
+            continue
+        # v_sh601006="1~大秦铁路~601006~9.06~..."
+        var_part, _, data_part = line.partition("=")
+        data_part = data_part.strip('" ;')
+        if not data_part:
+            continue
+
+        fields = data_part.split("~")
+        if len(fields) < 5:
+            continue
+
+        name = fields[1]
+        bare = fields[2]
+        try:
+            price = float(fields[3])
+        except (ValueError, IndexError):
+            continue
+
+        if bare in codes and price > 0:
+            result[bare] = (price, name)
+
+    logger.info(f"Tencent: got {len(result)}/{len(codes)} prices")
+    return result
 
 
 def fetch_prices_from_qlib(instruments: list[str]) -> dict[str, float]:

@@ -189,51 +189,26 @@ tushare:
 py main.py download --source qlib
 ```
 
-#### 第二步：追加 2020-09 之后的数据
+#### 第二步：每日增量更新
 
 ```bash
-# 自动检测已有数据的最后日期，只下载后续部分
-py main.py download --source akshare --append
+# 默认即为增量模式，自动检测每只股票的 data_end，只下载缺少的部分
+# 自动使用多个数据源（BaoStock + AkShare）并行拉取
+py main.py download
+
+# 如果只想用单一源（不并行）
+py main.py download --single-source
 ```
 
-由于 AKShare 免费接口有频率限制，首次追加可能有部分股票被限流跳过。用 `--retry-skipped` 重试：
+增量更新的工作原理：
+1. 读取 `data_meta.json` 获取每只股票的 `data_end`（即该股票的可信水位线）
+2. 自动检测可用数据源，将股票分配到多个源并行拉取（BaoStock ~70%，AkShare ~30%）
+3. 对每只股票，仅从其 `data_end + 1` 到目标日期拉取数据（退市股拉到退市日后自动跳过）
+4. 扩展日历、追加二进制特征、更新股票列表
+5. **fail-stop**（per worker）：活跃股票 API 返回空数据会停止该 worker，其他 worker 继续
+6. 全局 `trusted_until` 由所有股票的 `data_end` 自动计算（= 未完成股票中 `min(data_end)`）
 
-```bash
-# 重试上次被限流跳过的股票
-py main.py download --source akshare --retry-skipped
-
-# 也可以和 --append 组合：先追加新日期，再重试跳过的
-py main.py download --source akshare --append --retry-skipped
-```
-
-系统自动读取现有日历的最后日期（2020-09-25），仅获取 2020-09-26 至今的数据并合并到已有文件中。
-
-#### 第三步：每日增量更新
-
-```bash
-# 收盘后运行，只追加当天数据
-py main.py download --source akshare --append
-```
-
-`--append` 模式的工作原理：
-1. 读取现有 `calendars/day.txt` 获取最后日期
-2. 仅从 API 获取 *最后日期+1* 到今天的数据
-3. 扩展日历文件、追加二进制特征数据、更新股票列表
-4. 如果数据已是最新则跳过，不做任何修改
-
-`--retry-skipped` 模式：
-1. 扫描每只股票的 binary 文件，找出数据长度不足（未覆盖完整日历）的股票
-2. 只对这些不完整的股票重新请求数据
-3. 支持断点续传，中断后重跑会跳过已完成的
-4. 可与 `--append` 组合使用
-
-> **耗时估算**：初次追加 5 年数据约 40-60 分钟，每日增量更新约 15-20 分钟。重试跳过的股票视数量而定。
-
-同样可以使用 Tushare Pro：
-
-```bash
-py main.py download --source tushare --append
-```
+> **耗时估算**：初次追加 5 年数据约 20-30 分钟（多源并行），每日增量更新约 3-8 分钟。
 
 ### 3.4 指定下载目录
 
@@ -288,13 +263,13 @@ data:
 建议每日收盘后增量更新：
 
 ```bash
-py main.py download --source akshare --append
+py main.py download
 ```
 
 或配合 cron 自动运行：
 
 ```cron
-30 16 * * 1-5 cd ~/py/stopat30m && .venv/bin/python main.py download --source akshare --append >> output/logs/cron_data.log 2>&1
+30 16 * * 1-5 cd ~/py/stopat30m && .venv/bin/python main.py download >> output/logs/cron_data.log 2>&1
 ```
 
 ---
@@ -724,7 +699,7 @@ data:
 
 > `test_end` 留空（或不写）时自动取当天日期，无需手动更新。
 
-> **重要**：日期范围必须在已下载数据的覆盖范围内。如果使用 Qlib 公开数据（截止 2020-09-25），需要相应缩短所有日期。推荐使用 AKShare + `--append` 下载最新数据后再训练。
+> **重要**：日期范围必须在已下载数据的覆盖范围内。如果使用 Qlib 公开数据（截止 2020-09-25），需要先运行 `py main.py download` 增量更新到最新再训练。
 
 **原则**：
 - 训练集尽量长（8-12 年），覆盖多轮牛熊
@@ -1256,7 +1231,7 @@ export STOPAT30M_REDIS__HOST=192.168.1.100
 
 ```
 每天（收盘后）:
-  16:30  更新数据    py main.py download --source akshare --append
+  16:30  更新数据    py main.py download
   17:00  生成信号    py main.py signal --model-path output/models/model_lgbm.pkl
   全天    Web 监控   py main.py dashboard (持续运行)
 
@@ -1278,7 +1253,7 @@ export STOPAT30M_REDIS__HOST=192.168.1.100
 # ─── 每天（周一到周五）───
 
 # 16:30 增量更新数据
-30 16 * * 1-5 cd ~/py/stopat30m && .venv/bin/python main.py download --source akshare --append >> output/logs/cron.log 2>&1
+30 16 * * 1-5 cd ~/py/stopat30m && .venv/bin/python main.py download >> output/logs/cron.log 2>&1
 
 # 17:00 用现有模型生成信号
 0 17 * * 1-5 cd ~/py/stopat30m && .venv/bin/python main.py signal --model-path output/models/model_lgbm.pkl --publish >> output/logs/cron.log 2>&1

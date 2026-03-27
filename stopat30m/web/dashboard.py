@@ -44,6 +44,62 @@ MODEL_DIR = OUTPUT_DIR / "models"
 
 
 # ---------------------------------------------------------------------------
+# Global CSS: A-share color convention (red=up, green=down)
+# ---------------------------------------------------------------------------
+
+_CUSTOM_CSS = """
+<style>
+/* Metric card subtle borders */
+[data-testid="stMetric"] {
+    background: rgba(128, 128, 128, 0.04);
+    border: 1px solid rgba(128, 128, 128, 0.12);
+    border-radius: 8px;
+    padding: 12px 16px 8px 16px;
+}
+
+/* Sidebar watermark styling */
+.watermark-box {
+    background: rgba(128, 128, 128, 0.06);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 0.82em;
+    line-height: 1.6;
+}
+</style>
+"""
+
+st.markdown(_CUSTOM_CSS, unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------------------------
+# Table styling helpers (A-share: red=profit, green=loss)
+# ---------------------------------------------------------------------------
+
+_COLOR_POS = "color: #cf222e"  # red – profit in A-share
+_COLOR_NEG = "color: #1a7f37"  # green – loss in A-share
+_COLOR_NEUTRAL = ""
+
+
+def _pnl_text_color(val: object) -> str:
+    """Return CSS text color for a P&L value (A-share convention)."""
+    try:
+        v = float(val)
+    except (TypeError, ValueError):
+        return _COLOR_NEUTRAL
+    if v > 0:
+        return _COLOR_POS
+    if v < 0:
+        return _COLOR_NEG
+    return _COLOR_NEUTRAL
+
+
+def _style_pnl(styler: "pd.io.formats.style.Styler", cols: list[str]) -> "pd.io.formats.style.Styler":
+    """Apply A-share P&L coloring to specified columns, compatible with pandas >=2.0."""
+    _map = getattr(styler, "map", None) or styler.applymap
+    return _map(_pnl_text_color, subset=cols)
+
+
+# ---------------------------------------------------------------------------
 # Sidebar
 # ---------------------------------------------------------------------------
 
@@ -57,12 +113,95 @@ def sidebar() -> dict:
     )
 
     st.sidebar.markdown("---")
+
+    # ---- Data watermark & source info ----
+    _render_sidebar_watermark()
+
+    st.sidebar.markdown("---")
     st.sidebar.markdown(f"更新时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     if st.sidebar.button("刷新数据"):
+        _invalidate_price_cache()
         st.rerun()
 
     return {"page": page}
+
+
+def _render_sidebar_watermark() -> None:
+    """Show data watermark and active source count in sidebar."""
+    try:
+        from stopat30m.data.provider import get_data_dir
+        meta_path = get_data_dir() / "data_meta.json"
+        if not meta_path.exists():
+            return
+
+        meta = json.loads(meta_path.read_text())
+        trusted = meta.get("trusted_until", "")
+        stocks = meta.get("stocks", {})
+        total = len(stocks)
+        active = sum(1 for s in stocks.values() if s.get("status") != "delisted")
+        delisted = total - active
+
+        lines = []
+        if trusted:
+            today = datetime.now().strftime("%Y-%m-%d")
+            lag = (datetime.strptime(today, "%Y-%m-%d") - datetime.strptime(trusted, "%Y-%m-%d")).days
+            color = "#cf222e" if lag > 3 else ("#e3b341" if lag > 0 else "#1a7f37")
+            lines.append(f"可信水位线: <b style='color:{color}'>{trusted}</b>")
+            if lag > 0:
+                lines.append(f"落后: {lag} 天")
+        if total:
+            lines.append(f"股票: {active} 活跃 / {delisted} 退市")
+
+        if lines:
+            st.sidebar.markdown(
+                f"<div class='watermark-box'>{'<br>'.join(lines)}</div>",
+                unsafe_allow_html=True,
+            )
+    except Exception:
+        pass
+
+
+# ---------------------------------------------------------------------------
+# Shared price/name cache (across all pages, per session)
+# ---------------------------------------------------------------------------
+
+def _get_prices_and_names(
+    instruments: list[str],
+) -> tuple[dict[str, float], dict[str, str]]:
+    """Fetch prices and names for given instruments, using session-level cache.
+
+    Only fetches instruments not already cached. Merges results into the
+    shared cache so subsequent pages/calls don't re-fetch.
+    """
+    from stopat30m.trading.rebalancer import (
+        fetch_spot_prices, fetch_stock_names, normalize_instrument,
+    )
+
+    if "shared_prices" not in st.session_state:
+        st.session_state["shared_prices"] = {}
+        st.session_state["shared_names"] = {}
+
+    cached_prices = st.session_state["shared_prices"]
+    cached_names = st.session_state["shared_names"]
+
+    normed = [normalize_instrument(c) for c in instruments]
+    missing = [inst for inst in normed if inst not in cached_prices]
+
+    if missing:
+        with st.spinner(f"获取 {len(missing)} 只股票行情..."):
+            new_prices = fetch_spot_prices(missing)
+            new_names = fetch_stock_names(missing)
+            cached_prices.update(new_prices)
+            cached_names.update(new_names)
+
+    return cached_prices, cached_names
+
+
+def _invalidate_price_cache() -> None:
+    """Clear the shared price cache (e.g. on refresh button)."""
+    st.session_state.pop("shared_prices", None)
+    st.session_state.pop("shared_names", None)
 
 
 # ---------------------------------------------------------------------------
@@ -75,9 +214,7 @@ def page_overview() -> None:
     from stopat30m.trading.ledger import (
         compute_positions, load_portfolio_nav, load_trades,
     )
-    from stopat30m.trading.rebalancer import (
-        bare_code, fetch_spot_prices, fetch_stock_names, normalize_instrument,
-    )
+    from stopat30m.trading.rebalancer import bare_code, normalize_instrument
 
     trades = load_trades()
     positions = compute_positions(trades)
@@ -89,19 +226,8 @@ def page_overview() -> None:
     pos_rows: list[dict] = []
 
     if not positions.empty:
-        instruments = [normalize_instrument(str(r)) for r in positions["instrument"]]
-        cache_key = "overview_prices"
-        names_key = "overview_names"
-        if cache_key not in st.session_state:
-            with st.spinner("获取行情..."):
-                p = fetch_spot_prices(instruments)
-                n = fetch_stock_names(instruments)
-                if not p:
-                    p = _qlib_fallback_prices(instruments)
-                st.session_state[cache_key] = p
-                st.session_state[names_key] = n
-        prices = st.session_state[cache_key]
-        stock_names = st.session_state.get(names_key, {})
+        instruments = [str(r) for r in positions["instrument"]]
+        prices, stock_names = _get_prices_and_names(instruments)
 
         for _, row in positions.iterrows():
             inst = normalize_instrument(str(row["instrument"]))
@@ -131,7 +257,8 @@ def page_overview() -> None:
     col1.metric("持仓数量", len(positions))
     col2.metric("持仓市值", f"¥{total_market:,.0f}")
     col3.metric("总成本", f"¥{total_cost:,.0f}")
-    col4.metric("浮动盈亏", f"¥{total_unrealized:,.0f}", pnl_pct)
+    col4.metric("浮动盈亏", f"¥{total_unrealized:,.0f}", pnl_pct,
+                delta_color="inverse")
 
     # ---- Positions summary ----
     st.markdown("---")
@@ -140,7 +267,13 @@ def page_overview() -> None:
     with col_left:
         st.subheader("当前持仓")
         if pos_rows:
-            st.dataframe(pd.DataFrame(pos_rows), use_container_width=True, hide_index=True)
+            df_overview = pd.DataFrame(pos_rows)
+            styled_overview = _style_pnl(df_overview.style, ["盈亏"]).format({
+                "现价": lambda x: f"¥{x:.2f}" if isinstance(x, (int, float)) else x,
+                "市值": "¥{:,.0f}",
+                "盈亏": lambda x: f"¥{x:+,.0f}",
+            })
+            st.dataframe(styled_overview, use_container_width=True, hide_index=True)
         else:
             st.info("当前无持仓")
 
@@ -162,8 +295,7 @@ def page_overview() -> None:
         st.line_chart(chart_df)
 
     if st.button("刷新行情", key="overview_refresh"):
-        st.session_state.pop("overview_prices", None)
-        st.session_state.pop("overview_names", None)
+        _invalidate_price_cache()
         st.rerun()
 
 
@@ -175,8 +307,8 @@ def page_rebalance() -> None:
         save_portfolio_snapshot,
     )
     from stopat30m.trading.rebalancer import (
-        RebalancePlan, compute_rebalance_plan, fetch_spot_prices,
-        fetch_stock_names, load_latest_signals, normalize_instrument,
+        RebalancePlan, compute_rebalance_plan,
+        load_latest_signals, normalize_instrument,
     )
 
     # ---- Step 1: Load signals ----
@@ -187,7 +319,7 @@ def page_rebalance() -> None:
         return
 
     sig_display = signals.copy()
-    sig_names = st.session_state.get("rebal_names", {})
+    sig_names = st.session_state.get("shared_names", {})
     if sig_names and "instrument" in sig_display.columns:
         sig_display.insert(
             sig_display.columns.get_loc("instrument") + 1, "名称",
@@ -237,28 +369,14 @@ def page_rebalance() -> None:
         all_instruments = list(signals["instrument"].unique())
         if not positions.empty:
             all_instruments += list(positions["instrument"].unique())
-        all_instruments = list({normalize_instrument(c) for c in all_instruments})
+        all_instruments = list(set(all_instruments))
 
-        with st.spinner("正在获取实时行情..."):
-            try:
-                prices = fetch_spot_prices(all_instruments)
-                names = fetch_stock_names(all_instruments)
-            except Exception as e:
-                st.warning(f"AKShare 行情获取失败: {e}")
-                prices = {}
-                names = {}
-
-        price_source = "实时行情"
-        if not prices:
-            with st.spinner("AKShare 不可用，使用本地 Qlib 最新收盘价..."):
-                prices = _qlib_fallback_prices(all_instruments)
-                price_source = "本地收盘价（非实时）"
+        _invalidate_price_cache()
+        prices, names = _get_prices_and_names(all_instruments)
 
         if not prices:
-            st.error("无法获取价格数据（AKShare 网络不通，且本地 Qlib 数据无匹配）")
+            st.error("所有实时数据源均不可用（AKShare / 新浪 / 腾讯），请检查网络后重试")
             return
-
-        st.caption(f"价格来源: {price_source}")
 
         result = compute_rebalance_plan(
             signals=signals,
@@ -268,16 +386,14 @@ def page_rebalance() -> None:
             cash_reserve_pct=cash_reserve,
         )
         st.session_state["rebal_result"] = result
-        st.session_state["rebal_prices"] = prices
-        st.session_state["rebal_names"] = names
 
     # ---- Step 5: Display plan ----
     result: RebalancePlan | None = st.session_state.get("rebal_result")
     if result is None:
         return
 
-    prices = st.session_state.get("rebal_prices", {})
-    stock_names = st.session_state.get("rebal_names", {})
+    prices = st.session_state.get("shared_prices", {})
+    stock_names = st.session_state.get("shared_names", {})
     plan = result.trades
     cf = result.capital_flow
 
@@ -408,85 +524,6 @@ def _record_and_snapshot(
     st.rerun()
 
 
-def _qlib_fallback_prices(instruments: list[str]) -> dict[str, float]:
-    """Fetch latest close prices from local Qlib data as fallback."""
-    import traceback
-
-    from stopat30m.trading.rebalancer import normalize_instrument
-
-    norm = [normalize_instrument(c) for c in instruments]
-
-    try:
-        from stopat30m.data.provider import init_qlib
-        init_qlib()
-    except Exception as e:
-        st.warning(f"Qlib 初始化失败: {e}")
-        return {}
-
-    try:
-        import qlib.data
-        df = qlib.data.D.features(
-            instruments=norm, fields=["$close"],
-            start_time="2020-01-01", end_time="2099-12-31",
-        )
-    except Exception:
-        st.warning(f"Qlib 查询失败:\n```\n{traceback.format_exc()}\n```")
-        return {}
-
-    if df is None or df.empty:
-        st.warning(f"Qlib 返回空数据。查询的股票: {norm[:5]}")
-        return {}
-
-    latest = df.groupby(level="instrument").tail(1).reset_index()
-    prices = {}
-    for _, row in latest.iterrows():
-        inst = str(row["instrument"]).upper()
-        p = float(row["$close"])
-        if p > 0:
-            prices[inst] = p
-
-    if not prices:
-        st.warning(f"Qlib 有数据({len(df)}行)但未匹配到价格。index示例: {list(latest.index[:3])}")
-    return prices
-
-
-def _diagnose_spot_fetch(instruments: list[str]) -> None:
-    """Run AKShare fetch with full diagnostics visible on the page."""
-    import traceback
-
-    st.markdown("**诊断信息：**")
-
-    try:
-        import akshare as ak
-        st.write(f"AKShare 版本: {ak.__version__}")
-    except Exception as e:
-        st.error(f"无法导入 AKShare: {e}")
-        return
-
-    for fn_name in ["stock_zh_a_spot_em", "stock_zh_a_spot"]:
-        st.markdown(f"--- 尝试 `{fn_name}` ---")
-        try:
-            fn = getattr(ak, fn_name, None)
-            if fn is None:
-                st.warning(f"`ak.{fn_name}` 不存在，跳过")
-                continue
-            df = fn()
-            if df is None or df.empty:
-                st.warning("返回空数据")
-                continue
-            st.success(f"成功: {len(df)} 行, 列: {list(df.columns)}")
-            st.dataframe(df.head(3), use_container_width=True)
-
-            from stopat30m.trading.rebalancer import bare_code
-            sample_codes = [bare_code(c) for c in instruments[:3]]
-            matched = df[df.iloc[:, 1].astype(str).isin(sample_codes)]
-            st.write(f"匹配测试 {sample_codes}: 找到 {len(matched)} 行")
-            if not matched.empty:
-                st.dataframe(matched, use_container_width=True)
-            return
-        except Exception:
-            st.error(f"`{fn_name}` 报错:\n```\n{traceback.format_exc()}\n```")
-
 
 def _show_plan_table(df: pd.DataFrame, names: dict[str, str] | None = None) -> None:
     """Display a rebalance plan sub-table with formatted columns."""
@@ -573,7 +610,12 @@ def page_trades() -> None:
         st.subheader("已实现盈亏")
         cum_pnl = pnl.cumsum()
         st.line_chart(cum_pnl, y_label="累计盈亏 (¥)")
-        st.metric("总已实现盈亏", f"¥{pnl.sum():,.2f}")
+        total_pnl = pnl.sum()
+        st.metric(
+            "总已实现盈亏", f"¥{total_pnl:,.2f}",
+            delta=f"¥{total_pnl:+,.2f}" if total_pnl != 0 else None,
+            delta_color="inverse",
+        )
 
 
 def page_positions() -> None:
@@ -583,9 +625,7 @@ def page_positions() -> None:
         compute_positions, load_portfolio_nav, load_trades,
         save_portfolio_snapshot,
     )
-    from stopat30m.trading.rebalancer import (
-        bare_code, fetch_spot_prices, fetch_stock_names, normalize_instrument,
-    )
+    from stopat30m.trading.rebalancer import bare_code, normalize_instrument
 
     trades = load_trades()
     positions = compute_positions(trades)
@@ -595,26 +635,11 @@ def page_positions() -> None:
         _show_nav_chart()
         return
 
-    # ---- Fetch live prices & names ----
-    instruments = [normalize_instrument(str(r)) for r in positions["instrument"]]
-    prices_cache_key = "pos_prices"
-    names_cache_key = "pos_names"
+    # ---- Fetch live prices & names (shared cache) ----
+    instruments = [str(r) for r in positions["instrument"]]
     if st.button("刷新行情"):
-        st.session_state.pop(prices_cache_key, None)
-        st.session_state.pop(names_cache_key, None)
-
-    if prices_cache_key not in st.session_state:
-        with st.spinner("获取行情..."):
-            p = fetch_spot_prices(instruments)
-            n = fetch_stock_names(instruments)
-            if not p:
-                p = _qlib_fallback_prices(instruments)
-                if p:
-                    st.caption("价格来源: 本地收盘价（AKShare 不可用）")
-            st.session_state[prices_cache_key] = p
-            st.session_state[names_cache_key] = n
-    prices = st.session_state[prices_cache_key]
-    stock_names = st.session_state.get(names_cache_key, {})
+        _invalidate_price_cache()
+    prices, stock_names = _get_prices_and_names(instruments)
 
     # ---- Build enriched positions table ----
     rows = []
@@ -650,18 +675,22 @@ def page_positions() -> None:
     col2.metric("总市值", f"¥{total_market:,.0f}")
     col3.metric("总成本", f"¥{total_cost:,.0f}")
     pnl_delta = f"{total_unrealized / total_cost:.2%}" if total_cost > 0 else "0%"
-    col4.metric("浮动盈亏", f"¥{total_unrealized:,.0f}", pnl_delta)
+    col4.metric("浮动盈亏", f"¥{total_unrealized:,.0f}", pnl_delta,
+                delta_color="inverse")
 
     # ---- Styled table ----
     st.markdown("---")
     st.subheader("持仓明细")
 
-    styled = display.copy()
-    styled["盈亏比例"] = styled["盈亏比例"].map(lambda x: f"{x:+.2%}")
-    styled["浮动盈亏"] = styled["浮动盈亏"].map(lambda x: f"¥{x:+,.0f}")
-    styled["市值"] = styled["市值"].map(lambda x: f"¥{x:,.0f}" if isinstance(x, (int, float)) else x)
-    styled["持仓成本"] = styled["持仓成本"].map(lambda x: f"¥{x:,.0f}")
-    st.dataframe(styled, use_container_width=True, hide_index=True)
+    styled_pos = _style_pnl(display.style, ["浮动盈亏", "盈亏比例"]).format({
+        "成本价": "¥{:.4f}",
+        "现价": lambda x: f"¥{x:.2f}" if isinstance(x, (int, float)) else x,
+        "市值": "¥{:,.0f}",
+        "浮动盈亏": lambda x: f"¥{x:+,.0f}",
+        "盈亏比例": "{:+.2%}",
+        "持仓成本": "¥{:,.0f}",
+    })
+    st.dataframe(styled_pos, use_container_width=True, hide_index=True)
 
     # ---- Allocation pie chart ----
     st.markdown("---")
