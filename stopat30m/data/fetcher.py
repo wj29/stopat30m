@@ -1594,8 +1594,8 @@ def _worker_fetch(
 # ---------------------------------------------------------------------------
 
 _SOURCE_WEIGHT = {
-    "baostock": 5,
-    "akshare": 1,
+    "baostock": 4,
+    "akshare": 2,
     "tushare": 2,
 }
 
@@ -1606,9 +1606,9 @@ def _partition_work(
 ) -> list[list[tuple[str, str | None, str]]]:
     """Distribute stocks across fetchers weighted by aggregate throughput.
 
-    Weights reflect actual aggregate speed so both sources finish at ~same time:
-      BaoStock: ~4.5 stocks/s (4 sub-processes × ~1.2/s) → weight 5
-      AkShare:  ~0.9 stocks/s (rate-limited, single connection) → weight 1
+    Weights trade off throughput and source diversification:
+      BaoStock: ~4.5 stocks/s (4 sub-processes × ~1.2/s) → weight 4
+      AkShare:  ~0.9 stocks/s (rate-limited, single connection) → weight 2
       TuShare:  ~1.5 stocks/s (API quota-limited) → weight 2
 
     Each source gets a contiguous chunk (better for checkpoint resume).
