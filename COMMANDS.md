@@ -125,6 +125,10 @@ py main.py dashboard
 ## 其他
 
 ```bash
+# 首次一键启动（已安装 requirements.txt 前提下）
+# 执行: 全量下载 -> 训练(lgbm) -> 产出信号
+./first_run.sh
+
 # 查看因子库统计（Alpha158 基础因子 + 扩展因子组）
 py main.py info
 
