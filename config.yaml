@@ -107,6 +107,28 @@ signal:
   output_format: "csv"
   rebalance_freq: 5
 
+signal_backtest:
+  horizons: [1, 3, 5, 10, 20]
+  group_count: 10
+  top_k: 10
+  method: "top_k"
+  rebalance_freq: 5
+  benchmark: "SH000300"
+
+account_backtest:
+  initial_capital: 1000000
+  top_k: 10
+  method: "top_k"
+  rebalance_freq: 5
+  execution_price: "open"
+  order_type: "market"
+  slippage_bps: 5
+  allow_partial_fill: true
+  participation_rate: 0.1
+  cash_reserve_pct: 0.02
+  benchmark: "SH000300"
+  enable_risk_manager: true
+
 trading:
   gateway: "xtp"
   account: ""

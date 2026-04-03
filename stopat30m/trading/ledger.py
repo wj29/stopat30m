@@ -44,6 +44,22 @@ def load_trades() -> pd.DataFrame:
     return df
 
 
+def validate_trade(
+    direction: str, quantity: int, price: float, instrument: str,
+) -> tuple[bool, str]:
+    """Basic sanity checks before recording a trade."""
+    if direction.upper() not in (DIRECTION_BUY, DIRECTION_SELL):
+        return False, f"无效方向: {direction}"
+    if quantity <= 0:
+        return False, f"数量必须大于 0: {quantity}"
+    if price <= 0:
+        return False, f"价格必须大于 0: {price}"
+    bare = instrument.strip().upper()
+    if not bare:
+        return False, "证券代码不能为空"
+    return True, ""
+
+
 def add_trade(
     date: str,
     instrument: str,
@@ -54,6 +70,10 @@ def add_trade(
     note: str = "",
 ) -> pd.DataFrame:
     """Append a trade record and return updated trades."""
+    ok, reason = validate_trade(direction, quantity, price, instrument)
+    if not ok:
+        raise ValueError(reason)
+
     df = load_trades()
     max_id = int(df["id"].max()) if not df.empty else 0
     new_row = pd.DataFrame([{
@@ -111,11 +131,13 @@ def compute_positions(trades: pd.DataFrame | None = None) -> pd.DataFrame:
             pos["total_cost"] += qty * price
             pos["quantity"] += qty
         elif row["direction"] == DIRECTION_SELL:
-            if pos["quantity"] > 0:
-                # Reduce cost proportionally
-                sell_ratio = min(qty, pos["quantity"]) / pos["quantity"]
-                pos["total_cost"] *= (1 - sell_ratio)
-            pos["quantity"] -= qty
+            actual_sell = min(qty, pos["quantity"])
+            if actual_sell <= 0:
+                logger.warning(f"Sell {qty} {inst} but position is {pos['quantity']}, skipping")
+                continue
+            sell_ratio = actual_sell / pos["quantity"]
+            pos["total_cost"] *= (1 - sell_ratio)
+            pos["quantity"] -= actual_sell
 
         pos["commission_total"] += comm
 

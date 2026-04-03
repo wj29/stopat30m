@@ -41,29 +41,109 @@ import numpy as np
 OUTPUT_DIR = Path("./output")
 SIGNAL_DIR = OUTPUT_DIR / "signals"
 MODEL_DIR = OUTPUT_DIR / "models"
+PAPER_DIR = OUTPUT_DIR / "paper"
+BACKTESTS_DIR = OUTPUT_DIR / "backtests"
 
 
 # ---------------------------------------------------------------------------
-# Global CSS: A-share color convention (red=up, green=down)
+# Global CSS
 # ---------------------------------------------------------------------------
 
 _CUSTOM_CSS = """
 <style>
-/* Metric card subtle borders */
+/* ---- Metric cards ---- */
 [data-testid="stMetric"] {
-    background: rgba(128, 128, 128, 0.04);
-    border: 1px solid rgba(128, 128, 128, 0.12);
-    border-radius: 8px;
-    padding: 12px 16px 8px 16px;
+    background: linear-gradient(135deg, rgba(128,128,128,0.03) 0%, rgba(128,128,128,0.07) 100%);
+    border: 1px solid rgba(128,128,128,0.12);
+    border-radius: 10px;
+    padding: 14px 18px 10px 18px;
+    transition: border-color 0.2s;
+}
+[data-testid="stMetric"]:hover {
+    border-color: rgba(99,102,241,0.4);
 }
 
-/* Sidebar watermark styling */
+/* ---- Sidebar ---- */
+section[data-testid="stSidebar"] > div:first-child { padding-top: 1rem; }
+
+.sidebar-brand {
+    text-align: center;
+    padding: 0.4rem 0 0.6rem 0;
+}
+.sidebar-brand h2 {
+    margin: 0;
+    font-size: 1.35rem;
+    letter-spacing: 0.04em;
+    font-weight: 700;
+}
+.sidebar-brand .subtitle {
+    font-size: 0.78rem;
+    opacity: 0.55;
+    margin-top: 2px;
+}
+
+.sidebar-section-label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.45;
+    padding: 10px 0 4px 4px;
+    font-weight: 600;
+}
+
+.sidebar-mode-badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 10px;
+    margin-top: 4px;
+}
+.badge-paper {
+    background: rgba(234,179,8,0.15);
+    color: #b45309;
+    border: 1px solid rgba(234,179,8,0.3);
+}
+.badge-live {
+    background: rgba(34,197,94,0.15);
+    color: #15803d;
+    border: 1px solid rgba(34,197,94,0.3);
+}
+
+/* ---- Watermark box ---- */
 .watermark-box {
-    background: rgba(128, 128, 128, 0.06);
-    border-radius: 6px;
-    padding: 8px 12px;
-    font-size: 0.82em;
-    line-height: 1.6;
+    background: rgba(128,128,128,0.06);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.8em;
+    line-height: 1.7;
+}
+
+/* ---- Page header status bar ---- */
+.page-status-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+}
+.status-bar-paper {
+    background: rgba(234,179,8,0.08);
+    border: 1px solid rgba(234,179,8,0.2);
+}
+.status-bar-live {
+    background: rgba(34,197,94,0.08);
+    border: 1px solid rgba(34,197,94,0.2);
+}
+
+/* ---- Sidebar footer ---- */
+.sidebar-footer {
+    font-size: 0.72rem;
+    opacity: 0.4;
+    text-align: center;
+    padding: 8px 0;
 }
 </style>
 """
@@ -100,31 +180,128 @@ def _style_pnl(styler: "pd.io.formats.style.Styler", cols: list[str]) -> "pd.io.
 
 
 # ---------------------------------------------------------------------------
+# Page registry: (key, icon, label)
+# ---------------------------------------------------------------------------
+
+_PORTFOLIO_PAGES = [
+    ("overview",    "📊", "投资概览"),
+    ("trading",     "💹", "交易中心"),
+    ("trades",      "📝", "交易记录"),
+]
+
+_SYSTEM_PAGES = [
+    ("signals",     "📡", "信号中心"),
+    ("model_eval",  "🧪", "模型评估"),
+    ("signal_bt",   "🧭", "信号回测"),
+    ("account_bt",  "🏦", "账户回测"),
+    ("risk",        "🛡️", "风控监控"),
+    ("factors",     "🔬", "因子分析"),
+]
+
+_ALL_PAGES = _PORTFOLIO_PAGES + _SYSTEM_PAGES
+_PAGE_LABELS = {key: f"{icon} {label}" for key, icon, label in _ALL_PAGES}
+_LABEL_TO_KEY = {v: k for k, v in _PAGE_LABELS.items()}
+
+
+# ---------------------------------------------------------------------------
 # Sidebar
 # ---------------------------------------------------------------------------
 
 def sidebar() -> dict:
-    st.sidebar.title("StopAt30M")
-    st.sidebar.markdown("AI量化交易监控系统")
-
-    page = st.sidebar.radio(
-        "导航",
-        ["概览", "调仓操作", "交易记录", "持仓管理", "信号历史", "模型评估", "风控监控", "因子分析"],
+    # ---- Brand ----
+    st.sidebar.markdown(
+        "<div class='sidebar-brand'>"
+        "<h2>StopAt30M</h2>"
+        "<div class='subtitle'>AI 量化交易监控系统</div>"
+        "</div>",
+        unsafe_allow_html=True,
     )
 
+    # ---- Mode badge ----
+    is_paper = _paper_mode()
+    badge_cls = "badge-paper" if is_paper else "badge-live"
+    badge_text = "模拟交易" if is_paper else "手动记账"
+    st.sidebar.markdown(
+        f"<div style='text-align:center'>"
+        f"<span class='sidebar-mode-badge {badge_cls}'>{badge_text}</span>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+
+    st.sidebar.markdown("")
+
+    # ---- Portfolio section ----
+    st.sidebar.markdown(
+        "<div class='sidebar-section-label'>我的投资组合</div>",
+        unsafe_allow_html=True,
+    )
+    portfolio_labels = [_PAGE_LABELS[k] for k, _, _ in _PORTFOLIO_PAGES]
+    p_idx = _get_section_index("_port_idx", 0)
+    portfolio_choice = st.sidebar.radio(
+        "投资组合", portfolio_labels,
+        index=p_idx, key="nav_portfolio", label_visibility="collapsed",
+        on_change=_on_portfolio_click,
+    )
+
+    # ---- System section ----
+    st.sidebar.markdown(
+        "<div class='sidebar-section-label'>系统分析</div>",
+        unsafe_allow_html=True,
+    )
+    system_labels = [_PAGE_LABELS[k] for k, _, _ in _SYSTEM_PAGES]
+    s_idx = _get_section_index("_sys_idx", 0)
+    system_choice = st.sidebar.radio(
+        "系统分析", system_labels,
+        index=s_idx, key="nav_system", label_visibility="collapsed",
+        on_change=_on_system_click,
+    )
+
+    # Resolve active page from session
+    section = st.session_state.get("_active_section", "portfolio")
+    if section == "portfolio":
+        page_key = _LABEL_TO_KEY.get(portfolio_choice, "overview")
+    else:
+        page_key = _LABEL_TO_KEY.get(system_choice, "signals")
+
     st.sidebar.markdown("---")
 
-    # ---- Data watermark & source info ----
+    # ---- Data watermark ----
     _render_sidebar_watermark()
 
-    st.sidebar.markdown("---")
-    st.sidebar.markdown(f"更新时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-
-    if st.sidebar.button("刷新数据"):
+    # ---- Refresh + timestamp ----
+    st.sidebar.markdown("")
+    ts = datetime.now().strftime("%H:%M:%S")
+    col_ts, col_btn = st.sidebar.columns([3, 2])
+    col_ts.caption(f"🕐 {ts}")
+    if col_btn.button("刷新", use_container_width=True):
         _invalidate_price_cache()
         st.rerun()
 
-    return {"page": page}
+    # ---- Footer ----
+    st.sidebar.markdown(
+        "<div class='sidebar-footer'>StopAt30M v0.1</div>",
+        unsafe_allow_html=True,
+    )
+
+    return {"page": page_key}
+
+
+def _get_section_index(key: str, default: int) -> int:
+    return st.session_state.get(key, default)
+
+
+def _on_portfolio_click() -> None:
+    st.session_state["_active_section"] = "portfolio"
+    portfolio_labels = [_PAGE_LABELS[k] for k, _, _ in _PORTFOLIO_PAGES]
+    chosen = st.session_state.get("nav_portfolio", portfolio_labels[0])
+    st.session_state["_port_idx"] = portfolio_labels.index(chosen) if chosen in portfolio_labels else 0
+
+
+def _on_system_click() -> None:
+    st.session_state["_active_section"] = "system"
+    system_labels = [_PAGE_LABELS[k] for k, _, _ in _SYSTEM_PAGES]
+    chosen = st.session_state.get("nav_system", system_labels[0])
+    st.session_state["_sys_idx"] = system_labels.index(chosen) if chosen in system_labels else 0
 
 
 def _render_sidebar_watermark() -> None:
@@ -204,61 +381,127 @@ def _invalidate_price_cache() -> None:
     st.session_state.pop("shared_names", None)
 
 
+def _get_paper_broker():
+    """Load PaperBroker from disk (returns None if not initialized)."""
+    from stopat30m.trading.broker.paper import PaperBroker
+
+    broker = PaperBroker(state_dir=PAPER_DIR)
+    return broker if broker.is_initialized else None
+
+
+def _paper_mode() -> bool:
+    """True if a paper trading account exists."""
+    return (PAPER_DIR / "paper_state.json").exists()
+
+
+def _page_header(title: str, subtitle: str = "") -> None:
+    """Render a page title with optional contextual status bar."""
+    st.title(title)
+    is_paper = _paper_mode()
+    cls = "status-bar-paper" if is_paper else "status-bar-live"
+    mode_label = "📋 模拟交易模式" if is_paper else "📒 手动记账模式"
+    parts = [f"<b>{mode_label}</b>"]
+    if subtitle:
+        parts.append(f"<span style='opacity:0.7'>| {subtitle}</span>")
+    st.markdown(
+        f"<div class='page-status-bar {cls}'>{'  '.join(parts)}</div>",
+        unsafe_allow_html=True,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Pages
 # ---------------------------------------------------------------------------
 
 def page_overview() -> None:
-    st.title("系统概览")
-
-    from stopat30m.trading.ledger import (
-        compute_positions, load_portfolio_nav, load_trades,
-    )
     from stopat30m.trading.rebalancer import bare_code, normalize_instrument
 
-    trades = load_trades()
-    positions = compute_positions(trades)
+    broker = _get_paper_broker()
+    use_paper = broker is not None
+    _page_header("投资概览", "实时持仓与盈亏一览")
 
-    # ---- Fetch prices for live valuation ----
+    # ---- Load positions from broker or legacy ledger ----
     total_market = 0.0
     total_cost = 0.0
     total_unrealized = 0.0
+    total_cash = 0.0
+    realized_pnl = 0.0
     pos_rows: list[dict] = []
+    pos_count = 0
 
-    if not positions.empty:
-        instruments = [str(r) for r in positions["instrument"]]
-        prices, stock_names = _get_prices_and_names(instruments)
+    if use_paper:
+        acct = broker.get_account()
+        positions = broker.get_positions()
+        instruments = list(positions.keys())
+        if instruments:
+            prices, stock_names = _get_prices_and_names(instruments)
+            broker.update_prices(prices)
+        else:
+            prices, stock_names = {}, {}
 
-        for _, row in positions.iterrows():
-            inst = normalize_instrument(str(row["instrument"]))
-            qty = int(row["quantity"])
-            avg_cost = float(row["avg_cost"])
-            cost = float(row["total_cost"])
-            price = prices.get(inst, 0)
-            mv = qty * price
-            pnl = mv - cost
+        for inst, pos in positions.items():
+            price = prices.get(inst, pos.current_price)
+            mv = pos.quantity * price
+            pnl = mv - pos.total_cost
             total_market += mv
-            total_cost += cost
+            total_cost += pos.total_cost
             total_unrealized += pnl
             pos_rows.append({
                 "代码": bare_code(inst),
                 "名称": stock_names.get(inst, ""),
-                "持仓": qty,
+                "持仓": pos.quantity,
                 "现价": round(price, 2) if price > 0 else "N/A",
                 "市值": round(mv, 2),
                 "盈亏": round(pnl, 2),
             })
+        total_cash = acct.cash
+        realized_pnl = acct.realized_pnl
+        pos_count = len(positions)
+    else:
+        from stopat30m.trading.ledger import compute_positions, load_trades
 
-    # ---- Top metrics (consistent with 持仓管理) ----
-    capital = float(st.session_state.get("rebal_capital", total_market * 1.1)) if total_market > 0 else 0
+        trades = load_trades()
+        ledger_positions = compute_positions(trades)
+        pos_count = len(ledger_positions)
+
+        if not ledger_positions.empty:
+            instruments = [str(r) for r in ledger_positions["instrument"]]
+            prices, stock_names = _get_prices_and_names(instruments)
+            for _, row in ledger_positions.iterrows():
+                inst = normalize_instrument(str(row["instrument"]))
+                qty = int(row["quantity"])
+                cost = float(row["total_cost"])
+                price = prices.get(inst, 0)
+                mv = qty * price
+                pnl = mv - cost
+                total_market += mv
+                total_cost += cost
+                total_unrealized += pnl
+                pos_rows.append({
+                    "代码": bare_code(inst),
+                    "名称": stock_names.get(inst, ""),
+                    "持仓": qty,
+                    "现价": round(price, 2) if price > 0 else "N/A",
+                    "市值": round(mv, 2),
+                    "盈亏": round(pnl, 2),
+                })
+
+    # ---- Top metrics ----
     pnl_pct = f"{total_unrealized / total_cost:.2%}" if total_cost > 0 else "0%"
 
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("持仓数量", len(positions))
-    col2.metric("持仓市值", f"¥{total_market:,.0f}")
-    col3.metric("总成本", f"¥{total_cost:,.0f}")
-    col4.metric("浮动盈亏", f"¥{total_unrealized:,.0f}", pnl_pct,
-                delta_color="inverse")
+    if use_paper:
+        c1, c2, c3, c4, c5 = st.columns(5)
+        c1.metric("持仓数量", pos_count)
+        c2.metric("总权益", f"¥{acct.equity:,.0f}")
+        c3.metric("现金", f"¥{total_cash:,.0f}")
+        c4.metric("浮动盈亏", f"¥{total_unrealized:,.0f}", pnl_pct, delta_color="inverse")
+        c5.metric("已实现盈亏", f"¥{realized_pnl:,.0f}", delta_color="inverse")
+    else:
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("持仓数量", pos_count)
+        col2.metric("持仓市值", f"¥{total_market:,.0f}")
+        col3.metric("总成本", f"¥{total_cost:,.0f}")
+        col4.metric("浮动盈亏", f"¥{total_unrealized:,.0f}", pnl_pct, delta_color="inverse")
 
     # ---- Positions summary ----
     st.markdown("---")
@@ -286,38 +529,325 @@ def page_overview() -> None:
             st.info("暂无信号数据")
 
     # ---- NAV chart ----
-    nav_df = load_portfolio_nav()
-    if not nav_df.empty:
-        st.markdown("---")
-        st.subheader("净值走势")
-        chart_df = nav_df.set_index("date")[["total_value"]]
-        chart_df.columns = ["总资产"]
-        st.line_chart(chart_df)
+    st.markdown("---")
+    if use_paper:
+        nav_list = broker.get_nav_history()
+        if len(nav_list) >= 2:
+            st.subheader("净值走势")
+            nav_df = pd.DataFrame([n.to_dict() for n in nav_list])
+            nav_df["date"] = pd.to_datetime(nav_df["date"])
+            chart_df = nav_df.set_index("date")[["equity"]]
+            chart_df.columns = ["总权益"]
+            st.line_chart(chart_df)
+    else:
+        from stopat30m.trading.ledger import load_portfolio_nav
+        nav_df = load_portfolio_nav()
+        if not nav_df.empty:
+            st.subheader("净值走势")
+            chart_df = nav_df.set_index("date")[["total_value"]]
+            chart_df.columns = ["总资产"]
+            st.line_chart(chart_df)
 
     if st.button("刷新行情", key="overview_refresh"):
         _invalidate_price_cache()
         st.rerun()
 
 
-def page_rebalance() -> None:
-    st.title("调仓操作")
+def page_trading() -> None:
+    """Unified trading center: positions + rebalance + manual trade in tabs."""
+    from stopat30m.trading.rebalancer import bare_code, normalize_instrument
 
-    from stopat30m.trading.ledger import (
-        add_trades_batch, compute_positions, load_trades,
-        save_portfolio_snapshot,
+    broker = _get_paper_broker()
+    use_paper = broker is not None
+    _page_header("交易中心", "持仓查看、调仓执行与手动交易")
+
+    tab_pos, tab_rebal, tab_manual = st.tabs(["📊 持仓总览", "⚖️ 智能调仓", "✏️ 手动交易"])
+
+    with tab_pos:
+        _tab_positions(broker, use_paper, bare_code, normalize_instrument)
+    with tab_rebal:
+        _tab_rebalance(broker, use_paper, normalize_instrument)
+    with tab_manual:
+        _tab_manual_trade(broker, use_paper)
+
+
+# ---------------------------------------------------------------------------
+# Quick sell from positions
+# ---------------------------------------------------------------------------
+
+def _quick_sell(sellable: list[dict], broker, use_paper: bool) -> None:
+    st.markdown("---")
+    with st.expander("⚡ 快捷卖出"):
+        labels = [s["label"] for s in sellable]
+        sel_idx = st.selectbox(
+            "选择持仓", range(len(labels)),
+            format_func=lambda i: f"{labels[i]}  (可卖 {sellable[i]['available']})",
+            key="qs_select",
+        )
+        chosen = sellable[sel_idx]
+        max_qty = chosen["available"]
+
+        col1, col2 = st.columns(2)
+        with col1:
+            qty = st.number_input(
+                "卖出数量（股）", min_value=100, max_value=max_qty,
+                step=100, value=min(max_qty, 100), key="qs_qty",
+            )
+        with col2:
+            if use_paper:
+                otype = st.selectbox("委托类型", ["MARKET", "LIMIT"], key="qs_otype")
+            else:
+                otype = "LEDGER"
+                sell_price = st.number_input(
+                    "成交价", min_value=0.01, step=0.01,
+                    value=round(chosen["price"], 2) if chosen["price"] > 0 else 10.0,
+                    format="%.4f", key="qs_price",
+                )
+
+        limit_price = None
+        if use_paper and otype == "LIMIT":
+            limit_price = st.number_input(
+                "限价", min_value=0.01, step=0.01,
+                value=round(chosen["price"], 2) if chosen["price"] > 0 else 10.0,
+                format="%.4f", key="qs_limit",
+            )
+
+        if st.button("确认卖出", type="primary", key="qs_submit"):
+            if use_paper:
+                _quick_sell_paper(broker, chosen["instrument"], qty, otype, limit_price)
+            else:
+                _quick_sell_ledger(chosen["instrument"], qty, sell_price)
+
+
+def _quick_sell_paper(broker, instrument: str, qty: int, otype: str, limit_price: float | None) -> None:
+    from stopat30m.trading.models import Order, OrderDirection, OrderStatus, OrderType
+    from stopat30m.trading.rebalancer import fetch_spot_prices
+
+    if otype == "MARKET":
+        prices = fetch_spot_prices([instrument])
+        if prices:
+            broker.update_prices(prices)
+        else:
+            st.error("无法获取实时价格")
+            return
+
+    order = Order(
+        instrument=instrument,
+        direction=OrderDirection.SELL,
+        order_type=OrderType(otype),
+        quantity=qty,
+        limit_price=limit_price,
     )
+    result = broker.submit_order(order)
+    if result.status == OrderStatus.FILLED:
+        st.success(
+            f"卖出成交: {result.instrument} {result.filled_quantity} 股 "
+            f"@ ¥{result.avg_fill_price:.4f}, 费用 ¥{result.total_fee:.2f}"
+        )
+        st.rerun()
+    else:
+        st.error(f"卖出被拒绝: {result.reject_reason}")
+
+
+def _quick_sell_ledger(instrument: str, qty: int, price: float) -> None:
+    from stopat30m.trading.ledger import add_trade
+
+    add_trade(
+        date=datetime.now().strftime("%Y-%m-%d"),
+        instrument=instrument, direction="SELL",
+        quantity=qty, price=price,
+        commission=0.0, note="快捷卖出",
+    )
+    st.success(f"已录入卖出: {instrument} {qty} 股 @ ¥{price:.4f}")
+    st.rerun()
+
+
+# ---------------------------------------------------------------------------
+# Tab: 持仓总览
+# ---------------------------------------------------------------------------
+
+def _tab_positions(broker, use_paper: bool, bare_code, normalize_instrument) -> None:
+    if st.button("刷新行情", key="pos_refresh"):
+        _invalidate_price_cache()
+
+    rows: list[dict] = []
+    total_market = 0.0
+    total_cost = 0.0
+    total_unrealized = 0.0
+    sellable: list[dict] = []
+
+    if use_paper:
+        bp = broker.get_positions()
+        if not bp:
+            st.info("当前无持仓")
+            _show_nav_chart_paper(broker)
+            return
+
+        instruments = list(bp.keys())
+        prices, stock_names = _get_prices_and_names(instruments)
+        broker.update_prices(prices)
+
+        for inst, pos in bp.items():
+            price = prices.get(inst, pos.current_price)
+            mv = pos.quantity * price
+            unrealized = mv - pos.total_cost
+            pnl_pct = unrealized / pos.total_cost if pos.total_cost > 0 else 0
+            total_market += mv
+            total_cost += pos.total_cost
+            total_unrealized += unrealized
+            name = stock_names.get(inst, "")
+            rows.append({
+                "代码": bare_code(inst), "名称": name,
+                "持仓量": pos.quantity, "可卖": pos.available_quantity, "冻结": pos.frozen_quantity,
+                "成本价": round(pos.avg_cost, 4),
+                "现价": round(price, 2) if price > 0 else "N/A",
+                "市值": round(mv, 2), "浮动盈亏": round(unrealized, 2),
+                "盈亏比例": pnl_pct, "持仓成本": round(pos.total_cost, 2),
+            })
+            if pos.available_quantity > 0:
+                label = f"{bare_code(inst)} {name}".strip() if name else bare_code(inst)
+                sellable.append({
+                    "label": label, "instrument": inst,
+                    "available": pos.available_quantity, "price": price,
+                })
+        pos_count = len(bp)
+    else:
+        from stopat30m.trading.ledger import compute_positions, load_trades
+        trades = load_trades()
+        positions = compute_positions(trades)
+        if positions.empty:
+            st.info("当前无持仓")
+            _show_nav_chart()
+            return
+
+        instruments = [str(r) for r in positions["instrument"]]
+        prices, stock_names = _get_prices_and_names(instruments)
+        for _, row in positions.iterrows():
+            inst = normalize_instrument(str(row["instrument"]))
+            qty = int(row["quantity"])
+            avg_cost = float(row["avg_cost"])
+            tc = float(row["total_cost"])
+            price = prices.get(inst, 0)
+            mv = qty * price
+            unrealized = mv - tc
+            pnl_pct = unrealized / tc if tc > 0 else 0
+            total_market += mv
+            total_cost += tc
+            total_unrealized += unrealized
+            name = stock_names.get(inst, "")
+            rows.append({
+                "代码": bare_code(inst), "名称": name,
+                "持仓量": qty, "成本价": round(avg_cost, 4),
+                "现价": round(price, 2) if price > 0 else "N/A",
+                "市值": round(mv, 2), "浮动盈亏": round(unrealized, 2),
+                "盈亏比例": pnl_pct, "持仓成本": round(tc, 2),
+            })
+            if qty > 0:
+                label = f"{bare_code(inst)} {name}".strip() if name else bare_code(inst)
+                sellable.append({
+                    "label": label, "instrument": inst,
+                    "available": qty, "price": price,
+                })
+        pos_count = len(positions)
+
+    # Metrics
+    if use_paper:
+        acct = broker.get_account()
+        c1, c2, c3, c4, c5 = st.columns(5)
+        c1.metric("持仓数量", pos_count)
+        c2.metric("总权益", f"¥{acct.equity:,.0f}")
+        c3.metric("现金", f"¥{acct.cash:,.0f}")
+        pnl_delta = f"{total_unrealized / total_cost:.2%}" if total_cost > 0 else "0%"
+        c4.metric("浮动盈亏", f"¥{total_unrealized:,.0f}", pnl_delta, delta_color="inverse")
+        c5.metric("已实现盈亏", f"¥{acct.realized_pnl:,.0f}", delta_color="inverse")
+    else:
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("持仓数量", pos_count)
+        col2.metric("总市值", f"¥{total_market:,.0f}")
+        col3.metric("总成本", f"¥{total_cost:,.0f}")
+        pnl_delta = f"{total_unrealized / total_cost:.2%}" if total_cost > 0 else "0%"
+        col4.metric("浮动盈亏", f"¥{total_unrealized:,.0f}", pnl_delta, delta_color="inverse")
+
+    # Position table
+    st.markdown("---")
+    display = pd.DataFrame(rows)
+    pnl_cols = ["浮动盈亏", "盈亏比例"]
+    fmt_dict = {
+        "成本价": "¥{:.4f}",
+        "现价": lambda x: f"¥{x:.2f}" if isinstance(x, (int, float)) else x,
+        "市值": "¥{:,.0f}", "浮动盈亏": lambda x: f"¥{x:+,.0f}",
+        "盈亏比例": "{:+.2%}", "持仓成本": "¥{:,.0f}",
+    }
+    st.dataframe(
+        _style_pnl(display.style, pnl_cols).format(fmt_dict),
+        use_container_width=True, hide_index=True,
+    )
+
+    # Quick sell
+    if sellable:
+        _quick_sell(sellable, broker, use_paper)
+
+    # Charts
+    st.markdown("---")
+    col_left, col_right = st.columns(2)
+    with col_left:
+        st.subheader("持仓占比")
+        if total_market > 0:
+            alloc = pd.DataFrame(rows)[["代码", "名称", "市值"]].copy()
+            alloc = alloc[alloc["市值"] > 0]
+            alloc["标签"] = alloc.apply(lambda r: r["名称"] if r["名称"] else r["代码"], axis=1)
+            st.bar_chart(alloc.set_index("标签")[["市值"]], y_label="市值 (¥)")
+    with col_right:
+        st.subheader("盈亏分布")
+        pnl_df = pd.DataFrame(rows)[["代码", "名称", "浮动盈亏"]].copy()
+        pnl_df = pnl_df[pnl_df["浮动盈亏"] != 0]
+        pnl_df["标签"] = pnl_df.apply(lambda r: r["名称"] if r["名称"] else r["代码"], axis=1)
+        if not pnl_df.empty:
+            st.bar_chart(pnl_df.set_index("标签")[["浮动盈亏"]], y_label="浮动盈亏 (¥)")
+
+    # Settlement
+    st.markdown("---")
+    if use_paper:
+        if st.button("执行 T+1 日终结算 (settle)", type="primary", key="settle_btn"):
+            today = datetime.now().strftime("%Y-%m-%d")
+            snap = broker.settle_day(today)
+            st.success(f"结算完成 {today}: 权益 ¥{snap.equity:,.0f}, 日收益 {snap.daily_return:+.2%}")
+            st.rerun()
+        _show_nav_chart_paper(broker)
+    else:
+        from stopat30m.trading.ledger import save_portfolio_snapshot
+        capital_input = st.number_input(
+            "总资金（用于计算现金和净值）", min_value=0.0,
+            value=float(st.session_state.get("rebal_capital", total_market * 1.1)),
+            step=10000.0, format="%.0f", key="pos_capital",
+        )
+        if st.button("记录今日净值快照", key="snapshot_btn"):
+            cash = capital_input - total_market
+            save_portfolio_snapshot(
+                date=datetime.now().strftime("%Y-%m-%d"),
+                total_value=capital_input, total_cost=total_cost,
+                cash=cash, unrealized_pnl=total_unrealized,
+            )
+            st.success(f"已记录净值: 总资产 ¥{capital_input:,.0f}, 持仓 ¥{total_market:,.0f}, 现金 ¥{cash:,.0f}")
+        _show_nav_chart()
+
+
+# ---------------------------------------------------------------------------
+# Tab: 智能调仓
+# ---------------------------------------------------------------------------
+
+def _tab_rebalance(broker, use_paper: bool, normalize_instrument) -> None:
     from stopat30m.trading.rebalancer import (
-        RebalancePlan, compute_rebalance_plan,
-        load_latest_signals, normalize_instrument,
+        RebalancePlan, compute_rebalance_plan, load_latest_signals,
     )
 
-    # ---- Step 1: Load signals ----
-    st.subheader("① 最新信号")
     signals = load_latest_signals()
     if signals is None or signals.empty:
         st.warning("暂无信号文件。请先运行 `py main.py signal --model-path output/models/model_lgbm.pkl`")
         return
 
+    # Signal display
+    st.subheader("目标信号")
     sig_display = signals.copy()
     sig_names = st.session_state.get("shared_names", {})
     if sig_names and "instrument" in sig_display.columns:
@@ -334,60 +864,55 @@ def page_rebalance() -> None:
     target_count = len(signals[signals.get("signal", signals.columns[0]) == "BUY"]) if "signal" in signals.columns else len(signals)
     st.caption(f"目标持仓 {target_count} 只股票")
 
-    # ---- Step 2: Current positions ----
+    # Current positions
     st.markdown("---")
-    st.subheader("② 当前持仓")
-    trades = load_trades()
-    positions = compute_positions(trades)
-
-    if positions.empty:
-        st.info("当前无持仓（首次调仓将全部买入）")
+    if use_paper:
+        acct = broker.get_account()
+        positions = _paper_positions_to_df(broker.get_positions())
+        st.info(f"Paper 账户权益: ¥{acct.equity:,.0f} (现金 ¥{acct.cash:,.0f})")
+        default_capital = acct.equity
     else:
-        st.dataframe(positions.rename(columns={
-            "instrument": "代码", "quantity": "数量",
-            "avg_cost": "成本价", "total_cost": "成本",
-        }), use_container_width=True, hide_index=True)
+        from stopat30m.trading.ledger import compute_positions, load_trades
+        positions = compute_positions(load_trades())
+        default_capital = float(st.session_state.get("rebal_capital", 500000.0))
 
-    # ---- Step 3: Capital input ----
-    st.markdown("---")
-    st.subheader("③ 资金设置")
-
+    # Capital & reserve
     col_cap, col_reserve = st.columns(2)
     with col_cap:
         total_capital = st.number_input(
             "总资金（元）", min_value=10000.0, step=10000.0,
-            value=float(st.session_state.get("rebal_capital", 500000.0)),
-            format="%.0f",
+            value=float(st.session_state.get("rebal_capital", default_capital)),
+            format="%.0f", key="rebal_capital_input",
         )
         st.session_state["rebal_capital"] = total_capital
     with col_reserve:
-        cash_reserve = st.slider("现金预留比例 (%)", 0, 50, 0, 1)
-        cash_reserve = cash_reserve / 100.0
+        cash_reserve = st.slider("现金预留比例 (%)", 0, 50, 0, 1, key="rebal_reserve") / 100.0
 
-    # ---- Step 4: Fetch prices & compute plan ----
-    if st.button("生成调仓计划", type="primary"):
+    # Compute plan
+    if st.button("生成调仓计划", type="primary", key="gen_plan_btn"):
         all_instruments = list(signals["instrument"].unique())
-        if not positions.empty:
+        if use_paper:
+            all_instruments += list(broker.get_positions().keys())
+        elif not positions.empty:
             all_instruments += list(positions["instrument"].unique())
         all_instruments = list(set(all_instruments))
 
         _invalidate_price_cache()
         prices, names = _get_prices_and_names(all_instruments)
-
         if not prices:
-            st.error("所有实时数据源均不可用（AKShare / 新浪 / 腾讯），请检查网络后重试")
+            st.error("所有实时数据源均不可用，请检查网络后重试")
             return
+        if use_paper:
+            broker.update_prices(prices)
 
         result = compute_rebalance_plan(
-            signals=signals,
-            positions=positions,
-            total_capital=total_capital,
-            prices=prices,
+            signals=signals, positions=positions,
+            total_capital=total_capital, prices=prices,
             cash_reserve_pct=cash_reserve,
         )
         st.session_state["rebal_result"] = result
 
-    # ---- Step 5: Display plan ----
+    # Display plan
     result: RebalancePlan | None = st.session_state.get("rebal_result")
     if result is None:
         return
@@ -397,20 +922,29 @@ def page_rebalance() -> None:
     plan = result.trades
     cf = result.capital_flow
 
-    # Warnings
     for w in result.warnings:
         st.warning(w)
 
-    # Capital flow summary
-    st.markdown("---")
-    st.subheader("④ 资金流向")
+    if use_paper and not result.sells.empty:
+        bp = broker.get_positions()
+        for _, row in result.sells.iterrows():
+            inst = str(row["instrument"])
+            pos = bp.get(inst)
+            if pos and pos.frozen_quantity > 0:
+                sell_qty = int(row["quantity"])
+                if sell_qty > pos.available_quantity:
+                    st.warning(
+                        f"T+1 限制: {inst} 持仓 {pos.quantity}, "
+                        f"冻结 {pos.frozen_quantity}, 可卖 {pos.available_quantity}, 计划卖 {sell_qty}"
+                    )
 
+    st.markdown("---")
+    st.subheader("资金流向")
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("当前现金", f"¥{cf.get('available_cash', 0):,.0f}")
     c2.metric("卖出回笼", f"¥{cf.get('sell_proceeds', 0):,.0f}")
     c3.metric("买入支出", f"¥{cf.get('buy_cost', 0):,.0f}")
     c4.metric("调仓后现金", f"¥{cf.get('cash_after_rebalance', 0):,.0f}")
-
     st.caption(
         f"总资金 ¥{cf.get('total_capital', 0):,.0f} | "
         f"持仓市值 ¥{cf.get('holding_value', 0):,.0f} | "
@@ -418,14 +952,10 @@ def page_rebalance() -> None:
         f"预留目标 ¥{cf.get('reserve_target', 0):,.0f}"
     )
 
-    # Trade details
     st.markdown("---")
-    st.subheader("⑤ 调仓明细")
-
     sells = result.sells
     buys = result.buys
     errors = result.errors
-
     col1, col2, col3 = st.columns(3)
     sell_total = sells["amount"].sum() if not sells.empty else 0
     buy_total = buys["amount"].sum() if not buys.empty else 0
@@ -436,49 +966,188 @@ def page_rebalance() -> None:
     else:
         col3.metric("净资金流", f"¥{sell_total - buy_total:,.0f}")
 
-    st.info(
-        "**执行建议**: 先完成全部卖出，再执行买入（A股卖出资金 T+0 可用于买入）。\n\n"
-        "**关于价格**: 上表价格为实时行情，仅用于计算目标仓位和手数。"
-        "实际成交价以券商委托价为准（建议以次日开盘价/集合竞价委托）。"
-        "回测已按开盘价模拟执行，回测收益更贴近真实可执行水平。"
-    )
-
     if not sells.empty:
         st.markdown("**卖出（先执行）**")
         _show_plan_table(sells, stock_names)
-
     if result.hold_unchanged:
-        with st.expander(f"继续持有 ({len(result.hold_unchanged)} 只，无需操作)"):
+        with st.expander(f"继续持有 ({len(result.hold_unchanged)} 只)"):
             labels = [f"{c}({stock_names.get(c, '')})" if stock_names.get(c) else c for c in result.hold_unchanged]
             st.write(", ".join(labels))
-
     if not buys.empty:
         st.markdown("**买入（后执行）**")
         _show_plan_table(buys, stock_names)
-
     if not errors.empty:
         with st.expander(f"无法操作 ({len(errors)} 只)"):
             st.dataframe(errors[["instrument", "reason"]], use_container_width=True, hide_index=True)
 
-    # ---- Step 6: One-click record ----
+    # Execute
     st.markdown("---")
     actionable = plan[plan["direction"].isin(["BUY", "SELL"])]
     if actionable.empty:
         st.success("持仓已与目标完全一致，无需调仓")
         return
 
-    st.subheader("⑥ 录入交易")
-    trade_date = st.date_input("交易日期", value=datetime.now())
+    if use_paper:
+        rc1, rc2 = st.columns(2)
+        with rc1:
+            if st.button("一键执行全部交易", type="primary", key="exec_all"):
+                _execute_via_broker(broker, result, prices, sells_only=False)
+        with rc2:
+            if not sells.empty and not buys.empty:
+                if st.button("仅执行卖出", key="exec_sell"):
+                    _execute_via_broker(broker, result, prices, sells_only=True)
+    else:
+        trade_date = st.date_input("交易日期", value=datetime.now(), key="rebal_date")
+        rc1, rc2 = st.columns(2)
+        with rc1:
+            if st.button("一键录入全部交易", type="primary", key="record_all"):
+                _record_and_snapshot(actionable, trade_date, total_capital, prices)
+        with rc2:
+            if not sells.empty and not buys.empty:
+                if st.button("仅录入卖出", key="record_sell"):
+                    sell_only = actionable[actionable["direction"] == "SELL"]
+                    _record_and_snapshot(sell_only, trade_date, total_capital, prices)
 
-    record_col1, record_col2 = st.columns(2)
-    with record_col1:
-        if st.button("一键录入全部交易", type="primary"):
-            _record_and_snapshot(actionable, trade_date, total_capital, prices)
-    with record_col2:
-        sell_only = actionable[actionable["direction"] == "SELL"]
-        if not sell_only.empty and not buys.empty:
-            if st.button("仅录入卖出（稍后买入）"):
-                _record_and_snapshot(sell_only, trade_date, total_capital, prices)
+
+# ---------------------------------------------------------------------------
+# Tab: 手动交易
+# ---------------------------------------------------------------------------
+
+def _tab_manual_trade(broker, use_paper: bool) -> None:
+    if use_paper:
+        _manual_trade_paper(broker)
+    else:
+        _manual_trade_ledger()
+
+
+def _manual_trade_paper(broker) -> None:
+    """Manual buy/sell via PaperBroker."""
+    from stopat30m.trading.models import Order, OrderDirection, OrderStatus, OrderType
+    from stopat30m.trading.rebalancer import fetch_spot_prices, normalize_instrument
+
+    acct = broker.get_account()
+    st.info(f"账户现金: ¥{acct.cash:,.0f}")
+
+    with st.form("manual_paper_trade", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            instrument = st.text_input("股票代码", placeholder="例: 600519", key="mp_inst")
+            direction = st.selectbox("方向", ["BUY", "SELL"], key="mp_dir")
+        with col2:
+            quantity = st.number_input("数量（股）", min_value=100, step=100, value=100, key="mp_qty")
+            order_type = st.selectbox("委托类型", ["MARKET", "LIMIT"], key="mp_type")
+        limit_price = None
+        if order_type == "LIMIT":
+            limit_price = st.number_input("限价", min_value=0.01, step=0.01, value=10.0, format="%.4f", key="mp_lp")
+        submitted = st.form_submit_button("提交委托", type="primary")
+
+    if submitted:
+        if not instrument.strip():
+            st.error("请输入股票代码")
+            return
+
+        inst = normalize_instrument(instrument.strip())
+
+        if order_type == "MARKET":
+            with st.spinner("获取实时价格..."):
+                prices = fetch_spot_prices([inst])
+            if prices:
+                broker.update_prices(prices)
+            else:
+                st.error("无法获取实时价格")
+                return
+
+        order = Order(
+            instrument=inst,
+            direction=OrderDirection(direction),
+            order_type=OrderType(order_type),
+            quantity=quantity,
+            limit_price=limit_price,
+        )
+        result = broker.submit_order(order)
+
+        if result.status == OrderStatus.FILLED:
+            st.success(
+                f"成交: {result.direction.value} {result.instrument} "
+                f"{result.filled_quantity} 股 @ ¥{result.avg_fill_price:.4f}, "
+                f"费用 ¥{result.total_fee:.2f}"
+            )
+        else:
+            st.error(f"委托被拒绝: {result.reject_reason}")
+
+
+def _manual_trade_ledger() -> None:
+    """Manual buy/sell via CSV ledger."""
+    from stopat30m.trading.ledger import add_trade
+
+    with st.form("manual_ledger_trade", clear_on_submit=True):
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            trade_date = st.date_input("日期", value=datetime.now(), key="ml_date")
+            instrument = st.text_input("股票代码", placeholder="例: 600519", key="ml_inst")
+        with col2:
+            direction = st.selectbox("方向", ["BUY", "SELL"], key="ml_dir")
+            quantity = st.number_input("数量（股）", min_value=100, step=100, value=100, key="ml_qty")
+        with col3:
+            price = st.number_input("成交价", min_value=0.01, step=0.01, value=10.0, format="%.4f", key="ml_price")
+            commission = st.number_input("手续费", min_value=0.0, step=0.01, value=0.0, format="%.2f", key="ml_comm")
+        note = st.text_input("备注", placeholder="选填", key="ml_note")
+        submitted = st.form_submit_button("录入交易", type="primary")
+
+    if submitted:
+        if not instrument.strip():
+            st.error("请输入股票代码")
+        else:
+            add_trade(
+                date=trade_date.strftime("%Y-%m-%d"),
+                instrument=instrument, direction=direction,
+                quantity=quantity, price=price,
+                commission=commission, note=note,
+            )
+            st.success(f"已录入: {direction} {quantity} 股 {instrument.strip().upper()} @ {price:.4f}")
+            st.rerun()
+
+
+def _paper_positions_to_df(positions: dict) -> pd.DataFrame:
+    """Convert PaperBroker positions dict to DataFrame matching rebalancer format."""
+    if not positions:
+        return pd.DataFrame(columns=["instrument", "quantity", "avg_cost", "total_cost"])
+    rows = []
+    for inst, pos in positions.items():
+        rows.append({
+            "instrument": inst,
+            "quantity": pos.quantity,
+            "avg_cost": pos.avg_cost,
+            "total_cost": pos.total_cost,
+        })
+    return pd.DataFrame(rows)
+
+
+def _execute_via_broker(broker, result, prices, sells_only: bool) -> None:
+    """Execute rebalance plan through PaperBroker."""
+    from stopat30m.trading.executor import execute_plan
+    from stopat30m.trading.models import OrderStatus
+
+    broker.update_prices(prices)
+    report = execute_plan(result, broker, sells_only=sells_only)
+
+    if report.total_rejected > 0:
+        for o in report.rejected:
+            st.warning(f"被拒绝: {o.instrument} {o.direction.value} {o.quantity} — {o.reject_reason}")
+
+    if report.total_filled > 0:
+        acct = broker.get_account()
+        st.success(
+            f"已执行 {report.total_filled} 笔交易 "
+            f"({report.sell_count}卖/{report.buy_count}买), "
+            f"手续费 ¥{report.total_commission + report.total_stamp_tax:,.2f}, "
+            f"账户现金 ¥{acct.cash:,.0f}"
+        )
+    else:
+        st.info("无交易被执行")
+
+    st.session_state.pop("rebal_result", None)
+    st.rerun()
 
 
 def _record_and_snapshot(
@@ -540,70 +1209,78 @@ def _show_plan_table(df: pd.DataFrame, names: dict[str, str] | None = None) -> N
 
 
 def page_trades() -> None:
-    st.title("交易记录")
+    """Pure read-only trade history."""
+    broker = _get_paper_broker()
+    use_paper = broker is not None
+    _page_header("交易记录", "全部成交与委托历史")
 
-    from stopat30m.trading.ledger import (
-        add_trade, compute_daily_pnl, delete_trade, load_trades,
-    )
+    if use_paper:
+        _trades_history_paper(broker)
+    else:
+        _trades_history_ledger()
 
-    # --- Entry form ---
-    st.subheader("录入交易")
-    with st.form("trade_form", clear_on_submit=True):
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            trade_date = st.date_input("日期", value=datetime.now())
-            instrument = st.text_input("股票代码", placeholder="例: 600519")
-        with col2:
-            direction = st.selectbox("方向", ["BUY", "SELL"])
-            quantity = st.number_input("数量（股）", min_value=100, step=100, value=100)
-        with col3:
-            price = st.number_input("成交价", min_value=0.01, step=0.01, value=10.0, format="%.4f")
-            commission = st.number_input("手续费", min_value=0.0, step=0.01, value=0.0, format="%.2f")
-        note = st.text_input("备注", placeholder="选填")
-        submitted = st.form_submit_button("提交")
 
-    if submitted:
-        if not instrument.strip():
-            st.error("请输入股票代码")
-        else:
-            add_trade(
-                date=trade_date.strftime("%Y-%m-%d"),
-                instrument=instrument,
-                direction=direction,
-                quantity=quantity,
-                price=price,
-                commission=commission,
-                note=note,
-            )
-            st.success(f"已录入: {direction} {quantity} 股 {instrument.strip().upper()} @ {price:.4f}")
-            st.rerun()
+def _trades_history_paper(broker) -> None:
+    fills = broker.get_fills()
+    orders = broker.get_orders()
 
-    # --- Trade history ---
+    acct = broker.get_account()
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("总交易笔数", len(fills))
+    c2.metric("已实现盈亏", f"¥{acct.realized_pnl:,.0f}", delta_color="inverse")
+    c3.metric("累计佣金", f"¥{acct.total_commission:,.2f}")
+    c4.metric("累计印花税", f"¥{acct.total_stamp_tax:,.2f}")
+
     st.markdown("---")
-    st.subheader("交易历史")
-    trades = load_trades()
-
-    if trades.empty:
-        st.info("暂无交易记录")
+    st.subheader("成交记录")
+    if not fills:
+        st.info("暂无成交记录")
         return
 
-    display_df = trades.copy()
-    display_df = display_df.rename(columns={
+    fill_rows = []
+    for f in reversed(fills):
+        fill_rows.append({
+            "时间": f.timestamp, "代码": f.instrument, "方向": f.direction.value,
+            "数量": f.quantity, "成交价": round(f.price, 4),
+            "金额": round(f.quantity * f.price, 2),
+            "佣金": round(f.commission, 2), "印花税": round(f.stamp_tax, 2),
+            "过户费": round(f.transfer_fee, 2),
+        })
+    st.dataframe(pd.DataFrame(fill_rows), use_container_width=True, hide_index=True)
+
+    from stopat30m.trading.models import OrderStatus
+    rejected = [o for o in orders if o.status == OrderStatus.REJECTED]
+    if rejected:
+        with st.expander(f"被拒绝的委托 ({len(rejected)} 笔)"):
+            rej_rows = [{
+                "时间": o.created_at, "代码": o.instrument, "方向": o.direction.value,
+                "数量": o.quantity, "原因": o.reject_reason,
+            } for o in reversed(rejected)]
+            st.dataframe(pd.DataFrame(rej_rows), use_container_width=True, hide_index=True)
+
+
+def _trades_history_ledger() -> None:
+    from stopat30m.trading.ledger import compute_daily_pnl, delete_trade, load_trades
+
+    trades = load_trades()
+    if trades.empty:
+        st.info("暂无交易记录。请在「交易中心 → 手动交易」页面录入。")
+        return
+
+    display_df = trades.rename(columns={
         "id": "ID", "date": "日期", "instrument": "代码",
         "direction": "方向", "quantity": "数量", "price": "价格",
         "commission": "手续费", "note": "备注", "created_at": "录入时间",
     })
     st.dataframe(display_df, use_container_width=True, hide_index=True)
 
-    # --- Delete ---
     with st.expander("删除记录"):
-        del_id = st.number_input("输入要删除的交易 ID", min_value=1, step=1, value=1)
-        if st.button("确认删除"):
+        del_id = st.number_input("输入要删除的交易 ID", min_value=1, step=1, value=1, key="del_trade_id")
+        if st.button("确认删除", key="del_trade_btn"):
             delete_trade(int(del_id))
             st.success(f"已删除交易 ID={del_id}")
             st.rerun()
 
-    # --- Realized P&L ---
     pnl = compute_daily_pnl(trades)
     if not pnl.empty:
         st.markdown("---")
@@ -618,130 +1295,24 @@ def page_trades() -> None:
         )
 
 
-def page_positions() -> None:
-    st.title("持仓管理")
-
-    from stopat30m.trading.ledger import (
-        compute_positions, load_portfolio_nav, load_trades,
-        save_portfolio_snapshot,
-    )
-    from stopat30m.trading.rebalancer import bare_code, normalize_instrument
-
-    trades = load_trades()
-    positions = compute_positions(trades)
-
-    if positions.empty:
-        st.info("当前无持仓（请先在「交易记录」或「调仓操作」页面录入买卖）")
-        _show_nav_chart()
+def _show_nav_chart_paper(broker) -> None:
+    """Display NAV history from PaperBroker."""
+    nav_list = broker.get_nav_history()
+    if len(nav_list) < 2:
         return
 
-    # ---- Fetch live prices & names (shared cache) ----
-    instruments = [str(r) for r in positions["instrument"]]
-    if st.button("刷新行情"):
-        _invalidate_price_cache()
-    prices, stock_names = _get_prices_and_names(instruments)
-
-    # ---- Build enriched positions table ----
-    rows = []
-    for _, row in positions.iterrows():
-        inst = normalize_instrument(str(row["instrument"]))
-        qty = int(row["quantity"])
-        avg_cost = float(row["avg_cost"])
-        total_cost = float(row["total_cost"])
-        price = prices.get(inst, 0)
-        market_value = qty * price
-        unrealized = market_value - total_cost
-        pnl_pct = unrealized / total_cost if total_cost > 0 else 0
-        rows.append({
-            "代码": bare_code(inst),
-            "名称": stock_names.get(inst, ""),
-            "持仓量": qty,
-            "成本价": round(avg_cost, 4),
-            "现价": round(price, 2) if price > 0 else "N/A",
-            "市值": round(market_value, 2),
-            "浮动盈亏": round(unrealized, 2),
-            "盈亏比例": pnl_pct,
-            "持仓成本": round(total_cost, 2),
-        })
-
-    display = pd.DataFrame(rows)
-    total_market = sum(r["市值"] for r in rows if isinstance(r["市值"], (int, float)))
-    total_cost = display["持仓成本"].sum()
-    total_unrealized = sum(r["浮动盈亏"] for r in rows if isinstance(r["浮动盈亏"], (int, float)))
-
-    # ---- Summary metrics ----
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("持仓数量", len(positions))
-    col2.metric("总市值", f"¥{total_market:,.0f}")
-    col3.metric("总成本", f"¥{total_cost:,.0f}")
-    pnl_delta = f"{total_unrealized / total_cost:.2%}" if total_cost > 0 else "0%"
-    col4.metric("浮动盈亏", f"¥{total_unrealized:,.0f}", pnl_delta,
-                delta_color="inverse")
-
-    # ---- Styled table ----
     st.markdown("---")
-    st.subheader("持仓明细")
-
-    styled_pos = _style_pnl(display.style, ["浮动盈亏", "盈亏比例"]).format({
-        "成本价": "¥{:.4f}",
-        "现价": lambda x: f"¥{x:.2f}" if isinstance(x, (int, float)) else x,
-        "市值": "¥{:,.0f}",
-        "浮动盈亏": lambda x: f"¥{x:+,.0f}",
-        "盈亏比例": "{:+.2%}",
-        "持仓成本": "¥{:,.0f}",
-    })
-    st.dataframe(styled_pos, use_container_width=True, hide_index=True)
-
-    # ---- Allocation pie chart ----
-    st.markdown("---")
-    col_left, col_right = st.columns(2)
-
-    with col_left:
-        st.subheader("持仓占比")
-        if total_market > 0:
-            alloc = pd.DataFrame(rows)[["代码", "名称", "市值"]].copy()
-            alloc = alloc[alloc["市值"] > 0]
-            alloc["标签"] = alloc.apply(
-                lambda r: r["名称"] if r["名称"] else r["代码"], axis=1,
-            )
-            alloc = alloc.set_index("标签")[["市值"]]
-            st.bar_chart(alloc, y_label="市值 (¥)")
-
-    with col_right:
-        st.subheader("盈亏分布")
-        pnl_df = pd.DataFrame(rows)[["代码", "名称", "浮动盈亏"]].copy()
-        pnl_df = pnl_df[pnl_df["浮动盈亏"] != 0]
-        pnl_df["标签"] = pnl_df.apply(
-            lambda r: r["名称"] if r["名称"] else r["代码"], axis=1,
-        )
-        pnl_df = pnl_df.set_index("标签")[["浮动盈亏"]]
-        if not pnl_df.empty:
-            st.bar_chart(pnl_df, y_label="浮动盈亏 (¥)")
-
-    # ---- Record snapshot ----
-    st.markdown("---")
-    capital_input = st.number_input(
-        "总资金（用于计算现金和净值）", min_value=0.0,
-        value=float(st.session_state.get("rebal_capital", total_market * 1.1)),
-        step=10000.0, format="%.0f",
+    st.subheader("净值曲线")
+    nav_df = pd.DataFrame([n.to_dict() for n in nav_list])
+    nav_df["date"] = pd.to_datetime(nav_df["date"])
+    chart_data = nav_df.set_index("date")[["equity", "cash"]].rename(
+        columns={"equity": "总权益", "cash": "现金"},
     )
-    if st.button("记录今日净值快照"):
-        cash = capital_input - total_market
-        save_portfolio_snapshot(
-            date=datetime.now().strftime("%Y-%m-%d"),
-            total_value=capital_input,
-            total_cost=total_cost,
-            cash=cash,
-            unrealized_pnl=total_unrealized,
-        )
-        st.success(f"已记录净值: 总资产 ¥{capital_input:,.0f}, 持仓 ¥{total_market:,.0f}, 现金 ¥{cash:,.0f}")
-
-    # ---- NAV chart ----
-    _show_nav_chart()
+    st.line_chart(chart_data, y_label="金额 (¥)")
 
 
 def _show_nav_chart() -> None:
-    """Display portfolio NAV history chart."""
+    """Display portfolio NAV history chart (legacy ledger)."""
     from stopat30m.trading.ledger import load_portfolio_nav
 
     nav = load_portfolio_nav()
@@ -757,7 +1328,7 @@ def _show_nav_chart() -> None:
 
 
 def page_signals() -> None:
-    st.title("信号历史")
+    st.title("📡 信号中心")
 
     signal_files = sorted(SIGNAL_DIR.glob("signal_*.csv"), reverse=True) if SIGNAL_DIR.exists() else []
 
@@ -777,8 +1348,260 @@ def page_signals() -> None:
             st.bar_chart(signal_counts)
 
 
+def _list_run_dirs(kind: str) -> list[Path]:
+    root = BACKTESTS_DIR / kind
+    if not root.exists():
+        return []
+    return sorted([p for p in root.iterdir() if p.is_dir()], reverse=True)
+
+
+def _select_run_dir(kind: str, title: str) -> Path | None:
+    run_dirs = _list_run_dirs(kind)
+    if not run_dirs:
+        st.info(title)
+        return None
+    selected = st.selectbox(
+        "选择回测运行",
+        [p.name for p in run_dirs],
+        key=f"run_select_{kind}",
+    )
+    return next((p for p in run_dirs if p.name == selected), None)
+
+
+def _read_run_json(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    with open(path) as f:
+        return json.load(f)
+
+
+def _read_run_csv(path: Path) -> pd.DataFrame:
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
+
+
+def page_signal_backtest() -> None:
+    st.title("🧭 信号回测")
+    run_dir = _select_run_dir("signal", "暂无信号回测数据。请先运行 `py main.py signal-backtest --model-path ...`。")
+    if run_dir is None:
+        return
+
+    summary = _read_run_json(run_dir / "summary.json")
+    config = _read_run_json(run_dir / "config.json")
+    topk_report = _read_run_json(run_dir / "topk_report.json")
+    daily_ic = _read_run_csv(run_dir / "daily_ic.csv")
+    daily_rank_ic = _read_run_csv(run_dir / "daily_rank_ic.csv")
+    horizon_stats = _read_run_csv(run_dir / "horizon_stats.csv")
+    bucket_returns = _read_run_csv(run_dir / "bucket_returns.csv")
+    topk_returns = _read_run_csv(run_dir / "topk_returns.csv")
+    turnover = _read_run_csv(run_dir / "turnover.csv")
+    coverage = _read_run_csv(run_dir / "coverage.csv")
+    signal_history = _read_run_csv(run_dir / "signal_history.csv")
+
+    eval_horizon = int(config.get("eval_horizon", 5))
+    st.caption(
+        f"方法 {config.get('method', '?')} | Top-{config.get('top_k', '?')} | "
+        f"调仓频率 {config.get('rebalance_freq', '?')} 天 | "
+        f"区间 {config.get('test_start', '?')} ~ {config.get('test_end', '?')}"
+    )
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("平均候选数", f"{summary.get('avg_candidate_count', 0):,.1f}")
+    c2.metric("平均换手", f"{summary.get('avg_turnover', 0):.2%}")
+    c3.metric(f"{eval_horizon}D IC", f"{summary.get(f'ic_{eval_horizon}d_mean', 0):.4f}")
+    c4.metric(f"{eval_horizon}D RankIC", f"{summary.get(f'rank_ic_{eval_horizon}d_mean', 0):.4f}")
+
+    c5, c6, c7, c8 = st.columns(4)
+    c5.metric(f"BUY {eval_horizon}D 收益", f"{summary.get(f'buy_mean_return_{eval_horizon}d', 0):.2%}")
+    c6.metric(f"BUY {eval_horizon}D 胜率", f"{summary.get(f'buy_win_rate_{eval_horizon}d', 0):.2%}")
+    c7.metric("分层 Top-Bottom", f"{summary.get('top_bottom_spread', 0):.2%}")
+    c8.metric("Top-K 年化", f"{topk_report.get('annual_return', 0):.2%}")
+
+    st.markdown("---")
+    if not topk_returns.empty:
+        chart = topk_returns.copy()
+        chart["date"] = pd.to_datetime(chart["date"])
+        chart = chart.set_index("date")
+        line_cols = []
+        if "portfolio_cumulative" in chart.columns:
+            chart["策略组合"] = chart["portfolio_cumulative"]
+            line_cols.append("策略组合")
+        if "benchmark_cumulative" in chart.columns:
+            chart["基准"] = chart["benchmark_cumulative"]
+            line_cols.append("基准")
+        if line_cols:
+            st.subheader("Top-K 组合净值")
+            st.line_chart(chart[line_cols])
+
+    col_left, col_right = st.columns(2)
+    with col_left:
+        st.subheader("IC 时序")
+        if not daily_ic.empty:
+            ic_cols = [c for c in daily_ic.columns if c.startswith("ic_")]
+            ic_df = daily_ic.copy()
+            ic_df["date"] = pd.to_datetime(ic_df["date"])
+            st.line_chart(ic_df.set_index("date")[ic_cols])
+    with col_right:
+        st.subheader("RankIC 时序")
+        if not daily_rank_ic.empty:
+            ric_cols = [c for c in daily_rank_ic.columns if c.startswith("rank_ic_")]
+            ric_df = daily_rank_ic.copy()
+            ric_df["date"] = pd.to_datetime(ric_df["date"])
+            st.line_chart(ric_df.set_index("date")[ric_cols])
+
+    st.markdown("---")
+    col_left, col_right = st.columns(2)
+    with col_left:
+        st.subheader("换手与覆盖")
+        if not turnover.empty:
+            tdf = turnover.copy()
+            tdf["date"] = pd.to_datetime(tdf["date"])
+            tdf = tdf.set_index("date")
+            st.line_chart(tdf[["turnover"]])
+        if not coverage.empty:
+            cdf = coverage.copy()
+            cdf["date"] = pd.to_datetime(cdf["date"])
+            st.line_chart(cdf.set_index("date")[["candidate_count"]])
+    with col_right:
+        st.subheader("分层收益")
+        if not bucket_returns.empty:
+            bucket_avg = bucket_returns.groupby("bucket")["mean_return"].mean().to_frame("平均收益")
+            st.bar_chart(bucket_avg)
+
+    st.markdown("---")
+    col_left, col_right = st.columns(2)
+    with col_left:
+        st.subheader("期限收益统计")
+        if not horizon_stats.empty:
+            hz = horizon_stats.groupby("horizon").agg(
+                平均收益=("mean_return", "mean"),
+                中位数=("median_return", "mean"),
+                胜率=("win_rate", "mean"),
+                期数=("date", "count"),
+            )
+            st.dataframe(
+                hz.style.format({
+                    "平均收益": "{:.2%}",
+                    "中位数": "{:.2%}",
+                    "胜率": "{:.2%}",
+                }),
+                use_container_width=True,
+            )
+    with col_right:
+        st.subheader("配置信息")
+        st.json(config)
+
+    st.markdown("---")
+    st.subheader("最近信号明细")
+    if not signal_history.empty:
+        display = signal_history.sort_values(["date", "score"], ascending=[False, False]).head(200)
+        st.dataframe(display, use_container_width=True, hide_index=True)
+
+
+def page_account_backtest() -> None:
+    st.title("🏦 账户回测")
+    run_dir = _select_run_dir("account", "暂无账户回测数据。请先运行 `py main.py account-backtest --model-path ...`。")
+    if run_dir is None:
+        return
+
+    report = _read_run_json(run_dir / "report.json")
+    config = _read_run_json(run_dir / "config.json")
+    nav = _read_run_csv(run_dir / "nav.csv")
+    orders = _read_run_csv(run_dir / "orders.csv")
+    fills = _read_run_csv(run_dir / "fills.csv")
+    positions = _read_run_csv(run_dir / "positions.csv")
+    risk_events = _read_run_csv(run_dir / "risk_events.csv")
+    turnover = _read_run_csv(run_dir / "turnover.csv")
+
+    st.caption(
+        f"执行价 {config.get('execution_price', '?')} | Top-{config.get('top_k', '?')} | "
+        f"调仓频率 {config.get('rebalance_freq', '?')} 天 | "
+        f"初始资金 ¥{config.get('initial_capital', 0):,.0f}"
+    )
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("期末权益", f"¥{report.get('ending_equity', 0):,.0f}")
+    c2.metric("年化收益", f"{report.get('annual_return', 0):.2%}")
+    c3.metric("夏普比率", f"{report.get('sharpe', 0):.2f}")
+    c4.metric("最大回撤", f"{report.get('max_drawdown', 0):.2%}")
+
+    c5, c6, c7, c8 = st.columns(4)
+    c5.metric("总费用", f"¥{report.get('total_fees', 0):,.2f}")
+    c6.metric("委托数", int(report.get("order_count", 0)))
+    c7.metric("拒单数", int(report.get("rejected_orders", 0)))
+    c8.metric("部分成交", int(report.get("partial_fills", 0)))
+
+    c9, c10 = st.columns(2)
+    c9.metric("现金利用率", f"{report.get('cash_utilization', 0):.2%}")
+    c10.metric("日均成交额", f"¥{report.get('avg_daily_turnover', 0):,.0f}")
+
+    st.markdown("---")
+    if not nav.empty:
+        nav["date"] = pd.to_datetime(nav["date"])
+        nav = nav.set_index("date")
+        st.subheader("账户净值")
+        line_cols = []
+        if "equity_cumulative" in nav.columns:
+            line_cols.append("equity_cumulative")
+        if "benchmark_cumulative" in nav.columns:
+            line_cols.append("benchmark_cumulative")
+        if line_cols:
+            chart = nav[line_cols].rename(columns={
+                "equity_cumulative": "账户",
+                "benchmark_cumulative": "基准",
+            })
+            st.line_chart(chart)
+
+        st.subheader("现金与市值")
+        cash_mv = nav[["cash", "market_value"]].rename(columns={"cash": "现金", "market_value": "持仓市值"})
+        st.area_chart(cash_mv)
+
+        st.subheader("回撤")
+        drawdown = nav["equity"] / nav["equity"].cummax() - 1
+        st.area_chart(pd.DataFrame({"回撤": drawdown}))
+
+    st.markdown("---")
+    col_left, col_right = st.columns(2)
+    with col_left:
+        st.subheader("每日成交")
+        if not turnover.empty:
+            tdf = turnover.copy()
+            tdf["date"] = pd.to_datetime(tdf["date"])
+            st.bar_chart(tdf.set_index("date")[["turnover"]])
+    with col_right:
+        st.subheader("持仓数")
+        if not nav.empty:
+            st.line_chart(nav[["positions_count"]].rename(columns={"positions_count": "持仓数"}))
+
+    st.markdown("---")
+    col_left, col_right = st.columns(2)
+    with col_left:
+        st.subheader("订单明细")
+        if not orders.empty:
+            display = orders.sort_values(["date", "created_at"], ascending=[False, False]).head(200)
+            st.dataframe(display, use_container_width=True, hide_index=True)
+    with col_right:
+        st.subheader("成交明细")
+        if not fills.empty:
+            display = fills.sort_values(["date", "timestamp"], ascending=[False, False]).head(200)
+            st.dataframe(display, use_container_width=True, hide_index=True)
+
+    if not risk_events.empty:
+        st.markdown("---")
+        st.subheader("事件与异常")
+        st.dataframe(risk_events.sort_values("date", ascending=False), use_container_width=True, hide_index=True)
+
+    if not positions.empty:
+        st.markdown("---")
+        st.subheader("最新持仓快照")
+        latest_date = positions["date"].max()
+        latest_positions = positions[positions["date"] == latest_date].sort_values("market_value", ascending=False)
+        st.dataframe(latest_positions, use_container_width=True, hide_index=True)
+
+
 def page_model_eval() -> None:
-    st.title("模型评估")
+    st.title("🧪 模型评估")
 
     # --- IC Metrics (from training) ---
     metrics_file = OUTPUT_DIR / "metrics.json"
@@ -997,7 +1820,7 @@ def _show_backtest_assessment(report: dict) -> None:
 
 
 def page_risk() -> None:
-    st.title("风控监控")
+    st.title("🛡️ 风控监控")
 
     portfolio = _load_portfolio_state()
     risk = portfolio.get("risk_status", {})
@@ -1033,7 +1856,7 @@ def page_risk() -> None:
 
 
 def page_factor_analysis() -> None:
-    st.title("因子分析")
+    st.title("🔬 因子分析")
 
     try:
         from stopat30m.factors.expressions import get_factor_groups
@@ -1128,14 +1951,15 @@ def main() -> None:
     page = nav["page"]
 
     page_map = {
-        "概览": page_overview,
-        "调仓操作": page_rebalance,
-        "交易记录": page_trades,
-        "持仓管理": page_positions,
-        "信号历史": page_signals,
-        "模型评估": page_model_eval,
-        "风控监控": page_risk,
-        "因子分析": page_factor_analysis,
+        "overview": page_overview,
+        "trading": page_trading,
+        "trades": page_trades,
+        "signals": page_signals,
+        "model_eval": page_model_eval,
+        "signal_bt": page_signal_backtest,
+        "account_bt": page_account_backtest,
+        "risk": page_risk,
+        "factors": page_factor_analysis,
     }
 
     page_fn = page_map.get(page, page_overview)

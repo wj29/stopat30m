@@ -58,9 +58,9 @@ class RiskManager:
 
         self.state = RiskState()
 
-    def update_equity(self, current_equity: float) -> None:
+    def update_equity(self, current_equity: float, current_date: str | None = None) -> None:
         """Update tracked equity; resets daily P&L at day boundary."""
-        today = datetime.now().strftime("%Y-%m-%d")
+        today = current_date or datetime.now().strftime("%Y-%m-%d")
 
         if self.state.last_reset_date != today:
             self.state.daily_start_equity = current_equity
@@ -82,6 +82,7 @@ class RiskManager:
         price: float,
         current_equity: float,
         current_positions: dict[str, float],
+        current_date: str | None = None,
     ) -> tuple[bool, str]:
         """
         Validate an order against all risk rules.
@@ -89,7 +90,7 @@ class RiskManager:
         Returns:
             (approved, reason): True if approved, else False with rejection reason.
         """
-        self.update_equity(current_equity)
+        self.update_equity(current_equity, current_date=current_date)
 
         if self.state.circuit_breaker_active:
             return False, "circuit_breaker_active"

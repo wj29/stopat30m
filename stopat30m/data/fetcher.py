@@ -713,27 +713,63 @@ class DataMeta:
 
     _DELIST_TOLERANCE_DAYS = 5
 
+    _OUTLIER_LAG_DAYS = 180
+
     @property
     def trusted_until(self) -> str:
-        """Global watermark = min(data_end) across **active** stocks only.
+        """Global watermark = min(data_end) across tradable active stocks.
 
-        Delisted stocks are excluded entirely — their individual coverage is
-        tracked per-stock via data_end and reported separately in check-data.
-        They don't affect the ability to trade current stocks.
+        Excluded from the calculation:
+        - Delisted stocks (tracked per-stock separately).
+        - Stocks without ipo_date (likely index codes that slipped in).
+        - Outlier stocks whose data_end lags the majority by >180 days
+          (likely long-suspended; they shouldn't block the entire watermark).
 
-        Active stocks with no local data are also excluded (they haven't
-        entered the tracking pipeline yet, e.g. new IPOs).
-
-        Returns "" if no active stocks have data.
+        Returns "" if no qualifying stocks have data.
         """
         constraining: list[str] = []
         for sm in self.stocks.values():
             if not sm.data_end:
                 continue
-            if sm.status == "delisted":
+            if sm.status in ("delisted", "index"):
+                continue
+            if not sm.ipo_date:
                 continue
             constraining.append(sm.data_end)
-        return min(constraining) if constraining else ""
+        if not constraining:
+            return ""
+
+        max_date = max(constraining)
+        from datetime import timedelta
+        cutoff = (
+            datetime.strptime(max_date, "%Y-%m-%d")
+            - timedelta(days=self._OUTLIER_LAG_DAYS)
+        ).strftime("%Y-%m-%d")
+        filtered = [d for d in constraining if d >= cutoff]
+        return min(filtered) if filtered else min(constraining)
+
+    def watermark_outliers(self) -> list[StockMeta]:
+        """Return active stocks excluded from watermark due to lagging data_end."""
+        dates: list[str] = []
+        for sm in self.stocks.values():
+            if not sm.data_end or sm.status in ("delisted", "index") or not sm.ipo_date:
+                continue
+            dates.append(sm.data_end)
+        if not dates:
+            return []
+        max_date = max(dates)
+        from datetime import timedelta
+        cutoff = (
+            datetime.strptime(max_date, "%Y-%m-%d")
+            - timedelta(days=self._OUTLIER_LAG_DAYS)
+        ).strftime("%Y-%m-%d")
+        return [
+            sm for sm in self.stocks.values()
+            if sm.data_end
+            and sm.status not in ("delisted", "index")
+            and sm.ipo_date
+            and sm.data_end < cutoff
+        ]
 
     @classmethod
     def _delisted_complete(cls, sm: StockMeta) -> bool:
@@ -771,12 +807,33 @@ class DataMeta:
             code: StockMeta(**vals)
             for code, vals in raw.get("stocks", {}).items()
         }
-        return cls(
+        meta = cls(
             qlib_base_end=raw.get("qlib_base_end", ""),
             last_append=raw.get("last_append", ""),
             listing_updated=raw.get("listing_updated", ""),
             stocks=stocks,
         )
+        purged = meta._purge_index_codes()
+        if purged:
+            logger.info(f"Purged {purged} index codes from meta on load")
+            meta.save(path)
+        return meta
+
+    def _purge_index_codes(self) -> int:
+        """Mark any index codes (sh000xxx etc.) that slipped into meta."""
+        count = 0
+        for code, sm in self.stocks.items():
+            if sm.status == "index":
+                continue
+            qlib_sh = f"sh{code}"
+            qlib_sz = f"sz{code}"
+            if _is_index_symbol(qlib_sh) and not sm.ipo_date:
+                sm.status = "index"
+                count += 1
+            elif _is_index_symbol(qlib_sz) and not sm.ipo_date:
+                sm.status = "index"
+                count += 1
+        return count
 
     # -- query helpers --
 
@@ -795,6 +852,9 @@ class DataMeta:
         sm = self.stocks.get(code)
         if sm is None:
             return (True, None, target_date)
+
+        if sm.status == "index":
+            return (False, None, target_date)
 
         fetch_target = self._fetch_end(sm, target_date)
 
@@ -826,6 +886,15 @@ def _next_day_str(date_str: str) -> str:
 
 META_FILENAME = "data_meta.json"
 
+# Shanghai exchange index codes live in sh000xxx directories.
+# They are NOT stocks and should not participate in data tracking.
+_INDEX_PREFIXES = ("sh000", "sz399")
+
+
+def _is_index_symbol(qlib_sym: str) -> bool:
+    """Return True if the Qlib symbol is a market index, not a stock."""
+    return any(qlib_sym.startswith(p) for p in _INDEX_PREFIXES)
+
 
 def build_meta_from_scan(
     data_dir: Path,
@@ -853,6 +922,8 @@ def build_meta_from_scan(
             if not sym_dir.is_dir():
                 continue
             qlib_sym = sym_dir.name  # e.g. "sh600000"
+            if _is_index_symbol(qlib_sym):
+                continue
             bare = qlib_sym[2:] if len(qlib_sym) > 2 else qlib_sym
 
             close_bin = sym_dir / "close.day.bin"
@@ -1322,7 +1393,7 @@ def _worker_fetch_with_subprocesses(
     meta_path: Path,
     done_codes: set[str],
     fallback_start: str = "2005-01-01",
-    save_interval: int = 200,
+    save_interval: int = 50,
 ) -> "WorkerResult":
     """Fetch stocks using multiple sub-processes for a single source.
 
@@ -1484,7 +1555,7 @@ def _worker_fetch(
     meta_path: Path,
     done_codes: set[str],
     fallback_start: str = "2005-01-01",
-    save_interval: int = 200,
+    save_interval: int = 50,
 ) -> WorkerResult:
     """Fetch assigned stocks using *fetcher*, writing binary features.
 
@@ -1721,8 +1792,28 @@ def append_with_source(
     done_codes: set[str] = set()
     if checkpoint_path.exists():
         _, cp_end, done_codes = _load_checkpoint(checkpoint_path)
+
+        # Reconcile: checkpoint-done stocks may not have had their meta
+        # saved (periodic save every N stocks). Write their progress into
+        # meta NOW so it survives even if the checkpoint is discarded.
+        reconciled = 0
+        for code in done_codes:
+            sm = meta.stocks.get(code)
+            if not sm:
+                continue
+            goal = DataMeta._fetch_end(sm, cp_end)
+            if not sm.data_end or sm.data_end < goal:
+                sm.data_end = goal
+                reconciled += 1
+        if reconciled:
+            meta.save(meta_path)
+            logger.info(f"Reconciled {reconciled} checkpoint-done stocks into meta")
+
         if cp_end != end_date:
-            logger.info(f"Stale checkpoint (end={cp_end}, target={end_date}). Discarding.")
+            logger.info(
+                f"Checkpoint target date changed ({cp_end} → {end_date}). "
+                f"Meta reconciled, discarding stale checkpoint."
+            )
             checkpoint_path.unlink()
             done_codes = set()
         else:
@@ -1854,6 +1945,66 @@ def append_with_source(
                 except Exception as exc:
                     logger.opt(colors=True).error(f"{_colored_src(src_name)} worker crashed: {exc}")
                     results.append(WorkerResult(source_name=src_name, errors=1, error_codes=["CRASH"]))
+
+    # ── Phase 2.5: Cross-source retry for failed stocks ─────────────────
+
+    if len(fetchers) > 1:
+        # Collect failed stock codes and the source that failed them.
+        # Skip pseudo-codes like "subprocess#1" or "CRASH".
+        failed_by_source: dict[str, str] = {}
+        for r in results:
+            for code in r.error_codes:
+                if code.startswith("subprocess#") or code == "CRASH":
+                    continue
+                failed_by_source[code] = r.source_name
+
+        if failed_by_source:
+            retry_work: list[tuple[str, str | None, str]] = []
+            for code in failed_by_source:
+                needs, start, stock_end = meta.needs_fetch(code, end_date)
+                if needs:
+                    retry_work.append((code, start, stock_end))
+
+            if retry_work:
+                source_map = {f.name: f for f in fetchers}
+                # Group retry stocks by the alternative source to use
+                alt_groups: dict[str, list[tuple[str, str | None, str]]] = {}
+                for code, start, stock_end in retry_work:
+                    failed_src = failed_by_source[code]
+                    alt = next((f.name for f in fetchers if f.name != failed_src), None)
+                    if alt:
+                        alt_groups.setdefault(alt, []).append((code, start, stock_end))
+
+                total_retry = sum(len(v) for v in alt_groups.values())
+                logger.info(
+                    f"Cross-source retry: {total_retry} stocks failed, "
+                    f"retrying with alternate sources"
+                )
+
+                retry_results: list[WorkerResult] = []
+                for src_name, retry_partition in alt_groups.items():
+                    logger.opt(colors=True).info(
+                        f"  {_colored_src(src_name)} retrying {len(retry_partition)} stocks"
+                    )
+                    rr = _worker_fetch(
+                        fetcher=source_map[src_name],
+                        work=retry_partition,
+                        meta=meta,
+                        cal_to_idx=cal_to_idx,
+                        target=target,
+                        checkpoint_path=checkpoint_path,
+                        meta_lock=meta_lock,
+                        meta_path=meta_path,
+                        done_codes=set(),
+                        fallback_start=next_day,
+                    )
+                    retry_results.append(rr)
+                    logger.opt(colors=True).info(
+                        f"  {_colored_src(src_name)} retry done: "
+                        f"{rr.success} ok, {rr.empty} empty, {rr.errors} still failed"
+                    )
+
+                results.extend(retry_results)
 
     # ── Phase 3: Finalize ──────────────────────────────────────────────────
 

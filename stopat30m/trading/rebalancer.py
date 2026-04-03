@@ -29,6 +29,10 @@ def normalize_instrument(code: str) -> str:
     code = code.strip().upper()
     if code.startswith(("SH", "SZ")):
         return code
+    if "." in code:
+        left, right = code.split(".", 1)
+        if len(left) == 6 and left.isdigit() and right in {"SH", "SZ"}:
+            return f"{right}{left}"
     bare = code.replace(".", "").replace(" ", "")
     if len(bare) != 6 or not bare.isdigit():
         return code

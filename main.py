@@ -5,7 +5,10 @@ StopAt30M - AI-powered A-share quantitative trading system.
 Commands:
     download    Download A-share data
     train       Train alpha model
+    cache-predictions Cache model predictions for reuse
     backtest    Backtest trained model on test data
+    signal-backtest  Backtest generated signals
+    account-backtest Account-level trading backtest
     signal      Generate trading signals
     trade       Start trading engine
     dashboard   Launch monitoring dashboard
@@ -142,11 +145,15 @@ def check_data(fix: bool) -> None:
     active_total = 0
     delisted_count = 0
     delisted_incomplete = 0
+    index_count = 0
     no_data_new_ipo = 0
     no_data_gap = 0
     end_dates: list[str] = []
 
     for code, sm in sorted(meta.stocks.items()):
+        if sm.status == "index":
+            index_count += 1
+            continue
         if sm.status == "delisted":
             delisted_count += 1
             if sm.delist_date and (not sm.data_end or sm.data_end < sm.delist_date):
@@ -163,12 +170,11 @@ def check_data(fix: bool) -> None:
     at_latest = sum(1 for d in end_dates if d == latest_end)
     has_data = len(end_dates)
 
-    # Stocks without data: distinguish "new IPO after watermark" vs "not in original source"
     no_data_total = no_data_new_ipo
     no_data_pre_watermark = 0
     if meta.trusted_until:
         for code, sm in meta.stocks.items():
-            if sm.status == "delisted" or sm.data_end:
+            if sm.status in ("delisted", "index") or sm.data_end:
                 continue
             if not sm.ipo_date or sm.ipo_date <= meta.trusted_until:
                 no_data_pre_watermark += 1
@@ -198,6 +204,17 @@ def check_data(fix: bool) -> None:
         click.echo(f"  待拉取 (补全): {no_data_pre_watermark} 只 (原数据源未覆盖)")
     click.echo(f"  退市:         {delisted_count} 只"
                f"{f' (其中 {delisted_incomplete} 只需补到退市日)' if delisted_incomplete else ''}")
+    if index_count:
+        click.echo(f"  指数 (已排除): {index_count} 只")
+
+    # --- Watermark outliers ---
+    outliers = meta.watermark_outliers()
+    if outliers:
+        click.echo(f"\n  水位线排除 (长期停牌/异常): {len(outliers)} 只")
+        for sm in sorted(outliers, key=lambda s: s.data_end or "")[:10]:
+            click.echo(f"    {sm.code}  data_end={sm.data_end}  ipo={sm.ipo_date or '?'}")
+        if len(outliers) > 10:
+            click.echo(f"    ... 还有 {len(outliers) - 10} 只")
 
     if meta.trusted_until:
         behind = [d for d in end_dates if d < meta.trusted_until]
@@ -377,6 +394,187 @@ def backtest(model_path: str, universe: str | None, top_k: int | None,
     click.echo(f"{'=' * 58}\n")
 
 
+@cli.command("cache-predictions")
+@click.option("--model-path", required=True, help="Path to .pkl model")
+@click.option("--universe", default=None, help="Stock universe: csi300 / csi500 / all")
+@click.option("--factor-groups", default=None, help="Comma-separated factor groups")
+@click.option("--tag", default="", help="Optional output tag")
+def cache_predictions(
+    model_path: str,
+    universe: str | None,
+    factor_groups: str | None,
+    tag: str,
+) -> None:
+    """Generate predictions once and save them for reuse by backtests."""
+    from stopat30m.backtest.common import load_model_predictions, save_prediction_bundle
+
+    pred, labels, handler = load_model_predictions(
+        model_path=model_path,
+        universe=universe,
+        factor_groups=factor_groups,
+    )
+    out = save_prediction_bundle(
+        pred,
+        labels=labels,
+        metadata={
+            "source": "model",
+            "model_path": model_path,
+            "universe": handler.instruments,
+            "feature_count": handler.num_features,
+            "factor_groups": factor_groups.split(",") if factor_groups else None,
+        },
+        tag=tag,
+    )
+    click.echo(f"Predictions cached to: {out}")
+    click.echo(f"Rows: {len(pred)} | universe={handler.instruments} | features={handler.num_features}")
+
+
+@cli.command("signal-backtest")
+@click.option("--model-path", default=None, help="Path to .pkl model")
+@click.option("--pred-path", default=None, help="Path to cached predictions .pkl")
+@click.option("--universe", default=None, help="Stock universe: csi300 / csi500 / all")
+@click.option("--top-k", default=None, type=int, help="Number of stocks per signal")
+@click.option("--method", default=None, type=click.Choice(["top_k", "long_short", "quantile"]),
+              help="Signal construction method")
+@click.option("--rebalance-freq", default=None, type=int, help="Rebalance every N trading days")
+@click.option("--horizons", default=None, help="Comma-separated forward return horizons, e.g. 1,3,5,10,20")
+@click.option("--group-count", default=None, type=int, help="Number of quantile buckets")
+@click.option("--benchmark", default=None, help="Benchmark instrument, e.g. SH000300")
+@click.option("--factor-groups", default=None, help="Comma-separated factor groups")
+@click.option("--tag", default="", help="Optional output tag")
+def signal_backtest(
+    model_path: str | None,
+    pred_path: str | None,
+    universe: str | None,
+    top_k: int | None,
+    method: str | None,
+    rebalance_freq: int | None,
+    horizons: str | None,
+    group_count: int | None,
+    benchmark: str | None,
+    factor_groups: str | None,
+    tag: str,
+) -> None:
+    """Run signal-level backtest and save a run under output/backtests/signal."""
+    from stopat30m.backtest.common import load_prediction_source
+    from stopat30m.backtest.signal_backtest import SignalBacktestEngine
+    from stopat30m.config import get
+
+    cfg = get("signal_backtest") or {}
+    pred, _, metadata = load_prediction_source(
+        model_path=model_path,
+        pred_path=pred_path,
+        universe=universe,
+        factor_groups=factor_groups,
+    )
+    logger.info(
+        f"Prediction source={metadata.get('source', '?')}, "
+        f"universe={metadata.get('universe', metadata.get('source_path', '?'))}"
+    )
+
+    parsed_horizons = [int(v) for v in horizons.split(",")] if horizons else cfg.get("horizons", [1, 3, 5, 10, 20])
+    engine = SignalBacktestEngine(
+        top_k=top_k or cfg.get("top_k", 10),
+        method=method or cfg.get("method", "top_k"),
+        rebalance_freq=rebalance_freq or cfg.get("rebalance_freq", 5),
+        horizons=parsed_horizons,
+        group_count=group_count or cfg.get("group_count", 10),
+        benchmark=benchmark or cfg.get("benchmark", "SH000300"),
+    )
+    result = engine.run(pred)
+    run_dir = result.save(tag=tag)
+
+    click.echo(f"\nSignal backtest saved to: {run_dir}")
+    click.echo(f"Top-K: {engine.top_k} | method={engine.method} | rebalance={engine.rebalance_freq}")
+    click.echo(f"Avg turnover: {result.summary_metrics.get('avg_turnover', 0):.2%}")
+    click.echo(f"Primary IC mean: {result.summary_metrics.get(f'ic_{engine.eval_horizon}d_mean', 0):.4f}")
+    click.echo(f"Primary RankIC mean: {result.summary_metrics.get(f'rank_ic_{engine.eval_horizon}d_mean', 0):.4f}")
+    click.echo(f"Signal {engine.eval_horizon}D mean return: {result.summary_metrics.get(f'buy_mean_return_{engine.eval_horizon}d', 0):.2%}")
+
+
+@cli.command("account-backtest")
+@click.option("--model-path", default=None, help="Path to .pkl model")
+@click.option("--pred-path", default=None, help="Path to cached predictions .pkl")
+@click.option("--universe", default=None, help="Stock universe: csi300 / csi500 / all")
+@click.option("--top-k", default=None, type=int, help="Number of stocks to hold")
+@click.option("--method", default=None, type=click.Choice(["top_k", "quantile"]),
+              help="Signal construction method for account backtest")
+@click.option("--rebalance-freq", default=None, type=int, help="Rebalance every N trading days")
+@click.option("--execution-price", default=None, type=click.Choice(["open", "close"]),
+              help="Execution price model")
+@click.option("--order-type", default=None, type=click.Choice(["market", "limit"]),
+              help="Order submission type for account backtest")
+@click.option("--slippage-bps", default=None, type=float, help="Round-trip slippage in basis points per side")
+@click.option("--allow-partial-fill/--no-partial-fill", default=None, help="Allow partial fills when liquidity is limited")
+@click.option("--participation-rate", default=None, type=float, help="Max fraction of daily volume allowed to trade")
+@click.option("--initial-capital", default=None, type=float, help="Initial account capital")
+@click.option("--cash-reserve-pct", default=None, type=float, help="Cash reserve ratio")
+@click.option("--benchmark", default=None, help="Benchmark instrument, e.g. SH000300")
+@click.option("--disable-risk-manager", is_flag=True, help="Disable pre-trade risk manager")
+@click.option("--factor-groups", default=None, help="Comma-separated factor groups")
+@click.option("--tag", default="", help="Optional output tag")
+def account_backtest(
+    model_path: str | None,
+    pred_path: str | None,
+    universe: str | None,
+    top_k: int | None,
+    method: str | None,
+    rebalance_freq: int | None,
+    execution_price: str | None,
+    order_type: str | None,
+    slippage_bps: float | None,
+    allow_partial_fill: bool | None,
+    participation_rate: float | None,
+    initial_capital: float | None,
+    cash_reserve_pct: float | None,
+    benchmark: str | None,
+    disable_risk_manager: bool,
+    factor_groups: str | None,
+    tag: str,
+) -> None:
+    """Run account-level backtest and save a run under output/backtests/account."""
+    from stopat30m.backtest.account_backtest import AccountBacktestEngine
+    from stopat30m.backtest.common import load_prediction_source
+    from stopat30m.config import get
+
+    cfg = get("account_backtest") or {}
+    pred, _, metadata = load_prediction_source(
+        model_path=model_path,
+        pred_path=pred_path,
+        universe=universe,
+        factor_groups=factor_groups,
+    )
+    logger.info(
+        f"Prediction source={metadata.get('source', '?')}, "
+        f"universe={metadata.get('universe', metadata.get('source_path', '?'))}"
+    )
+
+    engine = AccountBacktestEngine(
+        initial_capital=initial_capital or cfg.get("initial_capital", 1_000_000),
+        top_k=top_k or cfg.get("top_k", 10),
+        method=method or cfg.get("method", "top_k"),
+        rebalance_freq=rebalance_freq or cfg.get("rebalance_freq", 5),
+        execution_price=execution_price or cfg.get("execution_price", "open"),
+        order_type=order_type or cfg.get("order_type", "market"),
+        slippage_bps=slippage_bps if slippage_bps is not None else cfg.get("slippage_bps", 0.0),
+        allow_partial_fill=allow_partial_fill if allow_partial_fill is not None else cfg.get("allow_partial_fill", False),
+        participation_rate=participation_rate if participation_rate is not None else cfg.get("participation_rate", 0.1),
+        cash_reserve_pct=cash_reserve_pct if cash_reserve_pct is not None else cfg.get("cash_reserve_pct", 0.02),
+        benchmark=benchmark or cfg.get("benchmark", "SH000300"),
+        enable_risk_manager=not disable_risk_manager and cfg.get("enable_risk_manager", True),
+    )
+    result = engine.run(pred)
+    run_dir = result.save(tag=tag)
+
+    click.echo(f"\nAccount backtest saved to: {run_dir}")
+    click.echo(f"Ending equity: ¥{result.report.get('ending_equity', 0):,.2f}")
+    click.echo(f"Annual return: {result.report.get('annual_return', 0):.2%}")
+    click.echo(f"Sharpe: {result.report.get('sharpe', 0):.2f}")
+    click.echo(f"Max drawdown: {result.report.get('max_drawdown', 0):.2%}")
+    click.echo(f"Total fees: ¥{result.report.get('total_fees', 0):,.2f}")
+    click.echo(f"Rejected orders: {result.report.get('rejected_orders', 0)}")
+
+
 @cli.command()
 @click.option("--model-path", required=True, help="Path to .pkl model")
 @click.option("--date", default=None, help="Signal date (YYYY-MM-DD)")
@@ -439,6 +637,130 @@ def dashboard() -> None:
     from pathlib import Path
     dashboard_path = Path(__file__).parent / "stopat30m" / "web" / "dashboard.py"
     subprocess.run(["streamlit", "run", str(dashboard_path)], check=False)
+
+
+@cli.group()
+def paper() -> None:
+    """Paper trading account management (模拟交易)."""
+
+
+@paper.command("init")
+@click.option("--capital", required=True, type=float, help="Initial capital (元)")
+@click.option("--state-dir", default=None, help="State directory (default: output/paper)")
+def paper_init(capital: float, state_dir: str | None) -> None:
+    """Initialize a new paper trading account."""
+    from stopat30m.trading.broker.paper import PaperBroker
+
+    kwargs = {}
+    if state_dir:
+        kwargs["state_dir"] = state_dir
+    broker = PaperBroker.init_account(capital, **kwargs)
+    acct = broker.get_account()
+    click.echo(f"Paper account created: ¥{acct.cash:,.0f} cash")
+    click.echo(f"State: {broker._state_path}")
+
+
+@paper.command("status")
+@click.option("--state-dir", default=None, help="State directory")
+def paper_status(state_dir: str | None) -> None:
+    """Show paper trading account summary."""
+    from stopat30m.trading.broker.paper import PaperBroker
+
+    broker = PaperBroker(state_dir=state_dir) if state_dir else PaperBroker()
+    if not broker.is_initialized:
+        click.echo("Paper account not initialized. Run: py main.py paper init --capital <amount>")
+        return
+
+    acct = broker.get_account()
+    positions = broker.get_positions()
+
+    click.echo(f"\n{'=' * 58}")
+    click.echo(f"  Paper Trading Account")
+    click.echo(f"{'=' * 58}")
+    click.echo(f"  {'Initial Capital':<24}¥{acct.initial_capital:>12,.0f}")
+    click.echo(f"  {'Cash':<24}¥{acct.cash:>12,.0f}")
+    click.echo(f"  {'Market Value':<24}¥{acct.market_value:>12,.0f}")
+    click.echo(f"  {'Equity':<24}¥{acct.equity:>12,.0f}")
+    click.echo(f"  {'Total P&L':<24}¥{acct.total_pnl:>+12,.0f}")
+    click.echo(f"  {'Return':<24}{acct.return_pct:>+12.2%}")
+    click.echo(f"  {'Realized P&L':<24}¥{acct.realized_pnl:>+12,.0f}")
+    click.echo(f"  {'Total Fees':<24}¥{acct.total_fees:>12,.2f}")
+    click.echo(f"  {'Positions':<24}{len(positions):>12d}")
+    click.echo(f"{'=' * 58}")
+
+    if positions:
+        click.echo(f"\n  {'Code':<12}{'Qty':>8}{'AvgCost':>10}{'CurPrice':>10}{'P&L':>12}{'P&L%':>8}")
+        click.echo(f"  {'-' * 56}")
+        for inst, pos in sorted(positions.items()):
+            frozen = f" [冻结{pos.frozen_quantity}]" if pos.frozen_quantity > 0 else ""
+            click.echo(
+                f"  {inst:<12}{pos.quantity:>8}{pos.avg_cost:>10.2f}"
+                f"{pos.current_price:>10.2f}{pos.unrealized_pnl:>+12,.0f}"
+                f"{pos.pnl_pct:>+7.1%}{frozen}"
+            )
+        click.echo(f"{'=' * 58}\n")
+
+
+@paper.command("settle")
+@click.option("--date", default=None, help="Settlement date (default: today)")
+@click.option("--state-dir", default=None, help="State directory")
+def paper_settle(date: str | None, state_dir: str | None) -> None:
+    """Run end-of-day settlement (unfreeze T+1, record NAV)."""
+    from datetime import datetime as dt
+
+    from stopat30m.trading.broker.paper import PaperBroker
+
+    if date is None:
+        date = dt.now().strftime("%Y-%m-%d")
+
+    broker = PaperBroker(state_dir=state_dir) if state_dir else PaperBroker()
+    if not broker.is_initialized:
+        click.echo("Paper account not initialized.")
+        return
+
+    snap = broker.settle_day(date)
+    click.echo(f"Settlement {date}:")
+    click.echo(f"  Equity: ¥{snap.equity:,.0f}")
+    click.echo(f"  Cash:   ¥{snap.cash:,.0f}")
+    click.echo(f"  MV:     ¥{snap.market_value:,.0f}")
+    click.echo(f"  Return: {snap.daily_return:+.2%}")
+
+
+@paper.command("reset")
+@click.option("--state-dir", default=None, help="State directory")
+@click.confirmation_option(prompt="This will delete all paper trading data. Continue?")
+def paper_reset(state_dir: str | None) -> None:
+    """Reset paper account (keeps initial capital, wipes all trades)."""
+    from stopat30m.trading.broker.paper import PaperBroker
+
+    broker = PaperBroker(state_dir=state_dir) if state_dir else PaperBroker()
+    if not broker.is_initialized:
+        click.echo("Paper account not initialized.")
+        return
+
+    capital = broker.get_account().initial_capital
+    broker.reset()
+    click.echo(f"Paper account reset to ¥{capital:,.0f}")
+
+
+@paper.command("export")
+@click.option("--state-dir", default=None, help="State directory")
+def paper_export(state_dir: str | None) -> None:
+    """Show paths to exported CSV files."""
+    from stopat30m.trading.broker.paper import PaperBroker
+
+    broker = PaperBroker(state_dir=state_dir) if state_dir else PaperBroker()
+    if not broker.is_initialized:
+        click.echo("Paper account not initialized.")
+        return
+
+    click.echo(f"State:  {broker._state_path}")
+    click.echo(f"Trades: {broker._trades_csv}")
+    click.echo(f"NAV:    {broker._nav_csv}")
+
+    fills = broker.get_fills()
+    nav = broker.get_nav_history()
+    click.echo(f"\n{len(fills)} fills, {len(nav)} NAV snapshots")
 
 
 @cli.command()
