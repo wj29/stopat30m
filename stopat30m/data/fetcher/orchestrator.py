@@ -615,7 +615,7 @@ def append_with_source(
     if not cal_path.exists():
         raise FileNotFoundError(
             f"No existing calendar at {cal_path}. "
-            "Run a full download first: py main.py download --full"
+            "Run a full download first: python main.py download --full"
         )
 
     if end_date is None:

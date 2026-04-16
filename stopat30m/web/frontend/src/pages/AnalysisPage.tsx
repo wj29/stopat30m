@@ -516,14 +516,27 @@ export default function AnalysisPage() {
       title: '技术信号',
       dataIndex: 'signal_score',
       width: 120,
-      render: (_, r) => (
-        <span className="inline-flex items-center gap-1.5">
-          {r.buy_signal
-            ? <Tag color={signalColor(r.buy_signal)} size="small">{r.buy_signal}</Tag>
-            : '—'}
-          <span className="tabular-nums text-gray-400">{r.signal_score ?? ''}</span>
-        </span>
-      ),
+      render: (_, r) => {
+        if (r.status === 'pending') {
+          return (
+            <span className="inline-flex items-center gap-1.5 text-blue-600">
+              <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+              <span className="text-xs">分析中…</span>
+            </span>
+          );
+        }
+        if (r.status === 'failed') {
+          return <Tag color="red" size="small">失败</Tag>;
+        }
+        return (
+          <span className="inline-flex items-center gap-1.5">
+            {r.buy_signal
+              ? <Tag color={signalColor(r.buy_signal)} size="small">{r.buy_signal}</Tag>
+              : '—'}
+            <span className="tabular-nums text-gray-400">{r.signal_score ?? ''}</span>
+          </span>
+        );
+      },
     },
     {
       title: '模型分',
@@ -564,9 +577,11 @@ export default function AnalysisPage() {
       render: (_, r) =>
         r.id != null ? (
           <Space size="small">
-            <Button type="text" size="mini" onClick={() => openDetail(r.id!)}>
-              详情
-            </Button>
+            {r.status !== 'pending' && (
+              <Button type="text" size="mini" onClick={() => openDetail(r.id!)}>
+                详情
+              </Button>
+            )}
             <Button type="text" status="danger" size="mini" onClick={() => confirmDeleteSingle(r.id!)}>
               删除
             </Button>
@@ -580,6 +595,13 @@ export default function AnalysisPage() {
       if (timerRef.current) window.clearInterval(timerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!loading) return;
+    const id = window.setInterval(() => loadHistory(), 3000);
+    loadHistory();
+    return () => window.clearInterval(id);
+  }, [loading, loadHistory]);
 
   async function onAnalyze() {
     const c = code.trim();

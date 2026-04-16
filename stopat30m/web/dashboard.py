@@ -843,7 +843,7 @@ def _tab_rebalance(broker, use_paper: bool, normalize_instrument) -> None:
 
     signals = load_latest_signals()
     if signals is None or signals.empty:
-        st.warning("暂无信号文件。请先运行 `py main.py signal --model-path output/models/model_lgbm.pkl`")
+        st.warning("暂无信号文件。请先运行 `python main.py signal --model-path output/models/model_lgbm.pkl`")
         return
 
     # Signal display
@@ -1383,7 +1383,7 @@ def _read_run_csv(path: Path) -> pd.DataFrame:
 
 def page_signal_backtest() -> None:
     st.title("🧭 信号回测")
-    run_dir = _select_run_dir("signal", "暂无信号回测数据。请先运行 `py main.py signal-backtest --model-path ...`。")
+    run_dir = _select_run_dir("signal", "暂无信号回测数据。请先运行 `python main.py signal-backtest --model-path ...`。")
     if run_dir is None:
         return
 
@@ -1501,7 +1501,7 @@ def page_signal_backtest() -> None:
 
 def page_account_backtest() -> None:
     st.title("🏦 账户回测")
-    run_dir = _select_run_dir("account", "暂无账户回测数据。请先运行 `py main.py account-backtest --model-path ...`。")
+    run_dir = _select_run_dir("account", "暂无账户回测数据。请先运行 `python main.py account-backtest --model-path ...`。")
     if run_dir is None:
         return
 
@@ -1624,7 +1624,7 @@ def page_model_eval() -> None:
 
         _show_ic_assessment(ic, icir, ric, ricir)
     else:
-        st.info("暂无 IC 数据。请先运行 `py main.py train`。")
+        st.info("暂无 IC 数据。请先运行 `python main.py train`。")
 
     # --- Backtest Results ---
     st.markdown("---")
@@ -1633,7 +1633,7 @@ def page_model_eval() -> None:
     returns_file = backtest_dir / "returns.csv"
 
     if not report_file.exists():
-        st.info("暂无回测数据。请先运行 `py main.py backtest --model-path output/models/model_lgbm.pkl`。")
+        st.info("暂无回测数据。请先运行 `python main.py backtest --model-path output/models/model_lgbm.pkl`。")
         return
 
     with open(report_file) as f:

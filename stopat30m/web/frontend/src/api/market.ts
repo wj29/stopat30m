@@ -24,12 +24,12 @@ export interface IndexItem {
   amount: number;
 }
 
-export async function getSectorHeatmap(): Promise<{ sectors: SectorItem[]; count: number }> {
+export async function getSectorHeatmap(): Promise<{ sectors: SectorItem[]; count: number; source?: string }> {
   const { data } = await api.get('/market/heatmap');
   return data;
 }
 
-export async function getMainIndices(): Promise<{ indices: IndexItem[] }> {
+export async function getMainIndices(): Promise<{ indices: IndexItem[]; source?: string }> {
   const { data } = await api.get('/market/indices');
   return data;
 }

@@ -114,7 +114,7 @@ def check_data(fix: bool) -> None:
     cal_path = data_dir / "calendars" / "day.txt"
     if not cal_path.exists():
         click.echo("  No calendar found. Run:")
-        click.echo("    py main.py download --source qlib+baostock")
+        click.echo("    python main.py download --source qlib+baostock")
         return
 
     cal_dates = [d.strip() for d in cal_path.read_text().strip().split("\n") if d.strip()]
@@ -134,8 +134,8 @@ def check_data(fix: bool) -> None:
     meta_path = data_dir / META_FILENAME
     if not meta_path.exists():
         click.echo(f"\n  data_meta.json 不存在!")
-        click.echo(f"  建议运行: py main.py download --source qlib+baostock")
-        click.echo(f"  或重建 meta: py main.py download --rebuild-meta")
+        click.echo(f"  建议运行: python main.py download --source qlib+baostock")
+        click.echo(f"  或重建 meta: python main.py download --rebuild-meta")
         click.echo(f"{'=' * 62}\n")
         return
 
@@ -234,13 +234,13 @@ def check_data(fix: bool) -> None:
     today = _dt.now().strftime("%Y-%m-%d")
     if not meta.trusted_until:
         click.echo(f"\n  本地无数据，建议全量下载:")
-        click.echo(f"    py main.py download --full")
+        click.echo(f"    python main.py download --full")
     elif meta.trusted_until >= today:
         click.echo(f"\n  数据已是最新，无需更新")
     else:
         gap = f"{meta.trusted_until} → {today}"
         click.echo(f"\n  需要增量更新 ({gap}):")
-        click.echo(f"    py main.py download")
+        click.echo(f"    python main.py download")
 
     # --- Instruments vs binary consistency ---
     from stopat30m.data.fetcher.qlib_dumper import rebuild_instruments_from_binary
@@ -279,7 +279,7 @@ def check_data(fix: bool) -> None:
         click.echo(f"\n  ⚠ instruments 与二进制数据不同步: {inst_desync} 只")
         click.echo(f"    (instruments 记录的结束日期落后于实际文件)")
         if not fix:
-            click.echo(f"    修复命令: py main.py check-data --fix")
+            click.echo(f"    修复命令: python main.py check-data --fix")
     else:
         click.echo(f"\n  instruments 与二进制数据一致 ✓")
 
@@ -497,7 +497,7 @@ def backtest(model_path: str | None, pred_path: str | None, universe: str | None
     click.echo(f"  {'Total Trading Days':<24}{m.get('total_trades', 0):>10d}")
     click.echo(f"{'=' * 58}")
     click.echo(f"  Results saved to ./output/backtest/")
-    click.echo(f"  View in dashboard: py main.py dashboard")
+    click.echo(f"  View in dashboard: python main.py dashboard")
     click.echo(f"{'=' * 58}\n")
 
 
@@ -839,7 +839,7 @@ def build_frontend() -> None:
     result = subprocess.run(["npx", "vite", "build"], cwd=str(frontend_dir))
     if result.returncode == 0:
         logger.info(f"Build complete: {frontend_dir / 'dist'}")
-        logger.info("Run 'py main.py serve' to start production server.")
+        logger.info("Run 'python main.py serve' to start production server.")
     else:
         logger.error("Frontend build failed")
         raise SystemExit(1)
@@ -874,7 +874,7 @@ def paper_status(state_dir: str | None) -> None:
 
     broker = PaperBroker(state_dir=state_dir) if state_dir else PaperBroker()
     if not broker.is_initialized:
-        click.echo("Paper account not initialized. Run: py main.py paper init --capital <amount>")
+        click.echo("Paper account not initialized. Run: python main.py paper init --capital <amount>")
         return
 
     acct = broker.get_account()
@@ -1219,7 +1219,7 @@ def create_invite(expires: str, admin_user: str | None) -> None:
             admin = db.query(User).filter(User.role == "admin").first()
 
         if not admin:
-            click.echo("No admin user found. Create one first: py main.py user create-admin")
+            click.echo("No admin user found. Create one first: python main.py user create-admin")
             return
 
         code = secrets.token_urlsafe(16)

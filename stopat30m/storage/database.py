@@ -85,6 +85,7 @@ def _migrate_add_columns() -> None:
         for table, col, col_type, default in [
             ("analysis_history", "data_source", "VARCHAR(30)", "''"),
             ("analysis_history", "user_id", "INTEGER", "NULL"),
+            ("analysis_history", "status", "VARCHAR(10)", "'completed'"),
             ("backtest_runs", "user_id", "INTEGER", "NULL"),
         ]:
             try:

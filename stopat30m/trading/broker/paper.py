@@ -338,7 +338,7 @@ class PaperBroker(AbstractBroker):
     def _ensure_initialized(self) -> None:
         if self._account is None:
             raise RuntimeError(
-                "Paper account not initialized. Run: py main.py paper init --capital <amount>"
+                "Paper account not initialized. Run: python main.py paper init --capital <amount>"
             )
 
     def _save(self) -> None:

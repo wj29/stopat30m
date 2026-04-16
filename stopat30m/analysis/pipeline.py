@@ -346,6 +346,18 @@ def _build_llm_dashboard_dict(llm_result) -> dict:
     return base
 
 
+def _mark_pending_failed(pending_id: int | None) -> None:
+    if pending_id is None:
+        return
+    try:
+        with get_db() as db:
+            rec = db.query(AnalysisHistory).filter(AnalysisHistory.id == pending_id).first()
+            if rec and rec.status == "pending":
+                rec.status = "failed"
+    except Exception:
+        pass
+
+
 def analyze_stock(
     code: str,
     on_progress: ProgressCallback | None = None,
@@ -363,6 +375,23 @@ def analyze_stock(
     emit(1, TOTAL_STEPS, "获取股票名称")
     names = fetch_stock_names([norm])
     stock_name = names.get(norm, "")
+
+    # Insert a pending record so it shows up in history immediately
+    pending_id: int | None = None
+    try:
+        with get_db() as db:
+            pending_record = AnalysisHistory(
+                code=norm,
+                user_id=user_id,
+                name=stock_name,
+                status="pending",
+                analysis_date=datetime.now(),
+            )
+            db.add(pending_record)
+            db.flush()
+            pending_id = pending_record.id
+    except Exception:
+        logger.debug("Failed to insert pending record, continuing anyway")
 
     # 2 — OHLCV
     emit(2, TOTAL_STEPS, "拉取行情数据")
@@ -382,6 +411,7 @@ def analyze_stock(
         except Exception:
             pass
     if df is None or df.empty:
+        _mark_pending_failed(pending_id)
         return FullAnalysisResponse(
             code=norm,
             name=stock_name,
@@ -456,6 +486,7 @@ def analyze_stock(
     llm_available = llm_result.summary != "LLM分析不可用"
     field_values = dict(
         name=stock_name,
+        status="completed",
         signal_score=tech_result.signal_score,
         buy_signal=tech_result.buy_signal.value,
         signal_reasons=tech_result.signal_reasons,
@@ -477,7 +508,9 @@ def analyze_stock(
     )
     with get_db() as db:
         record: AnalysisHistory | None = None
-        if upsert and user_id is not None:
+        if pending_id is not None:
+            record = db.query(AnalysisHistory).filter(AnalysisHistory.id == pending_id).first()
+        if record is None and upsert and user_id is not None:
             record = (
                 db.query(AnalysisHistory)
                 .filter(AnalysisHistory.code == norm, AnalysisHistory.user_id == user_id)

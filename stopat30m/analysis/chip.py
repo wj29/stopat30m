@@ -207,29 +207,51 @@ _ak_sleep_min = 2.0
 _ak_sleep_max = 5.0
 _ak_last_request_time: Optional[float] = None
 
+# push2his connectivity probe — once confirmed unreachable, skip all AKShare chip calls
+_push2his_ok: Optional[bool] = None
+_push2his_probe_ts: float = 0
+_PUSH2HIS_PROBE_TTL = 600  # re-probe every 10 min
+
+
+def _is_push2his_reachable() -> bool:
+    """Quick HTTPS probe to push2his.eastmoney.com. Cached for 10 min."""
+    global _push2his_ok, _push2his_probe_ts
+    now = time.time()
+    if _push2his_ok is not None and now - _push2his_probe_ts < _PUSH2HIS_PROBE_TTL:
+        return _push2his_ok
+
+    import requests as _req
+    try:
+        r = _req.get(
+            "https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=0.000001&fields1=f1&fields2=f51&klt=101&fqt=1&beg=0&end=0&lmt=1",
+            headers={"User-Agent": "Mozilla/5.0"},
+            timeout=3,
+        )
+        ok = r.status_code == 200 and len(r.text) > 10
+    except Exception:
+        ok = False
+    _push2his_ok = ok
+    _push2his_probe_ts = now
+    if not ok:
+        logger.info("[筹码] push2his.eastmoney.com 不可达，AKShare 筹码路径将跳过 (10分钟后重试)")
+    return ok
+
 
 def _set_random_user_agent() -> None:
-    """设置随机 User-Agent（与 AkshareFetcher 一致，防封策略）。"""
     try:
-        random_ua = random.choice(USER_AGENTS)
-        logger.debug(f"设置 User-Agent: {random_ua[:50]}...")
-    except Exception as e:
-        logger.debug(f"设置 User-Agent 失败: {e}")
+        random.choice(USER_AGENTS)
+    except Exception:
+        pass
 
 
 def _enforce_akshare_rate_limit() -> None:
-    """强制执行速率限制：间隔 + 随机 jitter（与 AkshareFetcher._enforce_rate_limit 一致）。"""
     global _ak_last_request_time
     if _ak_last_request_time is not None:
         elapsed = time.time() - _ak_last_request_time
-        min_interval = _ak_sleep_min
-        if elapsed < min_interval:
-            additional_sleep = min_interval - elapsed
-            logger.debug(f"补充休眠 {additional_sleep:.2f} 秒")
-            time.sleep(additional_sleep)
+        if elapsed < _ak_sleep_min:
+            time.sleep(_ak_sleep_min - elapsed)
 
     sleep_time = random.uniform(_ak_sleep_min, _ak_sleep_max)
-    logger.debug(f"随机休眠 {sleep_time:.2f} 秒...")
     time.sleep(sleep_time)
     _ak_last_request_time = time.time()
 
@@ -238,21 +260,22 @@ def _get_chip_distribution_akshare(stock_code: str) -> Optional[ChipDistribution
     """
     获取筹码分布数据（akshare_fetcher.get_chip_distribution）
 
-    数据来源：ak.stock_cyq_em()
+    数据来源：ak.stock_cyq_em() (push2his.eastmoney.com)
     """
-    import akshare as ak
-
     if _is_us_code(stock_code):
         logger.debug(f"[API跳过] {stock_code} 是美股，无筹码分布数据")
         return None
-
     if _is_hk_code(stock_code):
         logger.debug(f"[API跳过] {stock_code} 是港股，无筹码分布数据")
         return None
-
     if _is_etf_code(stock_code):
         logger.debug(f"[API跳过] {stock_code} 是 ETF/指数，无筹码分布数据")
         return None
+
+    if not _is_push2his_reachable():
+        return None
+
+    import akshare as ak
 
     try:
         _set_random_user_agent()
@@ -270,7 +293,6 @@ def _get_chip_distribution_akshare(stock_code: str) -> Optional[ChipDistribution
             return None
 
         logger.info(f"[API返回] ak.stock_cyq_em 成功: 返回 {len(df)} 天数据, 耗时 {api_elapsed:.2f}s")
-        logger.debug(f"[API返回] 筹码数据列名: {list(df.columns)}")
 
         latest = df.iloc[-1]
 
@@ -295,7 +317,7 @@ def _get_chip_distribution_akshare(stock_code: str) -> Optional[ChipDistribution
         return chip
 
     except Exception as e:
-        logger.error(f"[API错误] 获取 {stock_code} 筹码分布失败: {e}")
+        logger.warning(f"[筹码] AKShare 获取 {stock_code} 筹码分布失败: {e}")
         return None
 
 

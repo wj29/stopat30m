@@ -134,6 +134,7 @@ export default function HomePage() {
   const [sectors, setSectors] = useState<SectorItem[]>(cached?.sectors ?? []);
   const [indices, setIndices] = useState<IndexItem[]>(cached?.indices ?? []);
   const [loading, setLoading] = useState(!cached);
+  const [dataSource, setDataSource] = useState('');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -141,8 +142,12 @@ export default function HomePage() {
       const [heatRes, idxRes] = await Promise.allSettled([getSectorHeatmap(), getMainIndices()]);
       const newSectors = heatRes.status === 'fulfilled' ? heatRes.value.sectors : sectors;
       const newIndices = idxRes.status === 'fulfilled' ? idxRes.value.indices : indices;
+      const src = (idxRes.status === 'fulfilled' && idxRes.value.source)
+        || (heatRes.status === 'fulfilled' && heatRes.value.source)
+        || '';
       setSectors(newSectors);
       setIndices(newIndices);
+      setDataSource(src);
       writeCache(newSectors, newIndices);
     } finally {
       setLoading(false);
@@ -160,7 +165,12 @@ export default function HomePage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">市场概览</h1>
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-2xl font-bold text-gray-900">市场概览</h1>
+          {dataSource && (
+            <span className="text-xs text-gray-400">数据来源：{dataSource}</span>
+          )}
+        </div>
         <button
           type="button"
           onClick={fetchData}

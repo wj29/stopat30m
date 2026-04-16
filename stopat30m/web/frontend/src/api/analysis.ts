@@ -125,6 +125,7 @@ export interface AnalysisResult {
   id: number | null;
   code: string;
   name: string;
+  status?: string;
   analysis_date: string;
   signal_score: number;
   buy_signal: string;

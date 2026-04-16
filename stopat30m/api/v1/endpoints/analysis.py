@@ -297,6 +297,7 @@ def _record_to_dict(r: AnalysisHistory) -> dict:
         "id": r.id,
         "code": r.code,
         "name": r.name,
+        "status": getattr(r, "status", None) or "completed",
         "analysis_date": r.analysis_date.isoformat() if r.analysis_date else "",
         "signal_score": r.signal_score,
         "buy_signal": r.buy_signal,

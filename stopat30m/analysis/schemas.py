@@ -84,6 +84,7 @@ class FullAnalysisResponse(BaseModel):
     id: int | None = None
     code: str
     name: str = ""
+    status: str = "completed"
     analysis_date: str = ""
 
     # Technical

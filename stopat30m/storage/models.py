@@ -126,6 +126,7 @@ class AnalysisHistory(Base):
     code = Column(String(10), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     name = Column(String(50), default="")
+    status = Column(String(10), nullable=False, default="completed", server_default="completed", index=True)
     analysis_date = Column(DateTime, default=datetime.utcnow, index=True)
 
     # Technical analysis (from TrendAnalyzer)
