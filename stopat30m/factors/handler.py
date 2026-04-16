@@ -168,8 +168,6 @@ class AlphaExtendedHandler:
 
     def to_qlib_handler(self) -> Any:
         """Create a qlib DataHandlerLP instance."""
-        import warnings
-
         from qlib.data.dataset.handler import DataHandlerLP
 
         infer_processors = self._infer_processors or self._default_infer_processors()
@@ -186,21 +184,18 @@ class AlphaExtendedHandler:
         feature_config = (self._feature_exprs, self._feature_names)
         label_config = (self._label_exprs, self._label_names)
 
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", message="divide by zero", category=RuntimeWarning)
-            warnings.filterwarnings("ignore", message="invalid value", category=RuntimeWarning)
-            handler = DataHandlerLP(
-                **data_handler_config,
-                data_loader={
-                    "class": "QlibDataLoader",
-                    "kwargs": {
-                        "config": {
-                            "feature": feature_config,
-                            "label": label_config,
-                        },
+        handler = DataHandlerLP(
+            **data_handler_config,
+            data_loader={
+                "class": "QlibDataLoader",
+                "kwargs": {
+                    "config": {
+                        "feature": feature_config,
+                        "label": label_config,
                     },
                 },
-            )
+            },
+        )
         return handler
 
     def _default_infer_processors(self) -> list[dict]:
@@ -246,11 +241,18 @@ class AlphaExtendedHandler:
                 "test": (cfg.get("test_start", "2025-07-01"), cfg.get("test_end") or _today()),
             }
 
-        handler = self.to_qlib_handler()
-        if on_step:
-            on_step(f"{self.num_features} features computed")
+        import warnings
 
-        dataset = DatasetH(handler=handler, segments=segments)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message="divide by zero", category=RuntimeWarning)
+            warnings.filterwarnings("ignore", message="invalid value", category=RuntimeWarning)
+
+            handler = self.to_qlib_handler()
+            if on_step:
+                on_step(f"{self.num_features} features computed")
+
+            dataset = DatasetH(handler=handler, segments=segments)
+
         if on_step:
             on_step(f"{len(segments)} segments built")
 

@@ -2,6 +2,185 @@ project:
   name: stopat30m
   version: "1.0.0"
 
+# ╔══════════════════════════════════════════════════════════════╗
+# ║                     🔑 API 密钥汇总                         ║
+# ║  所有需要填写的 Key 集中在此，按用途分组                      ║
+# ║  不使用的服务留空即可，系统会自动跳过                         ║
+# ╚══════════════════════════════════════════════════════════════╝
+
+# ── 数据源 ──────────────────────────────────────────────────────
+tushare:
+  token: "117cc4376f3df4234f06c058eeaef6fa8e86ee64b5dd5f0b9a8a6afb"
+  # Tushare Pro API token
+  # 用途：筹码分布备选数据源 + 实时行情备选源
+  # 获取：https://tushare.pro/register （免费注册，部分接口需积分）
+
+# ── LLM 大模型 ─────────────────────────────────────────────────
+llm:
+  enabled: true # false = 跳过 LLM 分析，仅技术打分
+  model: "openai/gpt-5.4" # LiteLLM 模型标识符
+  # 常用模型：
+  #   deepseek/deepseek-chat             — DeepSeek (便宜)
+  #   openai/gpt-4o                      — OpenAI
+  #   gemini/gemini-2.0-flash            — Google Gemini
+  #   anthropic/claude-sonnet-4-20250514 — Anthropic Claude
+  #   ollama/qwen3:8b                    — Ollama 本地 (免费, 需 ollama_api_base)
+  #   完整列表: https://docs.litellm.ai/docs/providers
+  temperature: 0.3 # 越低越确定性
+  max_tokens: 4000 # 决策仪表盘 JSON 较大，建议 ≥3000
+  timeout: 90 # 请求超时 (秒)
+  num_retries: 2 # 调用失败重试次数
+  integrity_retries: 1 # 输出完整性校验不通过时额外重试
+
+  # --- LLM API Keys（只需填你使用的 provider，其余留空）---
+
+  # AIHubMix 聚合平台 — 一个 key 调所有 openai 兼容模型（推荐）
+  # 获取：https://aihubmix.com
+  # sk-OoCv1x1p6StPDNy06c53F218D58f4eD2911991FdB30d5813
+  aihubmix_api_key: ""
+
+  # DeepSeek
+  # 获取：https://platform.deepseek.com/api_keys
+  deepseek_api_key: ""
+  deepseek_base_url: "" # 留空 = 官方 api.deepseek.com
+
+  # OpenAI
+  # 获取：https://platform.openai.com/api-keys
+  openai_api_key: "sk-bc647dca4df0461f91889c20aba7a232"
+  openai_base_url: "https://www.right.codes/codex/v1" # 留空 = 官方，或填中转站地址（需包含 /v1）
+
+  # Google Gemini
+  # 获取：https://aistudio.google.com/apikey
+  gemini_api_key: ""
+
+  # Anthropic Claude
+  # 获取：https://console.anthropic.com/settings/keys
+  anthropic_api_key: ""
+
+  # Ollama 本地模型（免费，无需 key）
+  ollama_api_base: "" # 如: http://localhost:11434
+
+# ── 新闻搜索 ───────────────────────────────────────────────────
+# 用于个股分析时获取最新新闻情报，支持 7 家搜索引擎
+# 多个 key 用逗号分隔，系统自动轮询 + 故障转移
+# 至少配一个才有新闻数据；全部留空则跳过新闻搜索
+search:
+  # 博查 AI（中文搜索，推荐）
+  # 获取：https://open.bochaai.com
+  bocha_api_keys: "sk-dd5d73103da7490286c164b90dbbd6f2"
+
+  # Tavily（AI 优化搜索）
+  # 获取：https://tavily.com （免费 1000 次/月）
+  tavily_api_keys: ""
+
+  # Brave Search
+  # 获取：https://brave.com/search/api/
+  brave_api_keys: ""
+
+  # SerpAPI（Google 搜索代理）
+  # 获取：https://serpapi.com （免费 100 次/月）
+  serpapi_keys: "37f967a46e9a77ffeaeae258c4513e3447c0905feb607eca972a50d74df131cd"
+
+  # Anspire
+  # 获取：联系 anspire.cn
+  anspire_api_keys: ""
+
+  # MiniMax 搜索
+  # 获取：https://www.minimaxi.com
+  minimax_api_keys: ""
+
+  # SearXNG（开源，可自建，无需 key）
+  searxng_base_urls: "" # 自建实例地址，逗号分隔
+  searxng_public_instances_enabled: true # 无自建实例时自动使用公共实例
+
+  # 新闻搜索参数
+  news_max_age_days: 3 # 只搜索最近 N 天的新闻
+  news_strategy_profile: "short" # short=3天 | medium=7天 | long=14天
+  max_results: 8 # 每次搜索最大返回条数
+
+# ── 通知推送 ───────────────────────────────────────────────────
+# 支持 11 个推送渠道，未配置的自动跳过
+notification:
+  report_language: "zh" # zh=中文 | en=English
+  report_summary_only: false # true=只推摘要，不含个股详情
+  webhook_verify_ssl: true # Webhook 请求是否验证 SSL
+
+  # 企业微信
+  # 获取：企业微信后台 → 群机器人 → 复制 Webhook 地址
+  wechat_webhook_url: ""
+  wechat_max_bytes: 4000
+  wechat_msg_type: "markdown"
+
+  # 飞书
+  # 获取：飞书后台 → 群设置 → 群机器人 → 自定义机器人
+  feishu_webhook_url: ""
+  feishu_webhook_secret: "" # 签名校验密钥（可选）
+  feishu_webhook_keyword: "" # 关键词校验（可选）
+  feishu_max_bytes: 20000
+
+  # Telegram
+  # 获取：@BotFather 创建 Bot → 获取 token；chat_id 可通过 @userinfobot 获取
+  telegram_bot_token: ""
+  telegram_chat_id: ""
+  telegram_message_thread_id: "" # 话题消息 ID（可选）
+
+  # 邮件 SMTP
+  # 用途：发送 HTML 格式分析报告到邮箱
+  email_sender: "" # 发件人邮箱
+  email_sender_name: "stopat30m分析助手"
+  email_password: "" # SMTP 授权码（非登录密码）
+  email_receivers: [] # 收件人列表, 如: ["a@x.com", "b@x.com"]
+  stock_email_groups: [] # 按股票分组路由, 如: [{stocks: ["600519"], emails: ["vip@x.com"]}]
+
+  # Discord
+  # 获取：服务器设置 → 整合 → Webhook → 复制 URL
+  discord_webhook_url: ""
+  discord_bot_token: "" # Bot 模式（可选，与 webhook 二选一）
+  discord_main_channel_id: ""
+  discord_max_words: 2000
+
+  # Slack
+  # 获取：https://api.slack.com/apps → Incoming Webhooks
+  slack_webhook_url: ""
+  slack_bot_token: "" # Bot 模式（可选）
+  slack_channel_id: ""
+
+  # PushPlus（国内微信推送）
+  # 获取：https://www.pushplus.plus （微信扫码注册）
+  pushplus_token: ""
+  pushplus_topic: "" # 群组编码（可选）
+  pushplus_max_bytes: 20000
+
+  # Pushover（iOS/Android/桌面推送）
+  # 获取：https://pushover.net （$5 一次性购买）
+  pushover_user_key: ""
+  pushover_api_token: ""
+
+  # Server酱3（国内推送，支持多通道）
+  # 获取：https://sct.ftqq.com （免费）
+  serverchan3_sendkey: ""
+
+  # AstrBot（开源聊天机器人平台）
+  # 获取：自建 AstrBot 实例后获取 URL
+  astrbot_url: ""
+  astrbot_token: "" # HMAC 签名密钥（可选）
+
+  # 自定义 Webhook（POST JSON）
+  # 向任意地址发送 {"text": "报告内容"} 格式的 POST 请求
+  custom_webhook_urls: [] # 如: ["https://your-server.com/hook"]
+  custom_webhook_bearer_token: "" # Bearer 认证（可选）
+
+# ╔══════════════════════════════════════════════════════════════╗
+# ║                    ⚙️  系统配置                              ║
+# ╚══════════════════════════════════════════════════════════════╝
+
+# ── 行情数据源 ──────────────────────────────────────────────────
+# 实时行情按优先级逐个尝试；历史数据下载是并发无优先级
+# 可选: tencent, sina, efinance, pytdx, akshare, tushare
+# tushare 需 token，配了 tushare.token 后会自动加入
+realtime_source_priority: "tencent,sina,efinance,pytdx,akshare"
+
+# ── Qlib 数据 ──────────────────────────────────────────────────
 qlib:
   provider_uri: "~/.qlib/qlib_data/cn_data"
   region: "cn"
@@ -10,17 +189,15 @@ qlib:
 data:
   download_start: "2005-01-01"
   train_start: "2012-01-01"
-  train_end: "2023-12-31"
-  valid_start: "2024-01-01"
+  train_end: "2022-12-31"        # ← 原 2023-12-31，缩短1年让验证集覆盖牛熊
+  valid_start: "2023-01-01"      # ← 原 2024-01-01，含2023震荡+2024牛市，防止只学牛市
   valid_end: "2024-12-31"
   test_start: "2025-01-01"
-  # test_end: 留空则自动使用今天的日期
+  # test_end: 留空 = 自动使用今天
   benchmark: "SH000300"
-  universe: "csi300"
+  universe: "csi300" # csi300 | csi500 | all
 
-tushare:
-  token: ""  # Tushare Pro API token (https://tushare.pro/register)
-
+# ── 因子库 ──────────────────────────────────────────────────────
 factors:
   base: "alpha158"
   enable_momentum: true
@@ -55,6 +232,7 @@ factors:
   label: "Ref($close,-5)/$close - 1"
   label_name: "LABEL0"
 
+# ── 模型训练 ────────────────────────────────────────────────────
 model:
   type: "lgbm"
   output_dir: "./output/models"
@@ -92,13 +270,14 @@ model:
       epochs: 200
       batch_size: 4096
 
+# ── 回测 ────────────────────────────────────────────────────────
 backtest:
   top_k: 10
   rebalance_freq: 5
-  buy_cost: 0.0003       # 买入佣金 0.03%
-  sell_cost: 0.0013      # 卖出佣金 0.03% + 印花税 0.1%
+  buy_cost: 0.0003 # 买入佣金 0.03%
+  sell_cost: 0.0013 # 卖出佣金 0.03% + 印花税 0.1%
   benchmark: "SH000300"
-  deal_price: "open"     # open=开盘价执行(真实), close=收盘价执行(乐观)
+  deal_price: "open" # open=真实 | close=乐观
 
 signal:
   top_k: 10
@@ -129,6 +308,7 @@ account_backtest:
   benchmark: "SH000300"
   enable_risk_manager: true
 
+# ── 交易 ────────────────────────────────────────────────────────
 trading:
   gateway: "xtp"
   account: ""
@@ -148,19 +328,65 @@ risk:
   max_concentration: 0.10
   circuit_breaker_loss: 0.08
 
-redis:
-  host: "localhost"
-  port: 6379
-  db: 0
-  signal_channel: "alpha_signals"
+# ── Agent 多智能体 ──────────────────────────────────────────────
+agent:
+  arch: "multi"                    # single = 单 LLM 调用 | multi = 多 Agent 流水线
+  orchestrator_mode: "full"         # quick | standard | full | specialist
+  skills: []                        # 为空 = 使用默认(bull_trend)；["all"] = 全部激活
+  skill_dir: null                   # 自定义 YAML 技能目录（可选）
+  skill_routing: "auto"             # auto | manual
+  max_steps: 10                     # 每个 Agent 最大工具调用轮数
+  orchestrator_timeout_s: 180       # 整个 Pipeline 超时（秒），每个 Agent 可用完剩余时间
 
-web:
+# ── 分析参数 ────────────────────────────────────────────────────
+analysis:
+  bias_threshold: 5.0 # 乖离率阈值(%)，超过判定为追高
+
+storage:
+  sqlite_path: "./data/stopat30m.db"
+
+# ── Web 服务 ────────────────────────────────────────────────────
+server:
   host: "0.0.0.0"
-  port: 8501
-  refresh_interval: 30
+  port: 5172
+  cors_origins: "http://localhost:5173"
 
+# ── 日志 ────────────────────────────────────────────────────────
 logging:
   level: "INFO"
   file: "./output/logs/stopat30m.log"
   rotation: "10 MB"
   retention: "30 days"
+
+# ── 定时调度 ────────────────────────────────────────────────────
+schedule:
+  enabled: false
+  time: "18:00" # 每日执行时间 (HH:MM)
+  watchlist: "600519,000858,601318" # 逗号分隔的股票代码
+  run_immediately: true # 启动时立即执行一次
+
+# ── 事件监控 / 告警 ────────────────────────────────────────────
+event_monitor:
+  enabled: false
+  check_interval_seconds: 300
+  rules: []
+  # 示例规则:
+  # - type: price_above
+  #   stock_code: "600519"
+  #   threshold: 1800
+  # - type: volume_surge
+  #   stock_code: "000858"
+  #   threshold: 2.0
+
+# ── 用户认证 ─────────────────────────────────────────────────────
+auth:
+  secret_key: ""            # JWT 签名密钥，留空则每次启动自动生成（重启后 token 失效）
+  token_expire_hours: 24    # Token 有效期（小时）
+  invite_expire_days: 7     # 邀请码默认有效天数
+
+# ── Redis（可选，信号发布/订阅）──────────────────────────────────
+redis:
+  host: "localhost"
+  port: 6379
+  db: 0
+  signal_channel: "alpha_signals"

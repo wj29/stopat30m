@@ -12,8 +12,10 @@ from stopat30m.config import get
 from stopat30m.data.provider import init_qlib
 from stopat30m.factors.handler import AlphaExtendedHandler
 
-BACKTEST_ROOT = Path("./output/backtests")
-PREDICTION_ROOT = Path("./output/predictions")
+from stopat30m.config import PROJECT_ROOT
+
+BACKTEST_ROOT = PROJECT_ROOT / "output" / "backtests"
+PREDICTION_ROOT = PROJECT_ROOT / "output" / "predictions"
 
 
 def now_tag() -> str:
@@ -112,19 +114,31 @@ def load_model_predictions(
     universe: str | None = None,
     factor_groups: str | None = None,
     test_only: bool = True,
+    on_step: Any | None = None,
 ) -> tuple[pd.Series, pd.Series | None, AlphaExtendedHandler]:
+    if on_step:
+        on_step("[1/5] Initializing Qlib...")
     init_qlib()
 
+    if on_step:
+        on_step("[2/5] Loading model...")
     with open(model_path, "rb") as f:
         model = pickle.load(f)
 
     groups = factor_groups.split(",") if factor_groups else None
     handler = AlphaExtendedHandler(groups=groups, instruments=universe)
     segments = _test_only_segments() if test_only else None
+
+    if on_step:
+        on_step(f"[3/5] Computing {handler.num_features} features for '{handler.instruments}' (this may take a few minutes)...")
     dataset = handler.build_dataset(segments=segments)
 
+    if on_step:
+        on_step("[4/5] Running model prediction...")
     predictions = normalize_prediction_series(model.predict(dataset))
 
+    if on_step:
+        on_step("[5/5] Extracting labels...")
     labels = None
     try:
         raw_label = dataset.prepare("test", col_set="label", data_key="infer")

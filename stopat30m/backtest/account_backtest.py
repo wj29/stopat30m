@@ -19,7 +19,8 @@ from stopat30m.model.evaluator import compute_portfolio_metrics
 from stopat30m.signal.generator import SignalGenerator
 from stopat30m.trading.executor import execute_plan
 from stopat30m.trading.models import OrderType
-from stopat30m.trading.rebalancer import compute_rebalance_plan, normalize_instrument
+from stopat30m.data.normalize import normalize_instrument
+from stopat30m.trading.rebalancer import compute_rebalance_plan
 from stopat30m.trading.risk import RiskManager
 from stopat30m.trading.rules import price_limit_range
 

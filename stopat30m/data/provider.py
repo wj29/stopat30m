@@ -3,6 +3,7 @@
 Supported sources:
   - qlib:          Qlib public dataset (free, complete to ~2020-09)
   - baostock:      BaoStock (free, no rate limit, full/incremental)
+  - efinance:      Efinance (free, east-money backend, stable API)
   - akshare:       AKShare (free, latest daily data, no auth)
   - tushare:       Tushare Pro (paid, needs token, higher quality)
   - qlib+baostock: Recommended — Qlib base + BaoStock incremental to today
@@ -17,7 +18,7 @@ from loguru import logger
 from stopat30m.config import get
 
 
-VALID_SOURCES = ("qlib", "akshare", "baostock", "tushare", "qlib+baostock")
+VALID_SOURCES = ("qlib", "akshare", "baostock", "efinance", "tushare", "qlib+baostock")
 
 
 def get_data_dir() -> Path:
@@ -77,7 +78,7 @@ def download_cn_data(
 
 def _create_fetcher(source: str, workers: int | None = None):
     """Instantiate the appropriate DataFetcher for the given source."""
-    from stopat30m.data.fetcher import AKShareFetcher, BaoStockFetcher, TushareFetcher
+    from stopat30m.data.fetcher import AKShareFetcher, BaoStockFetcher, EfinanceFetcher, TushareFetcher
 
     if source == "akshare":
         return AKShareFetcher()
@@ -86,6 +87,8 @@ def _create_fetcher(source: str, workers: int | None = None):
         if workers is not None:
             kwargs["workers"] = workers
         return BaoStockFetcher(**kwargs)
+    elif source == "efinance":
+        return EfinanceFetcher()
     elif source == "tushare":
         token = get("tushare", "token", "")
         if not token:
@@ -93,7 +96,7 @@ def _create_fetcher(source: str, workers: int | None = None):
                 "Tushare token not configured. "
                 "Set tushare.token in config.yaml or register at https://tushare.pro"
             )
-        return TushareFetcher(token=token)
+        return TushareFetcher(token=token, delay=1.3)
     else:
         raise ValueError(f"Unknown fetcher source: {source}")
 
@@ -185,16 +188,23 @@ def _create_available_fetchers(primary_source: str, workers: int | None = None) 
 
     Always includes the primary source. Adds secondary sources that are
     importable and configured (e.g. TuShare needs a token).
+
+    Priority order for secondaries: BaoStock > Efinance > AKShare > Tushare.
     """
-    from stopat30m.data.fetcher import AKShareFetcher, BaoStockFetcher
+    from stopat30m.data.fetcher import AKShareFetcher, BaoStockFetcher, EfinanceFetcher
 
     primary = _create_fetcher(primary_source, workers=workers)
     fetchers = [primary]
 
-    secondaries = {"baostock": BaoStockFetcher, "akshare": AKShareFetcher}
-    secondaries.pop(primary_source, None)
+    secondaries = [
+        ("baostock", BaoStockFetcher),
+        ("efinance", EfinanceFetcher),
+        ("akshare", AKShareFetcher),
+    ]
 
-    for name, cls in secondaries.items():
+    for name, cls in secondaries:
+        if name == primary_source:
+            continue
         try:
             fetchers.append(cls())
             logger.info(f"Secondary source enabled: {name}")
@@ -205,8 +215,8 @@ def _create_available_fetchers(primary_source: str, workers: int | None = None) 
     if tushare_token and primary_source != "tushare":
         try:
             from stopat30m.data.fetcher import TushareFetcher
-            fetchers.append(TushareFetcher(token=tushare_token))
-            logger.info("Secondary source enabled: tushare")
+            fetchers.append(TushareFetcher(token=tushare_token, delay=1.3))
+            logger.info("Secondary source enabled: tushare (rate limited: ~25 stocks/min)")
         except ImportError:
             logger.debug("Secondary source tushare not available (not installed)")
 

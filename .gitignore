@@ -32,3 +32,13 @@ Users/
 .env
 *.pem
 *.key
+
+# Local config override (contains API keys)
+config.local.yaml
+
+# SQLite database
+data/*.db
+
+# Frontend build & deps
+stopat30m/web/frontend/node_modules/
+stopat30m/web/frontend/dist/

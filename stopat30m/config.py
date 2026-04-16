@@ -9,7 +9,8 @@ from typing import Any
 import yaml
 from loguru import logger
 
-_DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent.parent / "config.yaml"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.yaml"
 
 _config_cache: dict[str, Any] | None = None
 
@@ -62,10 +63,17 @@ def _set_nested(d: dict, keys: list[str], value: str) -> None:
         d[keys[-1]] = value
 
 
-def get(section: str, key: str | None = None, default: Any = None) -> Any:
-    """Get a config value by section and optional key."""
+def get(section_or_path: str, key: str | None = None, default: Any = None) -> Any:
+    """Get a config value by section and optional key, or by dotted path (e.g. ``notification.wechat_webhook_url``)."""
     cfg = load_config()
-    section_data = cfg.get(section, {})
+    if key is None and "." in section_or_path:
+        cur: Any = cfg
+        for part in section_or_path.split("."):
+            if not isinstance(cur, dict) or part not in cur:
+                return default
+            cur = cur[part]
+        return cur if cur is not None else default
+    section_data = cfg.get(section_or_path, {})
     if key is None:
         return section_data if section_data else default
     return section_data.get(key, default)

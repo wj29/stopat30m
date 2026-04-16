@@ -37,7 +37,7 @@ def cli(ctx: click.Context, config: str | None) -> None:
 
 @cli.command()
 @click.option("--source", default="baostock",
-              type=click.Choice(["baostock", "qlib+baostock", "qlib", "akshare", "tushare"]),
+              type=click.Choice(["baostock", "qlib+baostock", "qlib", "akshare", "efinance", "tushare"]),
               help="Data source: baostock (default, incremental), qlib+baostock (full rebuild), qlib (base only ~2020)")
 @click.option("--target-dir", default=None, help="Target directory")
 @click.option("--start-date", default=None, help="Start date YYYY-MM-DD (full download only)")
@@ -242,19 +242,73 @@ def check_data(fix: bool) -> None:
         click.echo(f"\n  需要增量更新 ({gap}):")
         click.echo(f"    py main.py download")
 
-    if fix and (no_data_pre_watermark + no_data_post_watermark) > 0:
-        import shutil
-        feat_dir = data_dir / "features"
-        cleaned = 0
-        for code, sm in meta.stocks.items():
-            if sm.data_end is None and sm.status != "delisted":
-                sym = f"sh{code}" if code.startswith("6") else f"sz{code}"
-                d = feat_dir / sym
-                if d.exists() and not any(d.iterdir()):
-                    shutil.rmtree(d, ignore_errors=True)
-                    cleaned += 1
-        if cleaned:
-            click.echo(f"\n  清理了 {cleaned} 个空目录")
+    # --- Instruments vs binary consistency ---
+    from stopat30m.data.fetcher.qlib_dumper import rebuild_instruments_from_binary
+    import struct as _struct
+
+    inst_path_all = data_dir / "instruments" / "all.txt"
+    feat_dir = data_dir / "features"
+    inst_desync = 0
+    if inst_path_all.exists() and feat_dir.exists():
+        old_inst: dict[str, tuple[str, str]] = {}
+        for _line in inst_path_all.read_text().strip().split("\n"):
+            _parts = _line.strip().split("\t")
+            if len(_parts) >= 3:
+                old_inst[_parts[0]] = (_parts[1], _parts[2])
+
+        for sd in feat_dir.iterdir():
+            if not sd.is_dir():
+                continue
+            sym = sd.name.upper()
+            cb = sd / "close.day.bin"
+            if not cb.exists() or cb.stat().st_size < 8:
+                continue
+            start_idx = int(_struct.unpack("<f", cb.read_bytes()[:4])[0])
+            n = (cb.stat().st_size - 4) // 4
+            end_idx = start_idx + n - 1
+            if start_idx < 0 or start_idx >= len(cal_dates):
+                continue
+            bin_end = cal_dates[min(end_idx, len(cal_dates) - 1)]
+            if sym in old_inst:
+                if old_inst[sym][1] < bin_end:
+                    inst_desync += 1
+            else:
+                inst_desync += 1
+
+    if inst_desync > 0:
+        click.echo(f"\n  ⚠ instruments 与二进制数据不同步: {inst_desync} 只")
+        click.echo(f"    (instruments 记录的结束日期落后于实际文件)")
+        if not fix:
+            click.echo(f"    修复命令: py main.py check-data --fix")
+    else:
+        click.echo(f"\n  instruments 与二进制数据一致 ✓")
+
+    if fix:
+        total_entries, changed_count = rebuild_instruments_from_binary(data_dir)
+        if changed_count:
+            click.echo(f"\n  已重建 instruments: {total_entries} 条, 修正 {changed_count} 条")
+        else:
+            click.echo(f"\n  instruments 无需修复")
+
+        from stopat30m.data.fetcher.qlib_dumper import sync_meta_from_binary
+        meta_synced = sync_meta_from_binary(data_dir)
+        if meta_synced:
+            click.echo(f"  已同步 data_meta: {meta_synced} 只股票的 data_end 已更新")
+        else:
+            click.echo(f"  data_meta 无需修复")
+
+        if (no_data_pre_watermark + no_data_post_watermark) > 0:
+            import shutil
+            cleaned = 0
+            for code, sm in meta.stocks.items():
+                if sm.data_end is None and sm.status != "delisted":
+                    sym = f"sh{code}" if code.startswith("6") else f"sz{code}"
+                    d = feat_dir / sym
+                    if d.exists() and not any(d.iterdir()):
+                        shutil.rmtree(d, ignore_errors=True)
+                        cleaned += 1
+            if cleaned:
+                click.echo(f"  清理了 {cleaned} 个空目录")
 
     click.echo(f"\n{'=' * 62}\n")
 
@@ -288,6 +342,57 @@ def _show_top_predictions(pred: "pd.Series | pd.DataFrame", top_k: int) -> None:
     for rank, (instrument, score) in enumerate(top.items(), 1):
         click.echo(f"  {rank:<6}{str(instrument):<16}{score:>+13.2%}")
     click.echo(f"{'=' * 58}\n")
+
+
+def _save_train_run_to_db(
+    metrics: dict,
+    model_type: str,
+    model_path: str,
+    universe: str,
+    num_features: int,
+    factor_groups: str | None,
+) -> None:
+    """Persist training metrics + config snapshot into BacktestRun table."""
+    try:
+        from stopat30m.storage.database import get_db
+        from stopat30m.storage.models import BacktestRun
+
+        model_params = get("model", "params") or {}
+        active_params = model_params.get(model_type, {})
+
+        config_snapshot = {
+            "model_type": model_type,
+            "model_path": model_path,
+            "universe": universe,
+            "num_features": num_features,
+            "factor_groups": factor_groups,
+            "model_params": active_params,
+            "data": {
+                "train_start": get("data", "train_start", ""),
+                "train_end": get("data", "train_end", ""),
+                "valid_start": get("data", "valid_start", ""),
+                "valid_end": get("data", "valid_end", ""),
+                "test_start": get("data", "test_start", ""),
+            },
+        }
+
+        with get_db() as db:
+            run = BacktestRun(
+                kind="train",
+                tag=f"{model_type}_{universe}",
+                run_dir=model_path,
+                annual_return=None,
+                sharpe=None,
+                max_drawdown=None,
+                total_trades=None,
+                win_rate=None,
+                config=config_snapshot,
+                report=metrics,
+            )
+            db.add(run)
+        logger.info("Training run saved to database")
+    except Exception as e:
+        logger.warning(f"Could not save training run to DB: {e}")
 
 
 @cli.command()
@@ -327,40 +432,42 @@ def train(model_type: str | None, save_name: str, factor_groups: str | None, uni
     progress.finish()
     logger.info(f"Model saved: {results['model_path']}")
 
+    _save_train_run_to_db(
+        metrics=results["metrics"],
+        model_type=model_type or get("model", "type", "lgbm"),
+        model_path=str(results["model_path"]),
+        universe=handler.instruments,
+        num_features=handler.num_features,
+        factor_groups=factor_groups,
+    )
+
     if top_k > 0:
         _show_top_predictions(results["predictions"], top_k)
 
 
 @cli.command()
-@click.option("--model-path", required=True, help="Path to .pkl model")
+@click.option("--model-path", default=None, help="Path to .pkl model")
+@click.option("--pred-path", default=None, help="Path to cached predictions .pkl")
 @click.option("--universe", default=None, help="Stock universe: csi300 / csi500 / all")
 @click.option("--top-k", default=None, type=int, help="Number of stocks to hold (default from config)")
 @click.option("--rebalance-freq", default=None, type=int, help="Rebalance every N trading days")
 @click.option("--deal-price", default=None, type=click.Choice(["open", "close"]),
               help="Execution price: open (realistic) or close (optimistic)")
 @click.option("--factor-groups", default=None, help="Comma-separated factor groups")
-def backtest(model_path: str, universe: str | None, top_k: int | None,
-             rebalance_freq: int | None, deal_price: str | None,
+def backtest(model_path: str | None, pred_path: str | None, universe: str | None,
+             top_k: int | None, rebalance_freq: int | None, deal_price: str | None,
              factor_groups: str | None) -> None:
     """Backtest a trained model on test data."""
-    import pickle
-
+    from stopat30m.backtest.common import load_prediction_source
     from stopat30m.backtest.engine import BacktestEngine
-    from stopat30m.data.provider import init_qlib
-    from stopat30m.factors.handler import AlphaExtendedHandler
 
-    init_qlib()
-
-    with open(model_path, "rb") as f:
-        model = pickle.load(f)
-
-    groups = factor_groups.split(",") if factor_groups else None
-    handler = AlphaExtendedHandler(groups=groups, instruments=universe)
-    logger.info(f"Universe: {handler.instruments}, features: {handler.num_features}")
-    dataset = handler.build_dataset()
-
-    logger.info("Generating predictions on test segment...")
-    pred = model.predict(dataset)
+    pred, _labels, metadata = load_prediction_source(
+        model_path=model_path,
+        pred_path=pred_path,
+        universe=universe,
+        factor_groups=factor_groups,
+    )
+    logger.info(f"Prediction source: {metadata.get('source', 'unknown')}, rows: {len(pred)}")
 
     kwargs: dict = {}
     if top_k is not None:
@@ -406,13 +513,23 @@ def cache_predictions(
     tag: str,
 ) -> None:
     """Generate predictions once and save them for reuse by backtests."""
+    import time as _time
     from stopat30m.backtest.common import load_model_predictions, save_prediction_bundle
+
+    t0 = _time.time()
+
+    def _progress(msg: str) -> None:
+        elapsed = _time.time() - t0
+        click.echo(f"  {elapsed:6.1f}s  {msg}")
 
     pred, labels, handler = load_model_predictions(
         model_path=model_path,
         universe=universe,
         factor_groups=factor_groups,
+        on_step=_progress,
     )
+
+    _progress("Saving prediction bundle...")
     out = save_prediction_bundle(
         pred,
         labels=labels,
@@ -425,8 +542,17 @@ def cache_predictions(
         },
         tag=tag,
     )
-    click.echo(f"Predictions cached to: {out}")
-    click.echo(f"Rows: {len(pred)} | universe={handler.instruments} | features={handler.num_features}")
+
+    elapsed = _time.time() - t0
+    dates = sorted(pred.index.get_level_values(0).unique())
+    instruments = pred.index.get_level_values(1).unique()
+    click.echo(f"\nDone in {elapsed:.1f}s")
+    click.echo(f"  Output:      {out}")
+    click.echo(f"  Rows:        {len(pred)}")
+    click.echo(f"  Universe:    {handler.instruments}")
+    click.echo(f"  Instruments: {len(instruments)}")
+    click.echo(f"  Date range:  {str(dates[0])[:10]} ~ {str(dates[-1])[:10]} ({len(dates)} days)")
+    click.echo(f"  Features:    {handler.num_features}")
 
 
 @cli.command("signal-backtest")
@@ -632,11 +758,91 @@ def trade(signal_source: str | None, poll_interval: int) -> None:
 
 @cli.command()
 def dashboard() -> None:
-    """Launch the web monitoring dashboard."""
+    """Launch the Streamlit monitoring dashboard (legacy)."""
     import subprocess
     from pathlib import Path
     dashboard_path = Path(__file__).parent / "stopat30m" / "web" / "dashboard.py"
     subprocess.run(["streamlit", "run", str(dashboard_path)], check=False)
+
+
+@cli.command()
+@click.option("--host", default=None, help="Bind host (default from config: server.host)")
+@click.option("--port", default=None, type=int, help="Bind port (default from config: server.port)")
+@click.option("--reload", "do_reload", is_flag=True, default=False, help="Enable auto-reload")
+def serve(host: str | None, port: int | None, do_reload: bool) -> None:
+    """Launch the FastAPI backend server."""
+    import uvicorn
+    from stopat30m.config import get
+    uvicorn.run(
+        "stopat30m.api.app:app",
+        host=host or get("server", "host", "0.0.0.0"),
+        port=port or get("server", "port", 8000),
+        reload=do_reload,
+    )
+
+
+@cli.command("dev")
+def dev() -> None:
+    """Start both backend + frontend dev servers (one command)."""
+    import subprocess
+    import sys
+    import os
+    from pathlib import Path
+    from stopat30m.config import get
+
+    frontend_dir = Path(__file__).parent / "stopat30m" / "web" / "frontend"
+    if not (frontend_dir / "package.json").exists():
+        logger.error(f"Frontend not found at {frontend_dir}. Run npm install first.")
+        raise SystemExit(1)
+
+    api_port = str(get("server", "port", 8000))
+    api_host = get("server", "host", "0.0.0.0")
+    python = sys.executable
+
+    env = os.environ.copy()
+    env["API_PORT"] = api_port
+
+    logger.info(f"Starting backend on {api_host}:{api_port} ...")
+    backend = subprocess.Popen(
+        [python, "-m", "uvicorn", "stopat30m.api.app:app",
+         "--host", api_host, "--port", api_port, "--reload"],
+    )
+
+    logger.info(f"Starting frontend (proxy → localhost:{api_port}) ...")
+    frontend = subprocess.Popen(
+        ["npx", "vite", "--host"],
+        cwd=str(frontend_dir),
+        env=env,
+    )
+
+    try:
+        backend.wait()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        frontend.terminate()
+        backend.terminate()
+
+
+@cli.command("build")
+def build_frontend() -> None:
+    """Build frontend for production (output to dist/)."""
+    import subprocess
+    from pathlib import Path
+
+    frontend_dir = Path(__file__).parent / "stopat30m" / "web" / "frontend"
+    if not (frontend_dir / "package.json").exists():
+        logger.error(f"Frontend not found at {frontend_dir}")
+        raise SystemExit(1)
+
+    logger.info("Building frontend ...")
+    result = subprocess.run(["npx", "vite", "build"], cwd=str(frontend_dir))
+    if result.returncode == 0:
+        logger.info(f"Build complete: {frontend_dir / 'dist'}")
+        logger.info("Run 'py main.py serve' to start production server.")
+    else:
+        logger.error("Frontend build failed")
+        raise SystemExit(1)
 
 
 @cli.group()
@@ -763,6 +969,110 @@ def paper_export(state_dir: str | None) -> None:
     click.echo(f"\n{len(fills)} fills, {len(nav)} NAV snapshots")
 
 
+@cli.command("schedule")
+@click.option("--time", "schedule_time", default=None, help="Daily execution time HH:MM (default from config)")
+@click.option("--watchlist", default=None, help="Comma-separated stock codes to analyze")
+@click.option("--run-immediately/--no-run-immediately", default=None,
+              help="Execute once immediately on startup")
+def schedule_cmd(schedule_time: str | None, watchlist: str | None, run_immediately: bool | None) -> None:
+    """Start the scheduler for daily analysis + event monitoring."""
+    from stopat30m.config import get
+    from stopat30m.scheduler import run_with_schedule
+
+    sched_cfg = get("schedule") or {}
+    time_str = schedule_time or sched_cfg.get("time", "18:00")
+    codes_raw = watchlist or sched_cfg.get("watchlist", "")
+    codes = [c.strip() for c in codes_raw.split(",") if c.strip()]
+    do_run_immediately = run_immediately if run_immediately is not None else sched_cfg.get("run_immediately", True)
+
+    if not codes:
+        click.echo("No watchlist configured. Set schedule.watchlist in config.yaml or use --watchlist.")
+        raise SystemExit(1)
+
+    click.echo(f"Schedule: daily at {time_str}, watchlist={codes}, run_immediately={do_run_immediately}")
+
+    def daily_task():
+        from stopat30m.analysis.pipeline import analyze_stock
+        for code in codes:
+            try:
+                logger.info(f"Scheduled analysis: {code}")
+                analyze_stock(code)
+            except Exception as e:
+                logger.error(f"Scheduled analysis failed for {code}: {e}")
+
+    background_tasks = []
+
+    em_cfg = get("event_monitor") or {}
+    if em_cfg.get("enabled", False):
+        interval = em_cfg.get("check_interval_seconds", 300)
+
+        def event_check():
+            from stopat30m.analysis.event_monitor import run_event_monitor_once
+            run_event_monitor_once()
+
+        background_tasks.append({
+            "task": event_check,
+            "interval_seconds": interval,
+            "run_immediately": True,
+            "name": "event_monitor",
+        })
+
+    run_with_schedule(
+        task=daily_task,
+        schedule_time=time_str,
+        run_immediately=do_run_immediately,
+        background_tasks=background_tasks if background_tasks else None,
+    )
+
+
+@cli.command("market-review")
+@click.option("--no-push", is_flag=True, default=False, help="Skip notification push")
+def market_review_cmd(no_push: bool) -> None:
+    """Run a one-shot A-share market review and optionally push notification."""
+    from stopat30m.analysis.market_review import run_market_review
+    from stopat30m.notification import get_notification_service
+
+    notifier = get_notification_service()
+    result = run_market_review(notifier=notifier, send_notification=not no_push)
+
+    if result:
+        click.echo("Market review completed.")
+        click.echo(result[:500] + ("..." if len(result) > 500 else ""))
+    else:
+        click.echo("Market review failed. Check logs.")
+
+
+@cli.command("notify-test")
+@click.option("--message", default=None, help="Custom test message")
+def notify_test(message: str | None) -> None:
+    """Send a test notification to all configured channels."""
+    from stopat30m.notification import get_notification_service
+
+    notifier = get_notification_service()
+    channels = notifier.get_available_channels() if hasattr(notifier, "get_available_channels") else []
+
+    if not channels and not hasattr(notifier, "is_available"):
+        click.echo("No notification channels configured.")
+        click.echo("Set webhook URLs or tokens in config.yaml under 'notification:'")
+        return
+
+    test_msg = message or (
+        "🔔 StopAt30M 通知测试\n\n"
+        "如果你看到这条消息，说明通知渠道配置正确。\n\n"
+        f"发送时间: {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    )
+
+    click.echo(f"Sending test notification...")
+    if hasattr(notifier, 'send'):
+        success = notifier.send(test_msg)
+        if success:
+            click.echo("Test notification sent successfully.")
+        else:
+            click.echo("Test notification failed. Check logs for details.")
+    else:
+        click.echo("NotificationService.send() not available.")
+
+
 @cli.command()
 def info() -> None:
     """Show factor library statistics."""
@@ -783,6 +1093,147 @@ def info() -> None:
     for name, factors in groups.items():
         click.echo(f"  {name:<20s}  {len(factors):>4d} factors")
     click.echo()
+
+
+# ---------------------------------------------------------------------------
+# User management CLI
+# ---------------------------------------------------------------------------
+
+
+@cli.group("user")
+def user_group() -> None:
+    """User management commands."""
+    pass
+
+
+@user_group.command("create-admin")
+@click.option("--username", prompt="Admin username", help="Admin username")
+@click.option("--password", prompt=True, hide_input=True, confirmation_prompt=True, help="Admin password")
+def create_admin(username: str, password: str) -> None:
+    """Create an admin user (interactive)."""
+    from stopat30m.auth.service import hash_password
+    from stopat30m.storage.database import get_db, init_db
+    from stopat30m.storage.models import User
+
+    init_db()
+    with get_db() as db:
+        existing = db.query(User).filter(User.username == username).first()
+        if existing:
+            click.echo(f"User '{username}' already exists (role={existing.role}).")
+            return
+
+        user = User(
+            username=username,
+            password_hash=hash_password(password),
+            role="admin",
+        )
+        db.add(user)
+        db.flush()
+        click.echo(f"Admin user '{username}' created (id={user.id}).")
+
+
+@user_group.command("list")
+def list_users() -> None:
+    """List all users."""
+    from stopat30m.storage.database import get_db, init_db
+    from stopat30m.storage.models import User
+
+    init_db()
+    with get_db() as db:
+        users = db.query(User).order_by(User.id).all()
+        if not users:
+            click.echo("No users.")
+            return
+        click.echo(f"{'ID':<5} {'Username':<20} {'Role':<8} {'Active':<8} {'Last Login'}")
+        click.echo("-" * 65)
+        for u in users:
+            last = u.last_login.strftime("%Y-%m-%d %H:%M") if u.last_login else "never"
+            active = "yes" if u.is_active else "NO"
+            click.echo(f"{u.id:<5} {u.username:<20} {u.role:<8} {active:<8} {last}")
+
+
+@user_group.command("reset-password")
+@click.argument("username")
+@click.option("--password", prompt=True, hide_input=True, confirmation_prompt=True, help="New password")
+def reset_password(username: str, password: str) -> None:
+    """Reset a user's password."""
+    from stopat30m.auth.service import hash_password
+    from stopat30m.storage.database import get_db, init_db
+    from stopat30m.storage.models import User
+
+    init_db()
+    with get_db() as db:
+        user = db.query(User).filter(User.username == username).first()
+        if not user:
+            click.echo(f"User '{username}' not found.")
+            return
+        user.password_hash = hash_password(password)
+        click.echo(f"Password for '{username}' has been reset.")
+
+
+@user_group.command("disable")
+@click.argument("username")
+def disable_user(username: str) -> None:
+    """Disable a user account."""
+    from stopat30m.storage.database import get_db, init_db
+    from stopat30m.storage.models import User
+
+    init_db()
+    with get_db() as db:
+        user = db.query(User).filter(User.username == username).first()
+        if not user:
+            click.echo(f"User '{username}' not found.")
+            return
+        if not user.is_active:
+            click.echo(f"User '{username}' is already disabled.")
+            return
+        user.is_active = False
+        click.echo(f"User '{username}' has been disabled.")
+
+
+@cli.group("invite")
+def invite_group() -> None:
+    """Invite code management."""
+    pass
+
+
+@invite_group.command("create")
+@click.option("--expires", default="7d", help="Expiry duration (e.g. 7d, 30d)")
+@click.option("--admin-user", default=None, help="Admin username (default: first admin)")
+def create_invite(expires: str, admin_user: str | None) -> None:
+    """Generate an invite code."""
+    import secrets
+    from datetime import datetime, timedelta, timezone
+
+    from stopat30m.storage.database import get_db, init_db
+    from stopat30m.storage.models import InviteCode, User
+
+    init_db()
+
+    days = int(expires.rstrip("d"))
+
+    with get_db() as db:
+        if admin_user:
+            admin = db.query(User).filter(User.username == admin_user, User.role == "admin").first()
+        else:
+            admin = db.query(User).filter(User.role == "admin").first()
+
+        if not admin:
+            click.echo("No admin user found. Create one first: py main.py user create-admin")
+            return
+
+        code = secrets.token_urlsafe(16)
+        now = datetime.now(timezone.utc)
+        inv = InviteCode(
+            code=code,
+            created_by=admin.id,
+            expires_at=now + timedelta(days=days),
+            created_at=now,
+        )
+        db.add(inv)
+        db.flush()
+        click.echo(f"Invite code: {code}")
+        click.echo(f"Expires: {inv.expires_at.strftime('%Y-%m-%d %H:%M')} ({days} days)")
 
 
 if __name__ == "__main__":
