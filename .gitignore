@@ -36,8 +36,11 @@ Users/
 # Local config override (contains API keys)
 config.local.yaml
 
-# SQLite database
+# SQLite database (including WAL/SHM journal files)
 data/*.db
+data/*.db-shm
+data/*.db-wal
+data/*.db-journal
 
 # Frontend build & deps
 stopat30m/web/frontend/node_modules/
