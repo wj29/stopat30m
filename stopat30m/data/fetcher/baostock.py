@@ -7,6 +7,23 @@ import pandas as pd
 from loguru import logger
 
 from .base import DataFetcher
+from stopat30m.data.normalize import to_baostock_code
+
+
+def _result_frame(response) -> pd.DataFrame:
+    """Consume BaoStock pages without its pandas<2 DataFrame.append helper."""
+    rows = []
+    fields = list(response.fields)
+    while str(response.error_code) == "0" and response.next():
+        if str(response.error_code) != "0":
+            break
+        row = response.get_row_data()
+        if len(row) != len(fields):
+            raise ValueError("BaoStock response row has an invalid width")
+        rows.append(row)
+    if str(response.error_code) != "0":
+        raise ValueError(f"BaoStock query/pagination failed: {response.error_code} {response.error_msg}")
+    return pd.DataFrame(rows, columns=fields)
 
 
 class BaoStockFetcher(DataFetcher):
@@ -43,9 +60,11 @@ class BaoStockFetcher(DataFetcher):
             old_stdout = sys.stdout
             sys.stdout = io.StringIO()
             try:
-                self._bs.login()
+                response = self._bs.login()
             finally:
                 sys.stdout = old_stdout
+            if str(response.error_code) != "0":
+                raise ValueError(f"BaoStock login failed: {response.error_code} {response.error_msg}")
             self._logged_in = True
             self._request_count = 0
 
@@ -75,9 +94,7 @@ class BaoStockFetcher(DataFetcher):
 
     @staticmethod
     def _to_bs_code(symbol: str) -> str:
-        s = symbol.zfill(6)
-        prefix = "sh" if s.startswith("6") else "sz"
-        return f"{prefix}.{s}"
+        return to_baostock_code(symbol)
 
     @staticmethod
     def _from_bs_code(bs_code: str) -> str:
@@ -86,7 +103,7 @@ class BaoStockFetcher(DataFetcher):
     def fetch_stock_list(self) -> list[str]:
         self._login()
         rs = self._bs.query_stock_basic()
-        df = rs.get_data()
+        df = _result_frame(rs)
         if df.empty:
             return []
         if "type" in df.columns and "status" in df.columns:
@@ -98,7 +115,7 @@ class BaoStockFetcher(DataFetcher):
         """Fetch stock list with IPO/delist dates and status."""
         self._login()
         rs = self._bs.query_stock_basic()
-        df = rs.get_data()
+        df = _result_frame(rs)
         if df.empty:
             return {}
 
@@ -133,7 +150,7 @@ class BaoStockFetcher(DataFetcher):
     def fetch_trade_calendar(self, start: str, end: str) -> list[str]:
         self._login()
         rs = self._bs.query_trade_dates(start_date=start, end_date=end)
-        df = rs.get_data()
+        df = _result_frame(rs)
         if df.empty:
             return []
         trading = df[df["is_trading_day"] == "1"]
@@ -154,7 +171,7 @@ class BaoStockFetcher(DataFetcher):
             logger.debug(f"BaoStock error for {bs_code}: {rs.error_msg}")
             return None
 
-        df_hfq = rs.get_data()
+        df_hfq = _result_frame(rs)
         if df_hfq is None or df_hfq.empty:
             return None
 
@@ -164,11 +181,20 @@ class BaoStockFetcher(DataFetcher):
             return None
 
         rs_raw = self._bs.query_history_k_data_plus(
-            bs_code, "date,close",
+            bs_code, "date,close,volume",
             start_date=start, end_date=end,
             frequency="d", adjustflag="3",
         )
-        df_raw = rs_raw.get_data() if rs_raw.error_code == "0" else pd.DataFrame()
+        df_raw = _result_frame(rs_raw)
+        if df_raw["date"].duplicated().any() or df_hfq["date"].duplicated().any():
+            raise ValueError(f"Duplicate raw/adjusted dates for {bs_code}")
+        raw = df_raw.set_index("date").reindex(df_hfq["date"])
+        raw_close = pd.to_numeric(raw["close"], errors="coerce").to_numpy()
+        raw_volume = pd.to_numeric(raw["volume"], errors="coerce").to_numpy()
+        if (not np.isfinite(raw_close).all() or (raw_close <= 0).any()
+                or not np.isfinite(raw_volume).all() or (raw_volume < 0).any()
+                or not np.isclose(raw_volume, np.rint(raw_volume), atol=1e-6, rtol=0).all()):
+            raise ValueError(f"Missing/invalid raw price or share volume for {bs_code}; cannot infer an adjustment factor")
 
         result = pd.DataFrame({
             "date": df_hfq["date"].values,
@@ -176,18 +202,11 @@ class BaoStockFetcher(DataFetcher):
             "close": df_hfq["close"].astype(float),
             "high": df_hfq["high"].astype(float),
             "low": df_hfq["low"].astype(float),
-            "volume": df_hfq["volume"].astype(float),
+            "volume": raw_volume,
             "change": df_hfq["pctChg"].astype(float),
         })
 
-        if not df_raw.empty and len(df_raw) == len(result):
-            raw_close = df_raw["close"].astype(float).values
-            hfq_close = result["close"].values
-            with np.errstate(divide="ignore", invalid="ignore"):
-                factor = np.where(raw_close > 0, hfq_close / raw_close, 1.0)
-            result["factor"] = factor
-        else:
-            result["factor"] = 1.0
+        result["factor"] = result["close"].to_numpy() / raw_close
 
         return result.sort_values("date").reset_index(drop=True)
 
@@ -200,7 +219,7 @@ class BaoStockFetcher(DataFetcher):
                 rs = self._bs.query_zz500_stocks()
             else:
                 return []
-            df = rs.get_data()
+            df = _result_frame(rs)
             if df.empty:
                 return []
             return [self._from_bs_code(c) for c in df["code"].tolist()]

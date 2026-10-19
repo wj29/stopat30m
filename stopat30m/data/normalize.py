@@ -12,7 +12,7 @@ defining their own normalization logic. Supported input formats:
 
 from __future__ import annotations
 
-_SH_LEADING = ("6", "9")
+_SH_LEADING = ("5", "6", "9")
 
 
 def normalize_instrument(code: str) -> str:

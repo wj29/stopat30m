@@ -17,7 +17,7 @@ def evaluate_predictions(
     pred: pd.Series | pd.DataFrame,
     dataset: Any = None,
     label: pd.Series | pd.DataFrame | None = None,
-) -> dict[str, float]:
+) -> dict[str, Any]:
     """
     Compute alpha model evaluation metrics.
 
@@ -85,7 +85,7 @@ def compute_portfolio_metrics(
     benchmark_returns: pd.Series | None = None,
     risk_free_rate: float = 0.03,
     periods_per_year: int = 252,
-) -> dict[str, float]:
+) -> dict[str, Any]:
     """
     Compute portfolio performance metrics from daily returns.
 
@@ -95,53 +95,70 @@ def compute_portfolio_metrics(
     if returns.empty:
         return {}
 
-    ret = returns.dropna()
+    ret = pd.to_numeric(returns, errors="coerce").dropna().astype(float)
+    if ret.empty:
+        return {}
+    if not np.isfinite(ret).all() or (ret < -1).any():
+        raise ValueError("Daily returns must be finite and cannot be below -100%.")
     n = len(ret)
+    total_growth = float((1 + ret).prod())
+    annual_ret = float(total_growth ** (periods_per_year / n) - 1)
+    daily_vol = float(ret.std(ddof=1)) if n > 1 else 0.0
+    # Repeated geometric returns can differ by floating-point roundoff. A
+    # near-zero denominator is undefined risk, not a trillion-point Sharpe.
+    tolerance = 1e-12 * max(1.0, float(ret.abs().max()))
+    if daily_vol <= tolerance:
+        daily_vol = 0.0
+    annual_vol = daily_vol * np.sqrt(periods_per_year)
+    rf_daily = (1 + risk_free_rate) ** (1 / periods_per_year) - 1
+    excess_daily = ret - rf_daily
+    sharpe = float(excess_daily.mean() / daily_vol * np.sqrt(periods_per_year)) if daily_vol > 0 else None
 
-    annual_ret = float((1 + ret.mean()) ** periods_per_year - 1)
-    annual_vol = float(ret.std() * np.sqrt(periods_per_year))
-    sharpe = (annual_ret - risk_free_rate) / (annual_vol + 1e-8)
-
-    downside = ret[ret < 0]
-    downside_vol = float(downside.std() * np.sqrt(periods_per_year)) if len(downside) > 0 else 1e-8
-    sortino = (annual_ret - risk_free_rate) / (downside_vol + 1e-8)
+    downside_vol = float(np.sqrt(np.mean(np.minimum(excess_daily, 0) ** 2)))
+    if downside_vol <= tolerance:
+        downside_vol = 0.0
+    sortino = float(excess_daily.mean() / downside_vol * np.sqrt(periods_per_year)) if downside_vol > 0 else None
 
     cum = (1 + ret).cumprod()
-    peak = cum.cummax()
+    # The starting investment is a peak too: a first-day loss is a drawdown.
+    peak = cum.cummax().clip(lower=1.0)
     drawdown = (cum - peak) / peak
     max_dd = float(drawdown.min())
 
-    calmar = annual_ret / (abs(max_dd) + 1e-8)
+    calmar = annual_ret / abs(max_dd) if max_dd < 0 else None
 
     win_rate = float((ret > 0).sum() / n) if n > 0 else 0.0
 
     avg_win = float(ret[ret > 0].mean()) if (ret > 0).any() else 0.0
-    avg_loss = float(ret[ret < 0].mean()) if (ret < 0).any() else -1e-8
-    pl_ratio = abs(avg_win / avg_loss) if avg_loss != 0 else float("inf")
+    avg_loss = float(ret[ret < 0].mean()) if (ret < 0).any() else 0.0
+    pl_ratio = abs(avg_win / avg_loss) if avg_loss != 0 else None
 
     excess_ret = None
     if benchmark_returns is not None:
-        bench = benchmark_returns.reindex(ret.index).fillna(0)
-        excess = ret - bench
-        excess_annual = float((1 + excess.mean()) ** periods_per_year - 1)
-        excess_ret = excess_annual
+        bench = pd.to_numeric(benchmark_returns.reindex(ret.index), errors="coerce")
+        valid_bench = bench.notna() & np.isfinite(bench) & (bench > -1)
+        if valid_bench.all():
+            benchmark_growth = float((1 + bench).prod())
+            excess_ret = float((total_growth / benchmark_growth) ** (periods_per_year / n) - 1)
 
     metrics = {
         "annual_return": round(annual_ret, 4),
         "annual_volatility": round(annual_vol, 4),
-        "sharpe": round(sharpe, 4),
-        "sortino": round(sortino, 4),
+        "sharpe": round(sharpe, 4) if sharpe is not None else None,
+        "sortino": round(sortino, 4) if sortino is not None else None,
         "max_drawdown": round(max_dd, 4),
-        "calmar": round(calmar, 4),
+        "calmar": round(calmar, 4) if calmar is not None else None,
         "win_rate": round(win_rate, 4),
-        "profit_loss_ratio": round(pl_ratio, 4),
-        "total_trades": n,
+        "profit_loss_ratio": round(pl_ratio, 4) if pl_ratio is not None else None,
+        "total_return": round(total_growth - 1, 6),
+        "observation_days": n,
+        "benchmark_available": bool(benchmark_returns is not None and valid_bench.all()),
     }
     if excess_ret is not None:
         metrics["excess_return"] = round(excess_ret, 4)
 
     logger.info(
-        f"Portfolio: AnnRet={annual_ret:.2%}, Sharpe={sharpe:.2f}, "
+        f"Portfolio: AnnRet={annual_ret:.2%}, Sharpe={sharpe}, "
         f"MaxDD={max_dd:.2%}, WinRate={win_rate:.2%}"
     )
     return metrics

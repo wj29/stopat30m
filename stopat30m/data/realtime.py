@@ -3,12 +3,16 @@
 Source priority and registration live in ``stopat30m.data.sources``
 (single authority).  This module provides spot-price and stock-name
 queries with automatic failover and retry.  After all online sources,
-the local Qlib last-close is used as a non-real-time fallback.
+missing prices remain unavailable; adjusted local closes are never quotes.
 """
 
 from __future__ import annotations
 
 import json
+import math
+from datetime import datetime, timezone
+from typing import Any
+from zoneinfo import ZoneInfo
 import os
 import time
 from pathlib import Path
@@ -22,7 +26,8 @@ from stopat30m.data.normalize import bare_code, normalize_instrument
 _cache_lock = Lock()
 _price_cache: dict[str, float] = {}
 _name_cache: dict[str, str] = {}
-_cache_ts: float = 0.0
+_quote_cache: dict[str, dict[str, Any]] = {}
+_price_cache_ts: dict[str, float] = {}
 _CACHE_TTL_SECONDS = 30.0
 
 _MAX_RETRIES = 2
@@ -70,63 +75,102 @@ def _build_source_chain(
 
 
 def fetch_spot_prices(instruments: list[str], ttl: float | None = None) -> dict[str, float]:
-    """Fetch latest spot prices with automatic source failover and retry.
+    """Execution-compatible mapping of timestamped, recent intraday quotes only.
 
-    Source order is read from ``config.yaml`` ``realtime_source_priority``.
-    Returns {normalized_instrument: price}.
+    Use fetch_spot_quotes for source, quote time and freshness. Local Qlib prices
+    are adjusted research data and must not stand in for exchange market prices.
+    Missing timestamps and stale/reference prices remain available through the
+    richer quote API, but cannot be re-stamped as fresh broker execution prices.
     """
-    global _price_cache, _name_cache, _cache_ts
+    return {inst: quote["price"] for inst, quote in fetch_spot_quotes(instruments, ttl).items()
+            if quote["price"] is not None and quote["is_realtime"]}
 
-    if not instruments:
+
+def fetch_spot_quotes(instruments: list[str], ttl: float | None = None) -> dict[str, dict[str, Any]]:
+    """Get quotes including explicit missing values and per-instrument freshness.
+
+    fetched_at is retrieval time in UTC, as_of is the source's quote timestamp
+    (null when the provider does not expose one). is_realtime is true only for a
+    timestamped intraday quote no older than two minutes. status is available,
+    cached, stale or unavailable; a recent fetch does not prove a recent quote.
+    """
+    normalized = list(dict.fromkeys(normalize_instrument(inst) for inst in instruments))
+    if not normalized:
         return {}
-
-    cache_ttl = ttl if ttl is not None else _CACHE_TTL_SECONDS
+    now = time.time()
+    cache_ttl = max(0.0, ttl if ttl is not None else _CACHE_TTL_SECONDS)
+    quotes: dict[str, dict[str, Any]] = {}
     with _cache_lock:
-        if _price_cache and (time.time() - _cache_ts) < cache_ttl:
-            hit = {normalize_instrument(i): _price_cache[normalize_instrument(i)]
-                   for i in instruments if normalize_instrument(i) in _price_cache}
-            if len(hit) == len(instruments):
-                return hit
-
-    needed = {bare_code(inst): normalize_instrument(inst) for inst in instruments}
-    prices: dict[str, float] = {}
+        for inst in normalized:
+            if inst in _quote_cache and now - _price_cache_ts.get(inst, 0) < cache_ttl:
+                quote = dict(_quote_cache[inst])
+                as_of = _parse_quote_time(quote.get("as_of"))
+                age = now - as_of.timestamp() if as_of else None
+                quote["is_realtime"] = bool(quote["is_realtime"] and age is not None and 0 <= age <= 120)
+                quote["status"] = "stale" if age is not None and age > 120 else "cached"
+                quotes[inst] = quote
+    needed = {bare_code(inst): inst for inst in normalized if inst not in quotes}
+    missing = dict(needed)
     names: dict[str, str] = {}
-
-    sources = _build_source_chain(needed)
-
-    missing_codes = dict(needed)
-    for source_name, fetch_fn in sources:
-        if not missing_codes:
+    new_quotes: dict[str, dict[str, Any]] = {}
+    for source_name, fetch_fn in _build_source_chain(needed):
+        if not missing:
             break
-        result = _call_with_retry(source_name, fetch_fn, list(missing_codes.keys()))
-        if result:
-            for code, (price, name) in result.items():
-                inst = missing_codes.get(code)
-                if inst and price > 0:
-                    prices[inst] = price
-                    if name:
-                        names[inst] = name
-            prev_missing = len(missing_codes)
-            missing_codes = {c: n for c, n in missing_codes.items() if n not in prices}
-            filled = prev_missing - len(missing_codes)
-            if filled > 0:
-                logger.info(f"{source_name}: got {filled} prices")
-
-    if not prices:
-        prices = fetch_prices_from_qlib(list(needed.values()))
-        if prices:
-            logger.info(f"Qlib fallback: got {len(prices)} prices")
-        else:
-            logger.error("All real-time price sources failed")
-    elif len(prices) < len(needed):
-        logger.warning(f"Got prices for {len(prices)}/{len(needed)} instruments")
-
+        result = _call_with_retry(source_name, fetch_fn, list(missing))
+        for code, value in (result or {}).items():
+            inst = missing.get(code)
+            if inst is None:
+                continue
+            price, name = value[:2]
+            try:
+                price = float(price)
+            except (ValueError, TypeError):
+                continue
+            if not math.isfinite(price) or price <= 0:
+                continue
+            quote_time = _parse_quote_time(value[2]) if len(value) > 2 else None
+            age = now - quote_time.timestamp() if quote_time else None
+            source_intraday = source_name.lower() != "tushare"
+            realtime = bool(source_intraday and age is not None and 0 <= age <= 120)
+            new_quotes[inst] = {
+                "price": price, "source": source_name, "name": name or "",
+                "as_of": quote_time.isoformat() if quote_time else None,
+                "fetched_at": datetime.fromtimestamp(now, timezone.utc).isoformat(),
+                "status": "stale" if age is not None and age > 120 else "available",
+                "is_realtime": realtime,
+            }
+            if name:
+                names[inst] = name
+        missing = {code: inst for code, inst in missing.items() if inst not in new_quotes}
     with _cache_lock:
-        _price_cache.update(prices)
+        for inst, quote in new_quotes.items():
+            _quote_cache[inst] = dict(quote)
+            _price_cache[inst] = quote["price"]
+            _price_cache_ts[inst] = now
         _name_cache.update(names)
-        _cache_ts = time.time()
+    quotes.update(new_quotes)
+    for inst in normalized:
+        if inst not in quotes:
+            quotes[inst] = {"price": None, "source": None, "name": "", "as_of": None,
+                            "fetched_at": datetime.fromtimestamp(now, timezone.utc).isoformat(),
+                            "status": "unavailable", "is_realtime": False}
+    return quotes
 
-    return prices
+
+def _parse_quote_time(value) -> datetime | None:
+    if not value:
+        return None
+    try:
+        text = str(value).strip()
+        fmt = "%Y%m%d%H%M%S" if len(text) == 14 and text.isdigit() else None
+        parsed = datetime.strptime(text, fmt) if fmt else datetime.fromisoformat(text)
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=ZoneInfo("Asia/Shanghai"))
+        if parsed.timestamp() > time.time() + 60:
+            return None
+        return parsed
+    except (ValueError, TypeError, OverflowError):
+        return None
 
 
 def fetch_stock_names(instruments: list[str]) -> dict[str, str]:
@@ -167,7 +211,8 @@ def fetch_stock_names(instruments: list[str]) -> dict[str, str]:
             break
         fetch_result = _call_with_retry(src_name, fetch_fn, list(still_missing.keys()))
         if fetch_result:
-            for code, (_, name) in fetch_result.items():
+            for code, value in fetch_result.items():
+                name = value[1]
                 if code in still_missing and name:
                     api_names[still_missing[code]] = name
 
@@ -185,11 +230,11 @@ def fetch_stock_names(instruments: list[str]) -> dict[str, str]:
 
 def invalidate_cache() -> None:
     """Clear the in-memory price/name cache."""
-    global _price_cache, _name_cache, _cache_ts
     with _cache_lock:
         _price_cache.clear()
         _name_cache.clear()
-        _cache_ts = 0.0
+        _quote_cache.clear()
+        _price_cache_ts.clear()
 
 
 def fetch_prices_from_qlib(instruments: list[str]) -> dict[str, float]:
@@ -394,7 +439,8 @@ def _fetch_sina(codes: list[str]) -> dict[str, tuple[float, str]]:
             continue
 
         if bare in codes and price > 0:
-            result[bare] = (price, name)
+            quote_time = f"{fields[30]}T{fields[31]}" if len(fields) > 31 else None
+            result[bare] = (price, name, quote_time)
 
     return result
 
@@ -436,7 +482,7 @@ def _fetch_tencent(codes: list[str]) -> dict[str, tuple[float, str]]:
             continue
 
         if bare in codes and price > 0:
-            result[bare] = (price, name)
+            result[bare] = (price, name, fields[30] if len(fields) > 30 else None)
 
     return result
 
@@ -570,7 +616,9 @@ def _fetch_tushare(codes: list[str]) -> dict[str, tuple[float, str]]:
             bare = tc.split(".")[0]
             price = float(row.get("close", 0))
             if bare in codes and price > 0:
-                result[bare] = (price, "")
+                quote_date = str(row.get("trade_date", ""))
+                quote_time = datetime.strptime(quote_date, "%Y%m%d").strftime("%Y-%m-%dT15:00:00") if quote_date else None
+                result[bare] = (price, "", quote_time)
     except Exception as e:
         logger.debug(f"Tushare realtime failed: {e}")
 

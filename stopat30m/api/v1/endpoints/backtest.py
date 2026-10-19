@@ -12,19 +12,21 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from stopat30m.api.deps import get_db_session
 from stopat30m.auth.deps import get_current_user
 from stopat30m.storage.models import BacktestRun, User
+from stopat30m.config import PROJECT_ROOT, get
+from stopat30m.backtest.common import BACKTEST_LIMITATIONS
 
 router = APIRouter(prefix="/backtest")
 
-MODEL_ROOT = Path("./output/models")
-PREDICTION_ROOT = Path("./output/predictions")
-BACKTEST_ROOT = Path("./output/backtests")
+MODEL_ROOT = PROJECT_ROOT / "output" / "models"
+PREDICTION_ROOT = PROJECT_ROOT / "output" / "predictions"
+BACKTEST_ROOT = PROJECT_ROOT / "output" / "backtests"
 
 _executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="backtest_")
 _tasks: dict[str, dict[str, Any]] = {}
@@ -44,22 +46,54 @@ class BacktestRequest(BaseModel):
     kind: Literal["backtest", "signal", "account"]
     model_path: str | None = None
     pred_path: str | None = None
-    tag: str = ""
-    top_k: int | None = None
-    rebalance_freq: int | None = None
+    tag: str = Field("", max_length=80, pattern=r"^[\w. -]*$")
+    top_k: int | None = Field(None, ge=1, le=1000)
+    rebalance_freq: int | None = Field(None, ge=1, le=252)
     deal_price: str | None = Field(None, pattern="^(open|close)$")
-    method: str | None = Field(None, pattern="^(top_k|long_short|quantile)$")
-    horizons: list[int] | None = None
-    group_count: int | None = None
-    benchmark: str | None = None
+    method: Literal["top_k"] | None = None
+    horizons: list[int] | None = Field(None, min_length=1, max_length=20)
+    group_count: int | None = Field(None, ge=2, le=100)
+    benchmark: str | None = Field(None, min_length=1, max_length=30, pattern=r"^[A-Za-z0-9._-]+$")
     execution_price: str | None = Field(None, pattern="^(open|close)$")
     order_type: str | None = Field(None, pattern="^(market|limit)$")
-    slippage_bps: float | None = None
+    slippage_bps: float | None = Field(None, ge=0, le=1000, allow_inf_nan=False)
     allow_partial_fill: bool | None = None
-    participation_rate: float | None = None
-    initial_capital: float | None = None
-    cash_reserve_pct: float | None = None
+    participation_rate: float | None = Field(None, gt=0, le=1, allow_inf_nan=False)
+    initial_capital: float | None = Field(None, gt=0, le=1e12, allow_inf_nan=False)
+    cash_reserve_pct: float | None = Field(None, ge=0, lt=1, allow_inf_nan=False)
     enable_risk_manager: bool = True
+
+
+@router.get("/defaults")
+def get_backtest_defaults(user: User = Depends(get_current_user)) -> dict:
+    basic = get("backtest") or {}
+    signal = get("signal_backtest") or {}
+    account = get("account_backtest") or {}
+    return {
+        "backtest": {"top_k": basic.get("top_k", 20), "rebalance_freq": basic.get("rebalance_freq", 5),
+                     "deal_price": basic.get("deal_price", "open"),
+                     "benchmark": basic.get("benchmark") or get("data", "benchmark", "SH000300")},
+        "signal": {"top_k": signal.get("top_k", 10), "rebalance_freq": signal.get("rebalance_freq", 5),
+                   "method": "top_k", "horizons": signal.get("horizons", [1, 3, 5, 10, 20]),
+                   "group_count": signal.get("group_count", 10), "benchmark": signal.get("benchmark", "SH000300")},
+        "account": {key: account.get(key, default) for key, default in {
+            "initial_capital": 1_000_000, "top_k": 10, "method": "top_k", "rebalance_freq": 5,
+            "execution_price": "open", "order_type": "market", "slippage_bps": 0.0,
+            "allow_partial_fill": False, "participation_rate": 0.1, "cash_reserve_pct": 0.02,
+            "benchmark": "SH000300", "enable_risk_manager": True,
+        }.items()} | {"method": "top_k"},
+        "supported_methods": ["top_k"], "limitations": BACKTEST_LIMITATIONS,
+    }
+
+
+def _owned_run(db: Session, run_id: int, user: User) -> BacktestRun:
+    query = db.query(BacktestRun).filter(BacktestRun.id == run_id)
+    if user.role != "admin":
+        query = query.filter(BacktestRun.user_id == user.id)
+    record = query.first()
+    if record is None:
+        raise HTTPException(status_code=404, detail="Backtest run not found")
+    return record
 
 
 # ---------------------------------------------------------------------------
@@ -105,16 +139,14 @@ def list_predictions(user: User = Depends(get_current_user)) -> list[dict]:
 @router.get("/runs")
 def list_runs(
     kind: str | None = None,
-    limit: int = 20,
+    limit: int = Query(20, ge=1, le=200),
     show_all: bool = False,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> list[dict]:
     query = db.query(BacktestRun).order_by(BacktestRun.created_at.desc())
     if not (show_all and user.role == "admin"):
-        query = query.filter(
-            (BacktestRun.user_id == user.id) | (BacktestRun.user_id == None)  # noqa: E711
-        )
+        query = query.filter(BacktestRun.user_id == user.id)
     if kind:
         query = query.filter(BacktestRun.kind == kind)
     records = query.limit(limit).all()
@@ -132,8 +164,8 @@ def list_runs(
             "win_rate": r.win_rate,
         }
         report = r.report or {}
-        row["ic_mean"] = report.get("IC_mean") or report.get("ic_5d_mean")
-        row["rank_ic_mean"] = report.get("RankIC_mean") or report.get("rank_ic_5d_mean")
+        row["ic_mean"] = report.get("IC_mean", report.get("ic_5d_mean"))
+        row["rank_ic_mean"] = report.get("RankIC_mean", report.get("rank_ic_5d_mean"))
         row["icir"] = report.get("ICIR")
         row["ending_equity"] = report.get("ending_equity")
 
@@ -150,9 +182,7 @@ def get_run_detail(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> dict:
-    record = db.query(BacktestRun).filter(BacktestRun.id == run_id).first()
-    if not record:
-        raise HTTPException(status_code=404, detail="Backtest run not found")
+    record = _owned_run(db, run_id, user)
 
     return {
         "id": record.id,
@@ -176,13 +206,13 @@ def get_run_charts(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db_session),
 ) -> dict[str, Any]:
-    record = db.query(BacktestRun).filter(BacktestRun.id == run_id).first()
-    if not record:
-        raise HTTPException(status_code=404, detail="Run not found")
+    record = _owned_run(db, run_id, user)
 
     run_dir = Path(record.run_dir) if record.run_dir else None
     if not run_dir or not run_dir.exists():
         return {"files": {}}
+    if not run_dir.resolve().is_relative_to((PROJECT_ROOT / "output").resolve()):
+        raise HTTPException(status_code=400, detail="Invalid backtest result directory")
 
     result: dict[str, list[dict]] = {}
     for f in run_dir.iterdir():
@@ -234,6 +264,10 @@ def _try_parse_number(v: str | None) -> Any:
 
 @router.get("/dirs/{kind}")
 def list_run_dirs(kind: str, user: User = Depends(get_current_user)) -> list[dict]:
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="CLI run directories are available to administrators only")
+    if kind not in {"backtest", "signal", "account"}:
+        raise HTTPException(status_code=400, detail="Unknown backtest kind")
     kind_dir = BACKTEST_ROOT / kind
     if not kind_dir.exists():
         return []
@@ -270,7 +304,7 @@ def get_active_task(user: User = Depends(get_current_user)) -> dict:
     """Return the currently running/pending task, or null."""
     with _tasks_lock:
         for t in _tasks.values():
-            if t["status"] in ("pending", "running"):
+            if t.get("user_id") == user.id and t["status"] in ("pending", "running"):
                 return dict(t)
     return {"task_id": None, "status": "idle"}
 
@@ -284,6 +318,19 @@ def submit_backtest(
         raise HTTPException(status_code=400, detail="Provide model_path or pred_path")
     if body.model_path and body.pred_path:
         raise HTTPException(status_code=400, detail="Provide only one of model_path or pred_path")
+    if body.horizons and any(h < 1 or h > 252 for h in body.horizons):
+        raise HTTPException(status_code=422, detail="Horizons must be between 1 and 252 trading days")
+    # These files contain pickle objects. Only server-managed model directories
+    # are accepted; an HTTP client must never choose an arbitrary local pickle.
+    for key, root in (("model_path", MODEL_ROOT), ("pred_path", PREDICTION_ROOT)):
+        value = getattr(body, key)
+        if value:
+            target = Path(value)
+            target = target if target.is_absolute() else PROJECT_ROOT / target
+            target = target.resolve()
+            if not target.is_relative_to(root.resolve()) or target.suffix != ".pkl" or not target.is_file():
+                raise HTTPException(status_code=422, detail=f"Invalid {key}: select a listed server asset")
+            setattr(body, key, str(target))
 
     with _tasks_lock:
         for t in _tasks.values():
@@ -293,17 +340,17 @@ def submit_backtest(
                     detail=f"A backtest is already running (task_id={t['task_id']})",
                 )
 
-    task_id = uuid.uuid4().hex
-    task_state = {
-        "task_id": task_id,
-        "status": "running",
-        "kind": body.kind,
-        "progress": "",
-        "run_id": None,
-        "error": None,
-        "created_at": datetime.utcnow().isoformat(),
-    }
-    with _tasks_lock:
+        task_id = uuid.uuid4().hex
+        task_state = {
+            "task_id": task_id,
+            "status": "running",
+            "kind": body.kind,
+            "progress": "",
+            "run_id": None,
+            "error": None,
+            "created_at": datetime.utcnow().isoformat(),
+            "user_id": user.id,
+        }
         _tasks[task_id] = task_state
 
     _executor.submit(_run_backtest_task, task_id, body.model_dump(), user.id)
@@ -314,7 +361,7 @@ def submit_backtest(
 def get_backtest_task(task_id: str, user: User = Depends(get_current_user)) -> dict:
     with _tasks_lock:
         task = _tasks.get(task_id)
-    if not task:
+    if not task or task.get("user_id") != user.id:
         raise HTTPException(status_code=404, detail="Task not found")
     return dict(task)
 
@@ -372,9 +419,12 @@ def _run_basic_backtest(
         kwargs["rebalance_freq"] = params["rebalance_freq"]
     if params.get("deal_price"):
         kwargs["deal_price"] = params["deal_price"]
+    if params.get("benchmark"):
+        kwargs["benchmark"] = params["benchmark"]
 
     engine = BacktestEngine(**kwargs)
     result = engine.run(pred)
+    result.config["source_metadata"] = metadata
     out_dir = result.save()
 
     update("running", "Saving to database...")
@@ -406,6 +456,7 @@ def _run_signal_backtest(
         benchmark=params.get("benchmark") or cfg.get("benchmark", "SH000300"),
     )
     result = engine.run(pred)
+    result.config["source_metadata"] = metadata
     tag = params.get("tag", "")
     run_dir = result.save(tag=tag)
 
@@ -445,6 +496,7 @@ def _run_account_backtest(
         enable_risk_manager=params.get("enable_risk_manager", True) and cfg.get("enable_risk_manager", True),
     )
     result = engine.run(pred)
+    result.config["source_metadata"] = metadata
     tag = params.get("tag", "")
     run_dir = result.save(tag=tag)
 

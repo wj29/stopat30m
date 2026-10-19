@@ -1,0 +1,53 @@
+{
+  "name": "M2 固定 ETF 池历史样本外验证",
+  "declared_on": "2026-10-19",
+  "experiment_type": "retrospective_fixed_rule_out_of_sample",
+  "universe": {
+    "kind": "fixed",
+    "instruments": ["SH510300", "SH510500", "SZ159915"],
+    "selection_date": "2026-10-19",
+    "selection_reason": "大盘、中盘和创业板宽基 ETF 的固定研究池，用于验证数据与执行时序；不是历史沪深300成分，也没有宣称在2021年已预先选定。"
+  },
+  "data_request": {
+    "source": "baostock",
+    "start_date": "2013-01-01",
+    "end_date": "2025-12-31",
+    "adjustment": "hfq",
+    "instruments": ["SH510300", "SH510500", "SZ159915", "SH000300"]
+  },
+  "config": {
+    "train_start": "2014-01-01",
+    "train_end": "2018-12-31",
+    "validation_start": "2019-01-01",
+    "validation_end": "2020-12-31",
+    "oos_start": "2021-01-01",
+    "oos_end": "2025-12-31",
+    "benchmark": "SH000300",
+    "buy_hold_instrument": "SH510300",
+    "lookback_sessions": 60,
+    "top_k": 1,
+    "rebalance_sessions": 20,
+    "fold_sessions": 126,
+    "buy_fee_bps": 3.0,
+    "sell_fee_bps": 3.0,
+    "slippage_bps": 2.0,
+    "cash_reserve_pct": 0.0,
+    "positive_momentum_only": true,
+    "periods_per_year": 252,
+    "risk_free_rate": 0.03
+  },
+  "predeclared_diagnostics": {
+    "cost_bps_per_side": [5.0, 10.0, 20.0],
+    "strategy_selection": "不运行参数网格，不根据最终OOS收益替换主策略、资产池或参数；成本敏感性不用于选赢家。",
+    "comparison": ["同成本等权再平衡", "同成本SH510300买入持有", "SH000300价格指数（不含分红）"],
+    "annual_return_target": 0.2,
+    "max_drawdown_research_target": 0.15
+  },
+  "scope": [
+    "固定参数动量基线，无机器学习模型拟合或滚动重新训练。",
+    "信号使用前一交易日收盘前已发生的数据，下一交易日开盘执行。",
+    "后复权价格仅用于连续收益与分数敞口研究，未复权价格单独保存；不是整数股现金账户仿真。",
+    "现金收益按0；ETF交易费用采用双边5bp研究假设，未模拟最低佣金、成交量冲击或开盘竞价能否成交。",
+    "规则在2026年锁定，2021至2025年属于历史回看样本外分段，不能声称是真正的前瞻实盘验证。"
+  ]
+}

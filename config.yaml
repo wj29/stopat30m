@@ -10,7 +10,7 @@ project:
 
 # ── 数据源 ──────────────────────────────────────────────────────
 tushare:
-  token: "117cc4376f3df4234f06c058eeaef6fa8e86ee64b5dd5f0b9a8a6afb"
+  token: ""  # Configure in config.local.yaml or environment
   # Tushare Pro API token
   # 用途：筹码分布备选数据源 + 实时行情备选源
   # 获取：https://tushare.pro/register （免费注册，部分接口需积分）
@@ -36,7 +36,6 @@ llm:
 
   # AIHubMix 聚合平台 — 一个 key 调所有 openai 兼容模型（推荐）
   # 获取：https://aihubmix.com
-  # sk-OoCv1x1p6StPDNy06c53F218D58f4eD2911991FdB30d5813
   aihubmix_api_key: ""
 
   # DeepSeek
@@ -46,7 +45,7 @@ llm:
 
   # OpenAI
   # 获取：https://platform.openai.com/api-keys
-  openai_api_key: "sk-bc647dca4df0461f91889c20aba7a232"
+  openai_api_key: ""  # Configure in config.local.yaml or environment
   openai_base_url: "https://www.right.codes/codex/v1" # 留空 = 官方，或填中转站地址（需包含 /v1）
 
   # Google Gemini
@@ -67,7 +66,7 @@ llm:
 search:
   # 博查 AI（中文搜索，推荐）
   # 获取：https://open.bochaai.com
-  bocha_api_keys: "sk-dd5d73103da7490286c164b90dbbd6f2"
+  bocha_api_keys: "" # 凭据保存在本地私有配置
 
   # Tavily（AI 优化搜索）
   # 获取：https://tavily.com （免费 1000 次/月）
@@ -79,7 +78,7 @@ search:
 
   # SerpAPI（Google 搜索代理）
   # 获取：https://serpapi.com （免费 100 次/月）
-  serpapi_keys: "37f967a46e9a77ffeaeae258c4513e3447c0905feb607eca972a50d74df131cd"
+  serpapi_keys: "" # 凭据保存在本地私有配置
 
   # Anspire
   # 获取：联系 anspire.cn
@@ -91,7 +90,7 @@ search:
 
   # SearXNG（开源，可自建，无需 key）
   searxng_base_urls: "" # 自建实例地址，逗号分隔
-  searxng_public_instances_enabled: true # 无自建实例时自动使用公共实例
+  searxng_public_instances_enabled: false # 默认不自动访问公共实例
 
   # 新闻搜索参数
   news_max_age_days: 3 # 只搜索最近 N 天的新闻
@@ -380,6 +379,8 @@ event_monitor:
 
 # ── 用户认证 ─────────────────────────────────────────────────────
 auth:
+  single_user: true         # 个人工作台：保留登录，默认隐藏多人管理入口
+  registration_enabled: false # 默认通过 CLI 创建本人管理员，不开放网页注册
   secret_key: ""            # JWT 签名密钥，留空则每次启动自动生成（重启后 token 失效）
   token_expire_hours: 24    # Token 有效期（小时）
   invite_expire_days: 7     # 邀请码默认有效天数

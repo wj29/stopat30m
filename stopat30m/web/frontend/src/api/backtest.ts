@@ -65,6 +65,18 @@ export interface BacktestRunParams {
   enable_risk_manager?: boolean;
 }
 
+export interface BacktestDefaults {
+  backtest: Partial<BacktestRunParams>;
+  signal: Partial<BacktestRunParams>;
+  account: Partial<BacktestRunParams>;
+  supported_methods: string[];
+  limitations: string[];
+}
+
+export async function getBacktestDefaults(): Promise<BacktestDefaults> {
+  return (await api.get('/backtest/defaults')).data;
+}
+
 export async function listRuns(kind?: string, limit = 40): Promise<BacktestRunSummary[]> {
   const { data } = await api.get('/backtest/runs', {
     params: { kind: kind || undefined, limit },

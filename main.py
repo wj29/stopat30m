@@ -9,6 +9,7 @@ Commands:
     backtest    Backtest trained model on test data
     signal-backtest  Backtest generated signals
     account-backtest Account-level trading backtest
+    research    Audited historical inputs and locked fixed-rule OOS research
     signal      Generate trading signals
     trade       Start trading engine
     dashboard   Launch monitoring dashboard
@@ -19,6 +20,7 @@ import sys
 
 import click
 from loguru import logger
+from stopat30m.formatting import format_metric
 
 logger.remove()
 logger.add(sys.stderr, level="INFO", format="<green>{time:HH:mm:ss}</green> | <level>{level:<7}</level> | {message}")
@@ -479,24 +481,25 @@ def backtest(model_path: str | None, pred_path: str | None, universe: str | None
 
     engine = BacktestEngine(**kwargs)
     result = engine.run(pred)
-    result.save()
+    run_dir = result.save()
 
     m = result.metrics
     click.echo(f"\n{'=' * 58}")
     click.echo(f"  Backtest Results ({result.config.get('test_days', '?')} trading days)")
     click.echo(f"{'=' * 58}")
-    click.echo(f"  {'Annual Return':<24}{m.get('annual_return', 0):>+10.2%}")
-    click.echo(f"  {'Sharpe Ratio':<24}{m.get('sharpe', 0):>10.2f}")
-    click.echo(f"  {'Sortino Ratio':<24}{m.get('sortino', 0):>10.2f}")
-    click.echo(f"  {'Max Drawdown':<24}{m.get('max_drawdown', 0):>10.2%}")
-    click.echo(f"  {'Calmar Ratio':<24}{m.get('calmar', 0):>10.2f}")
-    click.echo(f"  {'Win Rate':<24}{m.get('win_rate', 0):>10.2%}")
-    click.echo(f"  {'Profit/Loss Ratio':<24}{m.get('profit_loss_ratio', 0):>10.2f}")
+    for label, key, spec in [
+        ("Annual Return", "annual_return", "+.2%"), ("Sharpe Ratio", "sharpe", ".2f"),
+        ("Sortino Ratio", "sortino", ".2f"), ("Max Drawdown", "max_drawdown", ".2%"),
+        ("Calmar Ratio", "calmar", ".2f"), ("Profitable Days", "win_rate", ".2%"),
+        ("Profit/Loss Ratio", "profit_loss_ratio", ".2f"),
+    ]:
+        click.echo(f"  {label:<24}{format_metric(m.get(key), spec):>10}")
     if "excess_return" in m:
-        click.echo(f"  {'Excess Return (vs bench)':<24}{m['excess_return']:>+10.2%}")
-    click.echo(f"  {'Total Trading Days':<24}{m.get('total_trades', 0):>10d}")
+        click.echo(f"  {'Excess Return (vs bench)':<24}{format_metric(m.get('excess_return'), '+.2%'):>10}")
+    click.echo(f"  {'Execution Count':<24}{format_metric(m.get('total_trades'), 'd'):>10}")
+    click.echo(f"  {'Observed Trading Days':<24}{format_metric(m.get('observation_days'), 'd'):>10}")
     click.echo(f"{'=' * 58}")
-    click.echo(f"  Results saved to ./output/backtest/")
+    click.echo(f"  Results saved to {run_dir}")
     click.echo(f"  View in dashboard: python main.py dashboard")
     click.echo(f"{'=' * 58}\n")
 
@@ -612,10 +615,10 @@ def signal_backtest(
 
     click.echo(f"\nSignal backtest saved to: {run_dir}")
     click.echo(f"Top-K: {engine.top_k} | method={engine.method} | rebalance={engine.rebalance_freq}")
-    click.echo(f"Avg turnover: {result.summary_metrics.get('avg_turnover', 0):.2%}")
-    click.echo(f"Primary IC mean: {result.summary_metrics.get(f'ic_{engine.eval_horizon}d_mean', 0):.4f}")
-    click.echo(f"Primary RankIC mean: {result.summary_metrics.get(f'rank_ic_{engine.eval_horizon}d_mean', 0):.4f}")
-    click.echo(f"Signal {engine.eval_horizon}D mean return: {result.summary_metrics.get(f'buy_mean_return_{engine.eval_horizon}d', 0):.2%}")
+    click.echo(f"Avg turnover: {format_metric(result.summary_metrics.get('avg_turnover'), '.2%')}")
+    click.echo(f"Primary IC mean: {format_metric(result.summary_metrics.get(f'ic_{engine.eval_horizon}d_mean'), '.4f')}")
+    click.echo(f"Primary RankIC mean: {format_metric(result.summary_metrics.get(f'rank_ic_{engine.eval_horizon}d_mean'), '.4f')}")
+    click.echo(f"Signal {engine.eval_horizon}D mean return: {format_metric(result.summary_metrics.get(f'buy_mean_return_{engine.eval_horizon}d'), '.2%')}")
 
 
 @cli.command("account-backtest")
@@ -693,11 +696,11 @@ def account_backtest(
     run_dir = result.save(tag=tag)
 
     click.echo(f"\nAccount backtest saved to: {run_dir}")
-    click.echo(f"Ending equity: ¥{result.report.get('ending_equity', 0):,.2f}")
-    click.echo(f"Annual return: {result.report.get('annual_return', 0):.2%}")
-    click.echo(f"Sharpe: {result.report.get('sharpe', 0):.2f}")
-    click.echo(f"Max drawdown: {result.report.get('max_drawdown', 0):.2%}")
-    click.echo(f"Total fees: ¥{result.report.get('total_fees', 0):,.2f}")
+    click.echo(f"Ending equity: {format_metric(result.report.get('ending_equity'), ',.2f', prefix='¥')}")
+    click.echo(f"Annual return: {format_metric(result.report.get('annual_return'), '.2%')}")
+    click.echo(f"Sharpe: {format_metric(result.report.get('sharpe'), '.2f')}")
+    click.echo(f"Max drawdown: {format_metric(result.report.get('max_drawdown'), '.2%')}")
+    click.echo(f"Total fees: {format_metric(result.report.get('total_fees'), ',.2f', prefix='¥')}")
     click.echo(f"Rejected orders: {result.report.get('rejected_orders', 0)}")
 
 
@@ -1114,14 +1117,24 @@ def create_admin(username: str, password: str) -> None:
     from stopat30m.auth.service import hash_password
     from stopat30m.storage.database import get_db, init_db
     from stopat30m.storage.models import User
+    from stopat30m.config import get
 
+    username = username.strip()
+    if not 2 <= len(username) <= 50:
+        raise click.BadParameter("用户名应为 2–50 个字符", param_hint="--username")
+    if len(password) < 8:
+        raise click.BadParameter("管理员密码至少需要 8 个字符", param_hint="--password")
     init_db()
     with get_db() as db:
+        from sqlalchemy import text
+        db.execute(text("BEGIN IMMEDIATE"))
         existing = db.query(User).filter(User.username == username).first()
         if existing:
             click.echo(f"User '{username}' already exists (role={existing.role}).")
             return
 
+        if get("auth", "single_user", True) and db.query(User).count():
+            raise click.ClickException("个人模式已有账户，请使用 user reset-password 管理已有账户；如确需多人使用，请显式关闭 auth.single_user。")
         user = User(
             username=username,
             password_hash=hash_password(password),
@@ -1234,6 +1247,11 @@ def create_invite(expires: str, admin_user: str | None) -> None:
         db.flush()
         click.echo(f"Invite code: {code}")
         click.echo(f"Expires: {inv.expires_at.strftime('%Y-%m-%d %H:%M')} ({days} days)")
+
+
+from stopat30m.research_cli import research_group
+
+cli.add_command(research_group)
 
 
 if __name__ == "__main__":

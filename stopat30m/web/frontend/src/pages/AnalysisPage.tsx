@@ -449,22 +449,20 @@ export default function AnalysisPage() {
   const [elapsedSec, setElapsedSec] = useState(0);
   const timerRef = useRef(0);
   const stepStartRef = useRef(0);
+  const historyRequest = useRef(0);
 
   const loadHistory = useCallback((page?: number) => {
+    const requestId = ++historyRequest.current;
     const p = page ?? historyPage;
     getAnalysisHistory(PAGE_SIZE, p * PAGE_SIZE)
-      .then((res) => { setHistory(res.items); setHistoryTotal(res.total); })
-      .catch(() => { setHistory([]); setHistoryTotal(0); });
+      .then((res) => { if (requestId === historyRequest.current) { setHistory(res.items); setHistoryTotal(res.total); } })
+      .catch(() => { if (requestId === historyRequest.current) { setHistory([]); setHistoryTotal(0); } });
+    return () => { if (historyRequest.current === requestId) ++historyRequest.current; };
   }, [historyPage]);
 
   useEffect(() => {
-    loadHistory();
+    return loadHistory();
   }, [loadHistory]);
-
-  useEffect(() => {
-    loadHistory(historyPage);
-    setSelected(new Set());
-  }, [historyPage]);
 
   async function openDetail(id: number) {
     setDetailLoading(true);

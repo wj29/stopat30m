@@ -35,6 +35,9 @@ Users/
 
 # Local config override (contains API keys)
 config.local.yaml
+*.local.yaml
+*.local.yml
+.*.settings.lock
 
 # SQLite database (including WAL/SHM journal files)
 data/*.db

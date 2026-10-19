@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "name": "M2 固定 ETF 池历史样本外验证",
+  "kind": "fixed",
+  "coverage_start": "2013-01-01",
+  "coverage_end": "2025-12-31",
+  "selection_date": "2026-10-19",
+  "expected_size": 3,
+  "intervals": [
+    {
+      "instrument": "SH510300",
+      "effective_from": "2013-01-01",
+      "effective_to": "2026-01-01",
+      "known_at": "2026-10-19",
+      "source": "repository_experiment_spec",
+      "source_url": "repository:docs/research/m2_etf_spec.json"
+    },
+    {
+      "instrument": "SH510500",
+      "effective_from": "2013-01-01",
+      "effective_to": "2026-01-01",
+      "known_at": "2026-10-19",
+      "source": "repository_experiment_spec",
+      "source_url": "repository:docs/research/m2_etf_spec.json"
+    },
+    {
+      "instrument": "SZ159915",
+      "effective_from": "2013-01-01",
+      "effective_to": "2026-01-01",
+      "known_at": "2026-10-19",
+      "source": "repository_experiment_spec",
+      "source_url": "repository:docs/research/m2_etf_spec.json"
+    }
+  ],
+  "coverage_evidence": [],
+  "limitations": [
+    "固定研究池不是指数历史成分；池中证券由本次研究选定，不能据此声称消除了选池与幸存者偏差。"
+  ],
+  "metadata": {
+    "research_data_request": {
+      "source": "baostock",
+      "start_date": "2013-01-01",
+      "end_date": "2025-12-31",
+      "adjustment": "hfq",
+      "instruments": [
+        "SH510300",
+        "SH510500",
+        "SZ159915",
+        "SH000300"
+      ]
+    }
+  },
+  "sha256": "74fc25d6bee5f0463b02967c1add88666f1bb26b3a2b3d5accb034c6b845424a"
+}

@@ -1,10 +1,34 @@
 import api from './client';
 
+export interface AuthSettings {
+  single_user: boolean;
+  registration_enabled: boolean;
+}
+
+export async function getAuthSettings(): Promise<AuthSettings> {
+  const { data } = await api.get('/auth/settings');
+  return data;
+}
+
 export interface TokenResponse {
   access_token: string;
   token_type: string;
   role: string;
   username: string;
+}
+
+export interface BootstrapStatus {
+  required: boolean;
+  allowed: boolean;
+  reason: string | null;
+}
+
+export async function getBootstrapStatus(signal?: AbortSignal): Promise<BootstrapStatus> {
+  return (await api.get('/auth/bootstrap', { signal })).data;
+}
+
+export async function bootstrapAdmin(username: string, password: string): Promise<TokenResponse> {
+  return (await api.post<TokenResponse>('/auth/bootstrap', { username, password })).data;
 }
 
 export interface UserInfo {

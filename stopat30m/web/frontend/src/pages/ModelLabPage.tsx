@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getModelConfig, updateModelConfig, generateTrainCommand } from '../api/system';
+import { getModelConfig, updateModelConfig, generateTrainCommand, type ModelConfiguration } from '../api/system';
 import { useAuth } from '../contexts/AuthContext';
 
 /* ------------------------------------------------------------------ */
@@ -101,7 +101,7 @@ const FACTOR_HINTS: Record<string, string> = {
 export default function ModelLabPage() {
   const { isAdmin } = useAuth();
 
-  const [cfg, setCfg] = useState<Record<string, any> | null>(null);
+  const [cfg, setCfg] = useState<ModelConfiguration | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [saveMsg, setSaveMsg] = useState('');
@@ -113,11 +113,13 @@ export default function ModelLabPage() {
 
   /* ---------- load config ---------- */
   useEffect(() => {
-    if (!isAdmin) { setLoading(false); return; }
+    if (!isAdmin) return;
+    let active = true;
     getModelConfig()
-      .then(setCfg)
-      .catch((e: unknown) => setErr(e instanceof Error ? e.message : '加载配置失败'))
-      .finally(() => setLoading(false));
+      .then(value => { if (active) setCfg(value); })
+      .catch((e: unknown) => { if (active) setErr(e instanceof Error ? e.message : '加载配置失败'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, [isAdmin]);
 
   /* ---------- helpers ---------- */

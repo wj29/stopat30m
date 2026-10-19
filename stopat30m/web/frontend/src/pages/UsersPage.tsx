@@ -10,6 +10,7 @@ import {
   type UserInfo,
 } from '../api/auth';
 import { useAuth } from '../contexts/AuthContext';
+import { errorMessage } from '../utils/format';
 
 export default function UsersPage() {
   const { isAdmin } = useAuth();
@@ -57,8 +58,8 @@ function ChangePasswordSection() {
       setOldPw('');
       setNewPw('');
       setConfirmPw('');
-    } catch (err: any) {
-      setError(err.response?.data?.detail || '修改失败');
+    } catch (err: unknown) {
+      setError(errorMessage(err, '修改失败'));
     } finally {
       setLoading(false);
     }
@@ -117,15 +118,16 @@ function UserManagementSection() {
   const [resetMsg, setResetMsg] = useState('');
   const [resetErr, setResetErr] = useState('');
 
-  const load = () => {
-    setLoading(true);
+  const [revision, setRevision] = useState(0);
+  const load = () => { setLoading(true); setRevision(value => value + 1); };
+  useEffect(() => {
+    let active = true;
     listUsers()
-      .then(setUsers)
+      .then(value => { if (active) setUsers(value); })
       .catch(() => {})
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(load, []);
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [revision]);
 
   const toggleActive = async (u: UserInfo) => {
     await updateUser(u.id, { is_active: !u.is_active });
@@ -148,8 +150,8 @@ function UserManagementSection() {
       setResetMsg(`已重置 ${resetTarget.username} 的密码`);
       setResetPw('');
       setResetTarget(null);
-    } catch (err: any) {
-      setResetErr(err.response?.data?.detail || '重置失败');
+    } catch (err: unknown) {
+      setResetErr(errorMessage(err, '重置失败'));
     }
   };
 
@@ -243,15 +245,16 @@ function InviteCodeSection() {
   const [creating, setCreating] = useState(false);
   const [newCode, setNewCode] = useState('');
 
-  const load = () => {
-    setLoading(true);
+  const [revision, setRevision] = useState(0);
+  const load = () => { setLoading(true); setRevision(value => value + 1); };
+  useEffect(() => {
+    let active = true;
     listInvites()
-      .then(setInvites)
+      .then(value => { if (active) setInvites(value); })
       .catch(() => {})
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(load, []);
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [revision]);
 
   const handleCreate = async () => {
     setCreating(true);

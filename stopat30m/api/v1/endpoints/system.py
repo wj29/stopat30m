@@ -2,42 +2,62 @@
 
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 from typing import Any
 
 import yaml
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, HTTPException
+from pydantic import BaseModel, model_validator
+from typing import Literal
 from loguru import logger
 
 from stopat30m.auth.deps import require_role
 from stopat30m.config import get, load_config, _DEFAULT_CONFIG_PATH
-from stopat30m.data.provider import data_exists, get_data_dir
+from stopat30m.data.provider import get_data_dir
+from stopat30m.data.health import inspect_data
+from stopat30m.data.maintenance import UpdateBusyError, start_update, update_status
 
 router = APIRouter(prefix="/system", dependencies=[Depends(require_role("admin"))])
 
 
 @router.get("/data-status")
 def data_status() -> dict:
-    """Get data layer status: Qlib data availability, meta watermark, etc."""
-    data_dir = get_data_dir()
-    result = {
-        "data_dir": str(data_dir),
-        "data_available": data_exists(),
-        "calendar_exists": (data_dir / "calendars" / "day.txt").exists(),
-    }
+    """Inspect coverage and dates without claiming that a local calendar is current."""
+    return inspect_data(get_data_dir())
 
-    meta_path = data_dir / "data_meta.json"
-    if meta_path.exists():
-        import json
-        try:
-            meta = json.loads(meta_path.read_text())
-            result["trusted_until"] = meta.get("trusted_until", "")
-            result["last_append"] = meta.get("last_append", "")
-            result["stock_count"] = len(meta.get("stocks", {}))
-        except Exception:
-            pass
 
-    return result
+class DataUpdateRequest(BaseModel):
+    source: Literal["baostock", "akshare", "efinance", "tushare"] = "baostock"
+    start_date: date | None = None
+    end_date: date | None = None
+
+    @model_validator(mode="after")
+    def check_dates(self):
+        if self.start_date and self.end_date and self.start_date > self.end_date:
+            raise ValueError("开始日期不能晚于结束日期")
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        if self.end_date and self.end_date > datetime.now(ZoneInfo("Asia/Shanghai")).date():
+            raise ValueError("结束日期不能在未来")
+        return self
+
+
+@router.get("/data-update")
+def get_data_update() -> dict | None:
+    return update_status(get_data_dir())
+
+
+@router.post("/data-update", status_code=202)
+def request_data_update(payload: DataUpdateRequest) -> dict:
+    try:
+        return start_update(
+            get_data_dir(), source=payload.source,
+            start_date=payload.start_date.isoformat() if payload.start_date else None,
+            end_date=payload.end_date.isoformat() if payload.end_date else None,
+        )
+    except UpdateBusyError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.get("/config")
@@ -99,33 +119,30 @@ def get_model_config() -> dict[str, Any]:
     """Return the model-related config sections for the lab editor."""
     cfg = load_config()
     result: dict[str, Any] = {}
+    def safe_value(value):
+        if isinstance(value, dict):
+            return {key: None if any(word in str(key).lower() for word in ("api_key", "password", "secret", "token"))
+                    else safe_value(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [safe_value(item) for item in value]
+        return value
     for section in _EDITABLE_SECTIONS:
         if section in cfg:
-            result[section] = cfg[section]
+            result[section] = safe_value(cfg[section])
     return result
 
 
 @router.put("/model-config")
-def update_model_config(payload: dict[str, Any] = Body(...)) -> dict[str, str]:
-    """Merge submitted config sections back into config.yaml."""
-    import stopat30m.config as config_mod
-
-    config_path = _DEFAULT_CONFIG_PATH
-    with open(config_path, "r", encoding="utf-8") as f:
-        full_cfg = yaml.safe_load(f) or {}
-
-    changed: list[str] = []
-    for section in _EDITABLE_SECTIONS:
-        if section in payload:
-            full_cfg[section] = _deep_merge(full_cfg.get(section, {}), payload[section])
-            changed.append(section)
-
-    with open(config_path, "w", encoding="utf-8") as f:
-        yaml.dump(full_cfg, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
-
-    config_mod._config_cache = None
-    logger.info(f"Model config updated (sections: {changed})")
-    return {"status": "ok", "updated_sections": ", ".join(changed)}
+def update_model_config(payload: Any = Body(...), user=Depends(require_role("admin"))) -> dict[str, str]:
+    """Keep the legacy shape while writing only validated ignored local overrides."""
+    from stopat30m.settings_store import SettingsStore, SettingsError
+    try:
+        return SettingsStore(config_path=_DEFAULT_CONFIG_PATH).update_legacy(payload,
+            user_id=getattr(user, "id", None), username=getattr(user, "username", ""))
+    except SettingsError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from None
+    except (OSError, ValueError, TypeError):
+        raise HTTPException(status_code=409, detail="Local model settings could not be saved safely.") from None
 
 
 def _deep_merge(base: Any, override: Any) -> Any:

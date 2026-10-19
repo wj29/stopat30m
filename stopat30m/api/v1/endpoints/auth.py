@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from stopat30m.api.deps import get_db_session
+from stopat30m.config import get
 from stopat30m.auth.deps import get_current_user
 from stopat30m.auth.service import create_access_token, hash_password, verify_password
 from stopat30m.storage.models import InviteCode, User
@@ -58,8 +59,19 @@ class UserInfo(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+@router.get("/settings")
+def auth_settings() -> dict[str, bool]:
+    single_user = bool(get("auth", "single_user", True))
+    return {
+        "single_user": single_user,
+        "registration_enabled": not single_user and bool(get("auth", "registration_enabled", False)),
+    }
+
+
 @router.post("/register", response_model=TokenResponse)
 def register(req: RegisterRequest, db: Session = Depends(get_db_session)) -> TokenResponse:
+    if not auth_settings()["registration_enabled"]:
+        raise HTTPException(status_code=403, detail="当前为个人使用模式，网页注册未开放。请通过命令行创建管理员。")
     existing = db.query(User).filter(User.username == req.username).first()
     if existing:
         raise HTTPException(status_code=400, detail="用户名已存在")

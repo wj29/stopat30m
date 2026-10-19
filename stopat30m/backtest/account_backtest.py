@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from math import isfinite
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
 from stopat30m.backtest.common import (
+    BACKTEST_LIMITATIONS,
     create_run_dir,
     fetch_benchmark_close,
     fetch_price_fields,
@@ -72,6 +74,14 @@ class AccountBacktestEngine:
             raise ValueError("execution_price must be 'open' or 'close'")
         if order_type not in {"market", "limit"}:
             raise ValueError("order_type must be 'market' or 'limit'")
+        if method != "top_k":
+            raise ValueError("Account backtest currently supports top_k only; short selling and quantile portfolios are not implemented.")
+        if top_k < 1 or rebalance_freq < 1 or initial_capital <= 0:
+            raise ValueError("top_k, rebalance_freq and initial_capital must be positive.")
+        if not 0 <= cash_reserve_pct < 1 or not 0 < participation_rate <= 1:
+            raise ValueError("cash_reserve_pct must be in [0, 1), participation_rate in (0, 1].")
+        if order_type not in {"market", "limit"} or slippage_bps < 0:
+            raise ValueError("Invalid order type or negative slippage.")
         self.initial_capital = initial_capital
         self.top_k = top_k
         self.method = method
@@ -128,10 +138,17 @@ class AccountBacktestEngine:
         event_rows: list[dict[str, Any]] = []
         turnover_rows: list[dict[str, Any]] = []
 
+        # Preserve the initial investment as the baseline for first-day P&L.
+        broker.settle_day(str(dates[0].date()))
+
         for day_idx in range(1, len(dates)):
             prev_date = dates[day_idx - 1]
             date = dates[day_idx]
             date_str = str(date.date())
+            if risk_manager is not None:
+                # Establish the exchange day's baseline before marking the
+                # previous close holdings to today's execution price.
+                risk_manager.update_equity(broker.get_account().equity, current_date=date_str)
 
             close_map = _row_to_price_map(close_prices, date)
             prev_close_map = _row_to_price_map(close_prices, prev_date)
@@ -142,6 +159,9 @@ class AccountBacktestEngine:
                 open_prices if self.execution_price == "open" else close_prices,
                 date,
             )
+            for inst in broker.get_positions():
+                if inst not in exec_map or inst not in close_map:
+                    raise ValueError(f"Missing held-position price for {inst} on {date_str}; backtest valuation is incomplete.")
             paused = _build_paused_map(exec_map, close_map, volume_map, instruments)
             buy_blocked, sell_blocked = _build_price_blocks(exec_map, prev_close_map, paused)
             broker.set_market_snapshot(
@@ -155,79 +175,96 @@ class AccountBacktestEngine:
                 paused=paused,
                 buy_blocked=buy_blocked,
                 sell_blocked=sell_blocked,
+                execution_time="09:30:00" if self.execution_price == "open" else "15:00:00",
             )
+            if risk_manager is not None:
+                risk_manager.update_equity(broker.get_account().equity, current_date=date_str)
 
-            signals = signal_gen.generate(pred, date=prev_date)
-            positions_df = _positions_to_df(broker.get_positions())
-            tradable_prices = {
-                normalize_instrument(str(inst)): price
-                for inst, price in exec_map.items()
-                if price > 0
-            }
+            if (day_idx - 1) % self.rebalance_freq == 0:
+                signals = signal_gen.generate(pred, date=prev_date)
+                positions_df = _positions_to_df(broker.get_positions())
+                tradable_prices = {
+                    normalize_instrument(str(inst)): price
+                    for inst, price in exec_map.items()
+                    if price > 0
+                }
 
-            plan = compute_rebalance_plan(
-                signals=signals,
-                positions=positions_df,
-                total_capital=broker.get_account().equity,
-                prices=tradable_prices,
-                cash_reserve_pct=self.cash_reserve_pct,
-            )
+                plan = compute_rebalance_plan(
+                    signals=signals,
+                    positions=positions_df,
+                    total_capital=broker.get_account().equity,
+                    prices=tradable_prices,
+                    cash_reserve_pct=self.cash_reserve_pct,
+                )
 
-            for warning in plan.warnings:
-                event_rows.append({
-                    "date": date_str,
-                    "event_type": "PLAN_WARNING",
-                    "instrument": "",
-                    "message": warning,
-                })
-            if not plan.errors.empty:
-                for _, row in plan.errors.iterrows():
+                for warning in plan.warnings:
                     event_rows.append({
                         "date": date_str,
-                        "event_type": "PLAN_ERROR",
-                        "instrument": str(row.get("instrument", "")),
-                        "message": str(row.get("reason", "")),
+                        "event_type": "PLAN_WARNING",
+                        "instrument": "",
+                        "message": warning,
                     })
+                if not plan.errors.empty:
+                    for _, row in plan.errors.iterrows():
+                        event_rows.append({
+                            "date": date_str,
+                            "event_type": "PLAN_ERROR",
+                            "instrument": str(row.get("instrument", "")),
+                            "message": str(row.get("reason", "")),
+                        })
 
-            order_before = len(broker.get_orders())
-            fill_before = len(broker.get_fills())
-            report = execute_plan(
-                plan,
-                broker,
-                risk_manager=risk_manager,
-                order_type=OrderType.LIMIT if self.order_type == "limit" else OrderType.MARKET,
-                trade_date=date_str,
-            )
-            new_orders = broker.get_orders()[order_before:]
-            new_fills = broker.get_fills()[fill_before:]
+                order_before = len(broker.get_orders())
+                fill_before = len(broker.get_fills())
+                report = execute_plan(
+                    plan,
+                    broker,
+                    risk_manager=risk_manager,
+                    order_type=OrderType.LIMIT if self.order_type == "limit" else OrderType.MARKET,
+                    trade_date=date_str,
+                )
+                new_orders = broker.get_orders()[order_before:]
+                new_fills = broker.get_fills()[fill_before:]
+                broker_order_ids = {order.id for order in new_orders}
+                for rejected in report.rejected:
+                    if rejected.id not in broker_order_ids:
+                        # Pre-trade risk rejections never reach the broker, but
+                        # are still real attempts and must remain auditable.
+                        rejected.created_at = f"{date_str} {'09:30:00' if self.execution_price == 'open' else '15:00:00'}"
+                        rejected.updated_at = rejected.created_at
+                        new_orders.append(rejected)
+                        broker_order_ids.add(rejected.id)
 
-            for order in new_orders:
-                order_rows.append({
-                    "date": date_str,
-                    **order.to_dict(),
-                })
-                if str(order.status.value) != "FILLED":
-                    event_rows.append({
+                for order in new_orders:
+                    order_rows.append({
                         "date": date_str,
-                        "event_type": "ORDER_REJECTED",
-                        "instrument": order.instrument,
-                        "message": order.reject_reason,
+                        **order.to_dict(),
+                    })
+                    if str(order.status.value) != "FILLED":
+                        event_rows.append({
+                            "date": date_str,
+                            "event_type": "ORDER_REJECTED",
+                            "instrument": order.instrument,
+                            "message": order.reject_reason,
+                        })
+
+                for fill in new_fills:
+                    fill_rows.append({
+                        "date": date_str,
+                        **fill.to_dict(),
                     })
 
-            for fill in new_fills:
-                fill_rows.append({
+                turnover_rows.append({
                     "date": date_str,
-                    **fill.to_dict(),
+                    "turnover": round(sum(f.quantity * f.price for f in new_fills), 2),
+                    "fills": len(new_fills),
+                    "rejected": report.total_rejected,
                 })
-
-            turnover_rows.append({
-                "date": date_str,
-                "turnover": round(sum(f.quantity * f.price for f in new_fills), 2),
-                "fills": len(new_fills),
-                "rejected": report.total_rejected,
-            })
+            else:
+                turnover_rows.append({"date": date_str, "turnover": 0.0, "fills": 0, "rejected": 0})
 
             broker.update_prices(close_map)
+            if risk_manager is not None:
+                risk_manager.update_equity(broker.get_account().equity, current_date=date_str)
             snap = broker.settle_day(date_str)
 
             for inst, pos in broker.get_positions().items():
@@ -248,12 +285,11 @@ class AccountBacktestEngine:
             raise ValueError("Account backtest produced no NAV snapshots.")
 
         nav["date"] = pd.to_datetime(nav["date"])
-        nav["daily_return"] = nav["equity"].pct_change().fillna(0.0)
-        bench_ret = benchmark_close.pct_change().reindex(nav["date"]).fillna(0.0)
-        metrics = compute_portfolio_metrics(
-            nav["daily_return"].iloc[1:] if len(nav) > 1 else nav["daily_return"],
-            benchmark_returns=bench_ret.iloc[1:] if len(bench_ret) > 1 else bench_ret,
-        )
+        nav["daily_return"] = nav["equity"].pct_change(fill_method=None).fillna(0.0)
+        dates_index = pd.DatetimeIndex(nav["date"])
+        portfolio_returns = pd.Series(nav["daily_return"].to_numpy(), index=dates_index)
+        bench_ret = benchmark_close.pct_change(fill_method=None).reindex(dates_index)
+        metrics = compute_portfolio_metrics(portfolio_returns.iloc[1:], benchmark_returns=bench_ret.iloc[1:])
 
         orders = pd.DataFrame(order_rows)
         fills = pd.DataFrame(fill_rows)
@@ -267,6 +303,7 @@ class AccountBacktestEngine:
             "ending_equity": round(float(nav["equity"].iloc[-1]), 2),
             "total_fees": round(float(nav["total_fees"].iloc[-1]), 2),
             "order_count": int(len(orders)),
+            "total_trades": int(len(fills)),
             "fill_count": int(len(fills)),
             "rejected_orders": int((orders["status"] == "REJECTED").sum()) if not orders.empty else 0,
             "partial_fills": int((orders["status"] == "PARTIALLY_FILLED").sum()) if not orders.empty else 0,
@@ -298,10 +335,15 @@ class AccountBacktestEngine:
             "test_start": str(dates[0].date()),
             "test_end": str(dates[-1].date()),
             "instruments": len(instruments),
+            "limitations": BACKTEST_LIMITATIONS + [
+                "成交量限制使用事后全日成交量，开盘成交能力只是近似估计。",
+                "风控检查新增委托并跟踪每日权益；不等同于自动止损或完整持仓风险执行。",
+            ],
         }
 
-        nav["benchmark_cumulative"] = (1 + bench_ret.reindex(nav["date"]).fillna(0.0)).cumprod().values
-        nav["equity_cumulative"] = nav["equity"] / float(nav["equity"].iloc[0])
+        benchmark_growth = (1 + bench_ret.iloc[1:]).cumprod(skipna=False)
+        nav["benchmark_cumulative"] = [1.0, *benchmark_growth.to_list()]
+        nav["equity_cumulative"] = nav["equity"] / self.initial_capital
 
         return AccountBacktestResult(
             report=report,
@@ -319,7 +361,7 @@ def _row_to_price_map(frame: pd.DataFrame, date: pd.Timestamp) -> dict[str, floa
     if date not in frame.index:
         return {}
     row = frame.loc[date].dropna()
-    return {str(inst): float(price) for inst, price in row.items() if float(price) > 0}
+    return {str(inst): float(price) for inst, price in row.items() if isfinite(float(price)) and float(price) > 0}
 
 
 def _positions_to_df(positions: dict[str, Any]) -> pd.DataFrame:

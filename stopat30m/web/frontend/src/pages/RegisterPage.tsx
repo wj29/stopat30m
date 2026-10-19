@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { errorMessage } from '../utils/format';
 
 export default function RegisterPage() {
-  const { register } = useAuth();
+  const { register, settings } = useAuth();
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -23,12 +24,14 @@ export default function RegisterPage() {
     try {
       await register(username, password, inviteCode);
       navigate('/', { replace: true });
-    } catch (err: any) {
-      setError(err.response?.data?.detail || '注册失败');
+    } catch (err: unknown) {
+      setError(errorMessage(err, '注册失败'));
     } finally {
       setLoading(false);
     }
   };
+
+  if (!settings.registration_enabled) return <Navigate to="/login" replace />;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
@@ -38,8 +41,9 @@ export default function RegisterPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">邀请码</label>
+            <label htmlFor="register-invite" className="mb-1 block text-sm font-medium text-gray-700">邀请码</label>
             <input
+              id="register-invite"
               type="text"
               value={inviteCode}
               onChange={(e) => setInviteCode(e.target.value)}
@@ -49,8 +53,9 @@ export default function RegisterPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">用户名</label>
+            <label htmlFor="register-username" className="mb-1 block text-sm font-medium text-gray-700">用户名</label>
             <input
+              id="register-username"
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -60,8 +65,9 @@ export default function RegisterPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">密码</label>
+            <label htmlFor="register-password" className="mb-1 block text-sm font-medium text-gray-700">密码</label>
             <input
+              id="register-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -71,8 +77,9 @@ export default function RegisterPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">确认密码</label>
+            <label htmlFor="register-confirm-password" className="mb-1 block text-sm font-medium text-gray-700">确认密码</label>
             <input
+              id="register-confirm-password"
               type="password"
               value={confirmPw}
               onChange={(e) => setConfirmPw(e.target.value)}

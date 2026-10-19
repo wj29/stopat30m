@@ -30,6 +30,7 @@ class MarketSnapshot:
     paused: dict[str, bool]
     buy_blocked: dict[str, bool]
     sell_blocked: dict[str, bool]
+    execution_time: str = "09:30:00"
 
 
 class HistoricalBroker(AbstractBroker):
@@ -64,6 +65,7 @@ class HistoricalBroker(AbstractBroker):
         paused: dict[str, bool] | None = None,
         buy_blocked: dict[str, bool] | None = None,
         sell_blocked: dict[str, bool] | None = None,
+        execution_time: str = "09:30:00",
     ) -> None:
         self._market = MarketSnapshot(
             date=date,
@@ -76,14 +78,17 @@ class HistoricalBroker(AbstractBroker):
             paused=paused or {},
             buy_blocked=buy_blocked or {},
             sell_blocked=sell_blocked or {},
+            execution_time=execution_time,
         )
-        self.update_prices(close_prices)
+        # Decisions at the open may only use execution-time prices. The caller
+        # marks positions to the close after orders have been processed.
+        self.update_prices(execution_prices)
 
     def submit_order(self, order: Order) -> Order:
         if self._market is None:
             raise RuntimeError("Market snapshot is not set.")
 
-        order.created_at = f"{self._market.date} 09:30:00"
+        order.created_at = f"{self._market.date} {self._market.execution_time}"
         order.updated_at = order.created_at
         market_price = self._market.execution_prices.get(order.instrument, 0.0)
         if market_price <= 0:
@@ -113,21 +118,23 @@ class HistoricalBroker(AbstractBroker):
             created_at=order.created_at,
             updated_at=order.updated_at,
         )
-        vr = rules.validate_order(
-            check_order,
-            self._account,
-            prev_closes=self._market.prev_closes or None,
-            market_price=market_price,
-        )
-        if not vr.ok:
-            return self._reject(order, vr.reason)
-
         exec_price = self._resolve_execution_price(order, market_price)
         if exec_price is None or exec_price <= 0:
             return self._reject(order, "限价单当日未触发成交")
 
+        vr = rules.validate_order(
+            check_order,
+            self._account,
+            prev_closes=self._market.prev_closes or None,
+            market_price=exec_price,
+        )
+        if not vr.ok:
+            return self._reject(order, vr.reason)
+
         fill_qty = min(order.quantity, executable_qty)
         fees = rules.calculate_fees(order.direction, fill_qty, exec_price)
+        if order.direction == OrderDirection.BUY and fill_qty * exec_price + fees.total > self._account.cash:
+            return self._reject(order, "资金不足以支付实际成交价、滑点及费用")
         fill = Fill(
             order_id=order.id,
             instrument=order.instrument,
@@ -137,7 +144,7 @@ class HistoricalBroker(AbstractBroker):
             commission=fees.commission,
             stamp_tax=fees.stamp_tax,
             transfer_fee=fees.transfer_fee,
-            timestamp=f"{self._market.date} 09:30:00",
+            timestamp=f"{self._market.date} {self._market.execution_time}",
         )
 
         self._apply_fill(fill)
@@ -279,7 +286,7 @@ class HistoricalBroker(AbstractBroker):
 
         if fill.direction == OrderDirection.BUY:
             cost = fill.quantity * fill.price
-            pos.total_cost += cost
+            pos.total_cost += cost + fill.total_fee
             pos.quantity += fill.quantity
             pos.avg_cost = pos.total_cost / pos.quantity if pos.quantity > 0 else 0.0
             pos.frozen_quantity += fill.quantity

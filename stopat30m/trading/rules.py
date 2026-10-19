@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, time
+import math
+from zoneinfo import ZoneInfo
 
 from .models import Account, Order, OrderDirection, OrderType, Position
 
@@ -40,16 +42,19 @@ AFTERNOON_CLOSE = time(15, 0)
 # Trading session
 # ---------------------------------------------------------------------------
 
-def is_trading_time(now: datetime | None = None) -> bool:
-    """Check if the given time falls within A-share continuous auction sessions."""
-    t = (now or datetime.now()).time()
-    return (MORNING_OPEN <= t <= MORNING_CLOSE) or (AFTERNOON_OPEN <= t <= AFTERNOON_CLOSE)
+def is_trading_time(now: datetime | None = None, *, calendar=None) -> bool:
+    """Check a verified exchange day and session; missing calendar is unknown."""
+    if calendar is None:
+        raise ValueError("A verified exchange calendar is required for trading-session checks")
+    current = now or datetime.now(ZoneInfo("Asia/Shanghai"))
+    return calendar.session_status(current)["phase"] == "continuous"
 
 
-def is_trading_day(dt: datetime | None = None) -> bool:
-    """Heuristic: weekdays are trading days. Does NOT check holidays."""
-    d = (dt or datetime.now())
-    return d.weekday() < 5
+def is_trading_day(dt: datetime | None = None, *, calendar=None) -> bool:
+    """Consult a source-backed calendar, never a weekday heuristic."""
+    if calendar is None:
+        raise ValueError("A verified exchange calendar is required for trading-day checks")
+    return calendar.is_session(dt or datetime.now(ZoneInfo("Asia/Shanghai")))
 
 
 # ---------------------------------------------------------------------------
@@ -76,6 +81,10 @@ def calculate_fees(
     """Compute all fees for a single trade."""
     if isinstance(direction, str):
         direction = OrderDirection(direction)
+    if (isinstance(quantity, bool) or not isinstance(quantity, int) or quantity <= 0
+            or not math.isfinite(price) or price <= 0
+            or not math.isfinite(commission_rate) or commission_rate < 0):
+        raise ValueError("费用计算需要正整数数量、正有限价格与非负有限费率")
 
     amount = quantity * price
     commission = max(amount * commission_rate, MIN_COMMISSION)
@@ -187,6 +196,8 @@ def validate_order(
     4. Cash sufficiency for buys
     """
     # 1. Lot size
+    if isinstance(order.quantity, bool) or not isinstance(order.quantity, int):
+        return ValidationResult(False, "委托数量必须为正整数")
     if not is_valid_lot(order.quantity):
         return ValidationResult(False, f"数量 {order.quantity} 不是 {LOT_SIZE} 的整数倍")
 
@@ -203,7 +214,7 @@ def validate_order(
 
     # 3. Price limits (LIMIT orders only)
     if order.order_type == OrderType.LIMIT:
-        if order.limit_price is None or order.limit_price <= 0:
+        if order.limit_price is None or not math.isfinite(order.limit_price) or order.limit_price <= 0:
             return ValidationResult(False, "限价单缺少有效限价")
         if prev_closes and inst in prev_closes:
             is_st = inst in (st_set or set())
@@ -225,7 +236,7 @@ def validate_order(
                 else (account.positions[inst].current_price if inst in account.positions else 0)
             )
         )
-        if exec_price <= 0:
+        if not math.isfinite(exec_price) or exec_price <= 0:
             return ValidationResult(False, f"无法确定执行价格: {inst}")
         fees = calculate_fees(OrderDirection.BUY, order.quantity, exec_price)
         required = order.quantity * exec_price + fees.total

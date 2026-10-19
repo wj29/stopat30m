@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -23,6 +24,7 @@ from loguru import logger
 
 from stopat30m.config import get
 from stopat30m.model.evaluator import compute_portfolio_metrics
+from stopat30m.backtest.common import BACKTEST_LIMITATIONS, create_run_dir
 
 
 @dataclass
@@ -35,12 +37,12 @@ class BacktestResult:
     benchmark_curve: pd.Series
     trades: pd.DataFrame
     positions: pd.DataFrame
-    metrics: dict[str, float]
+    metrics: dict[str, Any]
     config: dict = field(default_factory=dict)
 
-    def save(self, output_dir: str | Path = "./output/backtest") -> Path:
+    def save(self, output_dir: str | Path | None = None) -> Path:
         """Persist backtest results to disk."""
-        out = Path(output_dir)
+        out = Path(output_dir) if output_dir is not None else create_run_dir("backtest")
         out.mkdir(parents=True, exist_ok=True)
 
         returns_df = pd.DataFrame({
@@ -91,12 +93,16 @@ class BacktestEngine:
         deal_price: str | None = None,
     ):
         cfg = get("backtest") or {}
-        self.top_k = top_k or cfg.get("top_k", 20)
-        self.rebalance_freq = rebalance_freq or cfg.get("rebalance_freq", 5)
+        self.top_k = top_k if top_k is not None else cfg.get("top_k", 20)
+        self.rebalance_freq = rebalance_freq if rebalance_freq is not None else cfg.get("rebalance_freq", 5)
         self.buy_cost = buy_cost if buy_cost is not None else cfg.get("buy_cost", 0.0003)
         self.sell_cost = sell_cost if sell_cost is not None else cfg.get("sell_cost", 0.0013)
         self.benchmark = benchmark or cfg.get("benchmark") or get("data", "benchmark", "SH000300")
         self.deal_price = deal_price or cfg.get("deal_price", "open")
+        if self.top_k < 1 or self.rebalance_freq < 1:
+            raise ValueError("top_k and rebalance_freq must be positive integers.")
+        if not 0 <= self.buy_cost < 1 or not 0 <= self.sell_cost < 1:
+            raise ValueError("Transaction cost rates must be between 0 and 1.")
         if self.deal_price not in self.VALID_DEAL_PRICES:
             raise ValueError(f"deal_price must be one of {self.VALID_DEAL_PRICES}")
 
@@ -132,103 +138,89 @@ class BacktestEngine:
         if self.deal_price == "open":
             open_prices = self._fetch_prices(instruments, dates[0], dates[-1], "$open")
 
-        close_ret = close_prices.pct_change()
-        bench_daily = benchmark_close.pct_change()
-
-        rebalance_dates = set(dates[i] for i in range(0, len(dates), self.rebalance_freq))
-
+        if len(dates) < 2:
+            raise ValueError("Need at least two prediction dates for backtest.")
+        bench_daily = benchmark_close.pct_change(fill_method=None)
         all_port_returns: list[tuple] = []
         all_bench_returns: list[tuple] = []
         trade_records: list[dict] = []
         position_records: list[dict] = []
+        # Fractional shares keep this a portfolio research model, while cash and
+        # share counts prevent free daily reweighting and preserve overnight P&L.
+        shares: dict[str, float] = {}
+        cash = 1.0
+        previous_nav = 1.0
 
-        current_holdings: dict[str, float] = {}
+        def required_price(frame: pd.DataFrame, date, inst: str) -> float:
+            price = _safe_price(frame, date, inst)
+            if not np.isfinite(price) or price <= 0:
+                raise ValueError(f"Missing or invalid price for {inst} on {date}; cannot value or execute backtest.")
+            return price
 
-        for day_idx, date in enumerate(dates):
-            if day_idx == 0:
-                continue
-
+        for day_idx, date in enumerate(dates[1:], 1):
             prev_date = dates[day_idx - 1]
-            is_rebalance = date in rebalance_dates or day_idx == 1
-
+            is_rebalance = (day_idx - 1) % self.rebalance_freq == 0
             if is_rebalance:
                 day_pred = pred.xs(prev_date, level=0).dropna().sort_values(ascending=False)
-                new_top = day_pred.head(self.top_k).index.tolist()
-
-                if not new_top:
-                    new_holdings = current_holdings.copy()
-                else:
-                    weight = 1.0 / len(new_top)
-                    new_holdings = {s: weight for s in new_top}
-
-                sold = set(current_holdings) - set(new_holdings)
-                bought = set(new_holdings) - set(current_holdings)
-                held = set(current_holdings) & set(new_holdings)
-
-                turnover_cost = 0.0
-                for s in sold:
-                    trade_records.append({
-                        "date": str(date), "instrument": s,
-                        "action": "SELL", "weight": current_holdings[s],
-                    })
-                    turnover_cost += current_holdings[s] * self.sell_cost
-                for s in bought:
-                    trade_records.append({
-                        "date": str(date), "instrument": s,
-                        "action": "BUY", "weight": new_holdings[s],
-                    })
-                    turnover_cost += new_holdings[s] * self.buy_cost
-
-                if self.deal_price == "open" and open_prices is not None:
-                    port_ret = self._rebalance_day_return_open(
-                        date, prev_date,
-                        current_holdings, new_holdings,
-                        sold, bought, held,
-                        close_prices, open_prices,
-                    )
-                else:
-                    port_ret = sum(
-                        w * _safe_ret(close_ret, date, inst)
-                        for inst, w in new_holdings.items()
-                    )
-
-                port_ret -= turnover_cost
-                current_holdings = new_holdings
-            else:
-                port_ret = sum(
-                    w * _safe_ret(close_ret, date, inst)
-                    for inst, w in current_holdings.items()
-                )
-
-            bench_ret = bench_daily.loc[date] if date in bench_daily.index else 0.0
-            if np.isnan(bench_ret):
-                bench_ret = 0.0
-
+                selected = day_pred.head(self.top_k).index.tolist()
+                if not selected:
+                    raise ValueError(f"No usable predictions for {prev_date}.")
+                execution_frame = open_prices if self.deal_price == "open" else close_prices
+                execution_date = date if self.deal_price == "open" else prev_date
+                involved = set(shares) | set(selected)
+                prices = {inst: required_price(execution_frame, execution_date, inst) for inst in involved}
+                old_values = {inst: shares.get(inst, 0.0) * prices[inst] for inst in involved}
+                execution_nav = cash + sum(old_values.values())
+                weight = 1.0 / len(selected)
+                # Account for both exits and changes to retained holdings.
+                lower, upper = 0.0, execution_nav
+                for _ in range(50):
+                    investable = (lower + upper) / 2
+                    targets = {inst: investable * weight if inst in selected else 0.0 for inst in involved}
+                    fees = sum(max(targets[inst] - old_values[inst], 0) * self.buy_cost
+                               + max(old_values[inst] - targets[inst], 0) * self.sell_cost
+                               for inst in involved)
+                    if investable + fees > execution_nav:
+                        upper = investable
+                    else:
+                        lower = investable
+                investable = lower
+                targets = {inst: investable * weight if inst in selected else 0.0 for inst in involved}
+                fees = 0.0
+                for inst in sorted(involved):
+                    delta = targets[inst] - old_values[inst]
+                    if abs(delta) > 1e-12:
+                        fee = abs(delta) * (self.buy_cost if delta > 0 else self.sell_cost)
+                        fees += fee
+                        trade_records.append({"date": str(date), "instrument": inst,
+                                              "action": "BUY" if delta > 0 else "SELL",
+                                              "weight": abs(delta) / execution_nav, "fee": fee})
+                shares = {inst: targets[inst] / prices[inst] for inst in selected}
+                cash = execution_nav - sum(targets.values()) - fees
+            nav = cash + sum(quantity * required_price(close_prices, date, inst) for inst, quantity in shares.items())
+            port_ret = nav / previous_nav - 1
+            previous_nav = nav
             all_port_returns.append((date, port_ret))
-            all_bench_returns.append((date, bench_ret))
-
-            for inst, w in current_holdings.items():
-                position_records.append({
-                    "date": str(date), "instrument": inst, "weight": round(w, 6),
-                })
+            all_bench_returns.append((date, bench_daily.get(date, np.nan)))
+            for inst, quantity in shares.items():
+                position_records.append({"date": str(date), "instrument": inst,
+                                         "weight": round(quantity * required_price(close_prices, date, inst) / nav, 6) if nav > 0 else 0.0})
 
         port_series = pd.Series(dict(all_port_returns), name="portfolio")
-        bench_series = pd.Series(dict(all_bench_returns), name="benchmark")
-
+        bench_series = pd.Series(dict(all_bench_returns), name="benchmark", dtype=float)
         equity = (1 + port_series).cumprod()
-        bench_cum = (1 + bench_series).cumprod()
-
+        bench_cum = (1 + bench_series).cumprod(skipna=False)
         metrics = compute_portfolio_metrics(port_series, benchmark_returns=bench_series)
-
+        metrics["total_trades"] = len(trade_records)
         cfg_snapshot = {
-            "top_k": self.top_k,
-            "rebalance_freq": self.rebalance_freq,
-            "buy_cost": self.buy_cost,
-            "sell_cost": self.sell_cost,
-            "benchmark": self.benchmark,
-            "deal_price": self.deal_price,
-            "test_days": len(dates),
-            "instruments": len(instruments),
+            "top_k": self.top_k, "rebalance_freq": self.rebalance_freq,
+            "buy_cost": self.buy_cost, "sell_cost": self.sell_cost,
+            "benchmark": self.benchmark, "deal_price": self.deal_price,
+            "test_days": len(dates), "test_start": str(pd.Timestamp(dates[0]).date()),
+            "test_end": str(pd.Timestamp(dates[-1]).date()), "instruments": len(instruments),
+            "limitations": BACKTEST_LIMITATIONS + [
+                "快速回测使用零碎股，不模拟停牌、涨跌停和成交量限制。",
+            ] + (["收盘价模式假设信号产生时即可按同一收盘价成交，结果偏乐观。"] if self.deal_price == "close" else []),
         }
 
         return BacktestResult(
@@ -241,47 +233,6 @@ class BacktestEngine:
             metrics=metrics,
             config=cfg_snapshot,
         )
-
-    @staticmethod
-    def _rebalance_day_return_open(
-        date: pd.Timestamp,
-        prev_date: pd.Timestamp,
-        old_holdings: dict[str, float],
-        new_holdings: dict[str, float],
-        sold: set[str],
-        bought: set[str],
-        held: set[str],
-        close_prices: pd.DataFrame,
-        open_prices: pd.DataFrame,
-    ) -> float:
-        """Compute portfolio return on a rebalance day using open-price execution.
-
-        Timeline for rebalance day T (signal from T-1 close):
-          1. Overnight: portfolio drifts from T-1 close to T open
-          2. At T open: sell outgoing, buy incoming, adjust held weights
-          3. Intraday: new portfolio earns T open → T close
-
-        Decomposition:
-          - SOLD positions: earn overnight return (close[T-1] → open[T])
-          - BOUGHT positions: earn intraday return (open[T] → close[T])
-          - HELD positions: earn full day return (close[T-1] → close[T])
-            Split: overnight (to open) + intraday (to close) = full day
-        """
-        ret = 0.0
-
-        for inst in sold:
-            w = old_holdings[inst]
-            ret += w * _open_vs_close(open_prices, close_prices, date, prev_date, inst, "overnight")
-
-        for inst in bought:
-            w = new_holdings[inst]
-            ret += w * _open_vs_close(open_prices, close_prices, date, prev_date, inst, "intraday")
-
-        for inst in held:
-            w = new_holdings[inst]
-            ret += w * _open_vs_close(open_prices, close_prices, date, prev_date, inst, "full")
-
-        return ret
 
     # ------------------------------------------------------------------
     # Data fetching helpers
@@ -304,8 +255,9 @@ class BacktestEngine:
             end_time=pd.Timestamp(end_date),
         )
         df = df.reset_index()
-        df.columns = ["datetime", "instrument", "price"]
-        return df.pivot(index="datetime", columns="instrument", values="price")
+        if "datetime" not in df.columns or "instrument" not in df.columns:
+            raise ValueError(f"Unexpected Qlib price columns: {list(df.columns)}")
+        return df.pivot(index="datetime", columns="instrument", values=field).sort_index()
 
     def _fetch_benchmark_close(
         self,
@@ -326,41 +278,6 @@ class BacktestEngine:
         except Exception as e:
             logger.warning(f"Could not fetch benchmark {self.benchmark}: {e}")
             return pd.Series(dtype=float)
-
-
-def _safe_ret(returns_df: pd.DataFrame, date, inst: str) -> float:
-    """Get return value with NaN fallback."""
-    if inst not in returns_df.columns:
-        return 0.0
-    val = returns_df.loc[date, inst] if date in returns_df.index else 0.0
-    return 0.0 if np.isnan(val) else float(val)
-
-
-def _open_vs_close(
-    open_prices: pd.DataFrame,
-    close_prices: pd.DataFrame,
-    date,
-    prev_date,
-    inst: str,
-    mode: str,
-) -> float:
-    """Compute return components for a single instrument on a rebalance day.
-
-    Modes:
-      - "overnight": close[T-1] → open[T]  (for sold positions)
-      - "intraday":  open[T] → close[T]    (for bought positions)
-      - "full":      close[T-1] → close[T]  (for held positions)
-    """
-    prev_close = _safe_price(close_prices, prev_date, inst)
-    today_open = _safe_price(open_prices, date, inst)
-    today_close = _safe_price(close_prices, date, inst)
-
-    if mode == "overnight":
-        return (today_open / prev_close - 1) if prev_close > 0 else 0.0
-    elif mode == "intraday":
-        return (today_close / today_open - 1) if today_open > 0 else 0.0
-    else:  # full
-        return (today_close / prev_close - 1) if prev_close > 0 else 0.0
 
 
 def _safe_price(prices_df: pd.DataFrame, date, inst: str) -> float:

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+import math
 
 from loguru import logger
 
@@ -48,13 +49,13 @@ class RiskManager:
         risk_cfg = get("risk") or {}
         trading_cfg = get("trading") or {}
 
-        self.max_drawdown = max_drawdown or risk_cfg.get("max_drawdown", 0.15)
-        self.max_daily_loss = max_daily_loss or risk_cfg.get("max_daily_loss", 0.03)
-        self.max_single_loss = max_single_loss or risk_cfg.get("max_single_loss", 0.05)
-        self.max_concentration = max_concentration or risk_cfg.get("max_concentration", 0.10)
-        self.max_position_pct = max_position_pct or trading_cfg.get("max_position_pct", 0.05)
-        self.max_total_position_pct = max_total_position_pct or trading_cfg.get("max_total_position_pct", 0.95)
-        self.circuit_breaker_loss = circuit_breaker_loss or risk_cfg.get("circuit_breaker_loss", 0.08)
+        self.max_drawdown = max_drawdown if max_drawdown is not None else risk_cfg.get("max_drawdown", 0.15)
+        self.max_daily_loss = max_daily_loss if max_daily_loss is not None else risk_cfg.get("max_daily_loss", 0.03)
+        self.max_single_loss = max_single_loss if max_single_loss is not None else risk_cfg.get("max_single_loss", 0.05)
+        self.max_concentration = max_concentration if max_concentration is not None else risk_cfg.get("max_concentration", 0.10)
+        self.max_position_pct = max_position_pct if max_position_pct is not None else trading_cfg.get("max_position_pct", 0.05)
+        self.max_total_position_pct = max_total_position_pct if max_total_position_pct is not None else trading_cfg.get("max_total_position_pct", 0.95)
+        self.circuit_breaker_loss = circuit_breaker_loss if circuit_breaker_loss is not None else risk_cfg.get("circuit_breaker_loss", 0.08)
 
         self.state = RiskState()
 
@@ -90,7 +91,17 @@ class RiskManager:
         Returns:
             (approved, reason): True if approved, else False with rejection reason.
         """
+        if (direction.upper() not in {"BUY", "SELL"} or volume <= 0
+                or not math.isfinite(price) or price <= 0 or not math.isfinite(current_equity)):
+            return False, "invalid_order_input"
         self.update_equity(current_equity, current_date=current_date)
+
+        # A risk halt stops adding exposure. Cash/share/T+1 checks remain the
+        # broker's responsibility and still apply to every reduction order.
+        if direction.upper() == "SELL":
+            return True, "risk_reducing_exit"
+        if current_equity <= 0:
+            return False, "nonpositive_equity"
 
         if self.state.circuit_breaker_active:
             return False, "circuit_breaker_active"

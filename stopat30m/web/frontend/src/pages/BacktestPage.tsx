@@ -1,16 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type ReactElement, type ReactNode } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import ResearchWorkspace from '../components/ResearchWorkspace';
+import { dateTime, errorMessage, money, number, percent, pnlColor } from '../utils/format';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar,
 } from 'recharts';
 import {
   listRuns, getRunDetail, getRunCharts, listModels, listPredictions,
-  submitBacktest, getTaskStatus, getActiveTask,
+  submitBacktest, getTaskStatus, getActiveTask, getBacktestDefaults,
   type BacktestRunSummary, type BacktestRunDetail, type AssetItem,
-  type BacktestRunParams, type BacktestTaskStatus,
+  type BacktestRunParams, type BacktestTaskStatus, type BacktestDefaults,
 } from '../api/backtest';
 
-type Tab = 'launch' | 'history';
+type Tab = 'research' | 'launch' | 'history';
 type Kind = 'backtest' | 'signal' | 'account';
 type Source = 'model' | 'pred';
 
@@ -23,7 +26,7 @@ const KIND_LABELS: Record<Kind, string> = {
 const KIND_DESC: Record<Kind, string> = {
   backtest: '简化组合回测：Top-K 等权、净值曲线、基准对比。快速验证模型方向。',
   signal: '信号质量诊断：IC/RankIC、分位组收益、换手率、覆盖度。定位模型问题。',
-  account: '仿真交易：涨跌停、滑点、部分成交、风控、订单簿。确认真实 P&L。',
+  account: '按现金、持仓、成交费用与交易约束进行历史仿真，观察策略在给定假设下的表现。',
 };
 
 // ---------------------------------------------------------------------------
@@ -31,7 +34,11 @@ const KIND_DESC: Record<Kind, string> = {
 // ---------------------------------------------------------------------------
 
 export default function BacktestPage() {
-  const [tab, setTab] = useState<Tab>('launch');
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState<Tab>(() => {
+    const mode = searchParams.get('mode');
+    return mode === 'launch' || mode === 'history' ? mode : 'research';
+  });
   const [runs, setRuns] = useState<BacktestRunSummary[]>([]);
   const [filterKind, setFilterKind] = useState('');
   const [loading, setLoading] = useState(false);
@@ -40,53 +47,61 @@ export default function BacktestPage() {
   const [detail, setDetail] = useState<BacktestRunDetail | null>(null);
   const [charts, setCharts] = useState<Record<string, unknown> | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const detailRequest = useRef(0);
+  const runsRequest = useRef(0);
 
   const refreshRuns = useCallback(async () => {
+    const requestId = ++runsRequest.current;
     setLoading(true);
     setErr(null);
     try {
       const r = await listRuns(filterKind || undefined, 50);
-      setRuns(r);
+      if (requestId === runsRequest.current) setRuns(r);
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : '加载失败');
+      if (requestId === runsRequest.current) setErr(errorMessage(e, '加载失败'));
     } finally {
-      setLoading(false);
+      if (requestId === runsRequest.current) setLoading(false);
     }
   }, [filterKind]);
 
   useEffect(() => {
+    ++detailRequest.current;
+    setDetailLoading(false);
     setDetail(null);
     setCharts(null);
     refreshRuns();
   }, [refreshRuns]);
 
-  function toggleDetail(id: number) {
-    if (detail?.id === id) {
-      setDetail(null);
-      setCharts(null);
-      return;
-    }
+  const loadDetail = useCallback(async (id: number) => {
+    const requestId = ++detailRequest.current;
     setDetailLoading(true);
+    setDetail(null);
+    setCharts(null);
     setErr(null);
-    Promise.all([getRunDetail(id), getRunCharts(id)])
-      .then(([d, c]) => { setDetail(d); setCharts(c); })
-      .catch((e: unknown) => { setErr(e instanceof Error ? e.message : '无法加载详情'); })
-      .finally(() => setDetailLoading(false));
+    try {
+      const [d, c] = await Promise.all([getRunDetail(id), getRunCharts(id)]);
+      if (requestId === detailRequest.current) { setDetail(d); setCharts(c); }
+    } catch (error) { if (requestId === detailRequest.current) setErr(errorMessage(error, '无法加载详情')); }
+    finally { if (requestId === detailRequest.current) setDetailLoading(false); }
+  }, []);
+  function toggleDetail(id: number) {
+    if (detail?.id === id) { ++detailRequest.current; setDetail(null); setCharts(null); return; }
+    void loadDetail(id);
   }
-
-  function onRunComplete() {
-    refreshRuns();
+  const onRunComplete = useCallback((runId: number | null) => {
+    void refreshRuns();
     setTab('history');
-  }
+    if (runId != null) void loadDetail(runId);
+  }, [refreshRuns, loadDetail]);
 
   return (
     <div className="mx-auto max-w-6xl">
       <h1 className="mb-1 text-2xl font-bold text-gray-900">回测中心</h1>
       <p className="mb-6 text-sm text-gray-500">
-        配置并运行回测、查看历史结果与可视化分析。训练和预测缓存通过 CLI 完成。
+        使用锁定协议和真实历史数据核对策略，也可查看已有模型回测。研究结果取决于数据、费用和执行假设。
       </p>
 
-      {err && (
+      {err && tab !== 'research' && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {err}
         </div>
@@ -94,18 +109,20 @@ export default function BacktestPage() {
 
       {/* Tabs */}
       <div className="mb-6 flex gap-1 rounded-lg bg-gray-100 p-1">
-        {(['launch', 'history'] as Tab[]).map((t) => (
+        {(['research', 'launch', 'history'] as Tab[]).map((t) => (
           <button
             key={t}
             className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
               tab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
             }`}
-            onClick={() => setTab(t)}
+            onClick={() => { if (t === 'launch') setFilterKind(''); setTab(t); }}
           >
-            {t === 'launch' ? '新建回测' : '回测历史'}
+            {t === 'research' ? '样本外研究' : t === 'launch' ? '模型回测' : '回测历史'}
           </button>
         ))}
       </div>
+
+      {tab === 'research' && <ResearchWorkspace />}
 
       {tab === 'launch' && <LaunchPanel onComplete={onRunComplete} />}
 
@@ -134,7 +151,7 @@ export default function BacktestPage() {
 // Launch panel
 // ---------------------------------------------------------------------------
 
-function LaunchPanel({ onComplete }: { onComplete: () => void }) {
+function LaunchPanel({ onComplete }: { onComplete: (runId: number | null) => void }) {
   const [kind, setKind] = useState<Kind>('backtest');
   const [source, setSource] = useState<Source>('pred');
   const [models, setModels] = useState<AssetItem[]>([]);
@@ -144,79 +161,117 @@ function LaunchPanel({ onComplete }: { onComplete: () => void }) {
   const [tag, setTag] = useState('');
 
   // Common params
-  const [topK, setTopK] = useState('');
-  const [rebalFreq, setRebalFreq] = useState('');
-  const [benchmark, setBenchmark] = useState('');
+  const [topK, setTopK] = useState('10');
+  const [rebalFreq, setRebalFreq] = useState('5');
+  const [benchmark, setBenchmark] = useState('SH000300');
 
   // Backtest-specific
   const [dealPrice, setDealPrice] = useState('open');
 
   // Signal-specific
   const [method, setMethod] = useState('top_k');
-  const [groupCount, setGroupCount] = useState('');
+  const [groupCount, setGroupCount] = useState('10');
 
   // Account-specific
   const [execPrice, setExecPrice] = useState('open');
   const [orderType, setOrderType] = useState('market');
-  const [slippage, setSlippage] = useState('');
+  const [slippage, setSlippage] = useState('0');
   const [partialFill, setPartialFill] = useState(false);
-  const [participationRate, setParticipationRate] = useState('');
-  const [initialCapital, setInitialCapital] = useState('');
-  const [cashReserve, setCashReserve] = useState('');
+  const [participationRate, setParticipationRate] = useState('10');
+  const [initialCapital, setInitialCapital] = useState('1000000');
+  const [cashReserve, setCashReserve] = useState('2');
   const [riskManager, setRiskManager] = useState(true);
 
   // Task state
   const [task, setTask] = useState<BacktestTaskStatus | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const submitLock = useRef(false);
+  const [defaults, setDefaults] = useState<BacktestDefaults | null>(null);
+  const [assetLoading, setAssetLoading] = useState(true);
+  const [assetError, setAssetError] = useState('');
+  const [pollError, setPollError] = useState('');
+  const [formError, setFormError] = useState('');
 
-  useEffect(() => {
-    Promise.all([listModels(), listPredictions()]).then(([m, p]) => {
-      setModels(m);
-      setPreds(p);
-      if (p.length > 0) setSelectedPred(p[0].path);
-      if (m.length > 0) setSelectedModel(m[0].path);
-    });
-
-    getActiveTask().then((active) => {
-      if (active && (active.status === 'running' || active.status === 'pending')) {
-        setTask(active);
-        pollRef.current = setInterval(async () => {
-          try {
-            const s = await getTaskStatus(active.task_id);
-            setTask(s);
-            if (s.status === 'completed' || s.status === 'failed') {
-              if (pollRef.current) clearInterval(pollRef.current);
-              pollRef.current = null;
-              if (s.status === 'completed') onComplete();
-            }
-          } catch { /* ignore */ }
-        }, 2000);
-      }
-    }).catch(() => { /* ignore */ });
-
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const loadAssets = useCallback(async () => {
+    setAssetLoading(true); setAssetError('');
+    const [m, p, d] = await Promise.allSettled([listModels(), listPredictions(), getBacktestDefaults()]);
+    const errors: string[] = [];
+    if (m.status === 'fulfilled') { setModels(m.value); setSelectedModel(current => current || m.value[0]?.path || ''); }
+    else errors.push(`模型：${errorMessage(m.reason)}`);
+    if (p.status === 'fulfilled') { setPreds(p.value); setSelectedPred(current => current || p.value[0]?.path || ''); }
+    else errors.push(`预测缓存：${errorMessage(p.reason)}`);
+    if (d.status === 'fulfilled') setDefaults(d.value); else errors.push(`默认参数：${errorMessage(d.reason)}`);
+    setAssetError(errors.join('；')); setAssetLoading(false);
   }, []);
+  useEffect(() => { void loadAssets(); }, [loadAssets]);
+  useEffect(() => {
+    if (!defaults) return;
+    const d = defaults[kind];
+    setTopK(String(d.top_k ?? 10)); setRebalFreq(String(d.rebalance_freq ?? 5));
+    setBenchmark(d.benchmark || 'SH000300'); setMethod('top_k');
+    setDealPrice(d.deal_price || 'open'); setGroupCount(String(d.group_count ?? 10));
+    setExecPrice(d.execution_price || 'open'); setOrderType(d.order_type || 'market');
+    setSlippage(String(d.slippage_bps ?? 0)); setPartialFill(d.allow_partial_fill ?? false);
+    setParticipationRate(String((d.participation_rate ?? 0.1) * 100));
+    setInitialCapital(String(d.initial_capital ?? 1000000)); setCashReserve(String((d.cash_reserve_pct ?? 0.02) * 100));
+    setRiskManager(d.enable_risk_manager ?? true);
+  }, [defaults, kind]);
+  useEffect(() => {
+    let active = true;
+    getActiveTask().then(value => { if (active && value) setTask(value); }).catch(error => { if (active) setPollError(`任务恢复检查失败：${errorMessage(error)}`); });
+    return () => { active = false; };
+  }, []);
+  const isRunning = task?.status === 'running' || task?.status === 'pending';
+  const taskId = task?.task_id;
+  useEffect(() => {
+    if (!isRunning || !taskId) return;
+    let active = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const poll = async () => {
+      try {
+        const status = await getTaskStatus(taskId);
+        if (!active) return;
+        setTask(status); setPollError('');
+        if (status.status === 'completed') { onComplete(status.run_id); return; }
+        if (status.status === 'failed') return;
+      } catch (error) {
+        if (!active) return;
+        if (typeof error === 'object' && error != null && 'response' in error && (error as { response?: { status?: number } }).response?.status === 404) {
+          setTask({ task_id: taskId, status: 'failed', kind: task?.kind || kind, progress: '', run_id: null, error: '任务已不可用，服务可能已重启。请先检查回测历史，再决定是否重新运行。' }); return;
+        }
+        setPollError(`状态连接中断，将自动重试：${errorMessage(error)}`);
+      }
+      if (active) timer = setTimeout(poll, 2500);
+    };
+    timer = setTimeout(poll, 1200);
+    return () => { active = false; clearTimeout(timer); };
+  }, [isRunning, taskId, onComplete, kind, task?.kind]);
 
   async function handleSubmit() {
+    if (submitLock.current || isRunning) return;
+    const integer = (value: string, min: number, max: number) => value !== '' && Number.isInteger(Number(value)) && Number(value) >= min && Number(value) <= max;
+    if (!integer(topK, 1, 1000) || !integer(rebalFreq, 1, 252)) { setFormError('Top K 需为 1–1000 的整数，换仓间隔需为 1–252 个交易日'); return; }
+    if (kind === 'signal' && !integer(groupCount, 2, 100)) { setFormError('分位组数需为 2–100 的整数'); return; }
+    if (kind === 'account' && (!Number.isFinite(Number(initialCapital)) || Number(initialCapital) <= 0 || Number(initialCapital) > 1e12 || slippage === '' || !Number.isFinite(Number(slippage)) || Number(slippage) < 0 || Number(slippage) > 1000 || participationRate === '' || !Number.isFinite(Number(participationRate)) || Number(participationRate) <= 0 || Number(participationRate) > 100 || cashReserve === '' || !Number.isFinite(Number(cashReserve)) || Number(cashReserve) < 0 || Number(cashReserve) >= 100)) { setFormError('请核对账户参数：资金 > 0，滑点 ≥ 0，参与率 0–100%，现金预留 0–100%（不含100%）'); return; }
+    setFormError(''); setPollError('');
+    submitLock.current = true;
     setSubmitting(true);
     setTask(null);
     try {
-      const params: BacktestRunParams = { kind, tag: tag || undefined };
+      const params: BacktestRunParams = { kind, tag: tag.trim() || undefined };
       if (source === 'model') params.model_path = selectedModel;
       else params.pred_path = selectedPred;
 
-      if (topK) params.top_k = parseInt(topK);
-      if (rebalFreq) params.rebalance_freq = parseInt(rebalFreq);
-      if (benchmark) params.benchmark = benchmark;
+      if (topK) params.top_k = Number(topK);
+      if (rebalFreq) params.rebalance_freq = Number(rebalFreq);
+      if (benchmark) params.benchmark = benchmark.trim();
 
       if (kind === 'backtest') {
         params.deal_price = dealPrice;
       }
       if (kind === 'signal') {
         params.method = method;
-        if (groupCount) params.group_count = parseInt(groupCount);
+        if (groupCount) params.group_count = Number(groupCount);
       }
       if (kind === 'account') {
         params.method = method;
@@ -224,43 +279,36 @@ function LaunchPanel({ onComplete }: { onComplete: () => void }) {
         params.order_type = orderType;
         if (slippage) params.slippage_bps = parseFloat(slippage);
         params.allow_partial_fill = partialFill;
-        if (participationRate) params.participation_rate = parseFloat(participationRate);
+        if (participationRate) params.participation_rate = Number(participationRate) / 100;
         if (initialCapital) params.initial_capital = parseFloat(initialCapital);
-        if (cashReserve) params.cash_reserve_pct = parseFloat(cashReserve);
+        if (cashReserve) params.cash_reserve_pct = Number(cashReserve) / 100;
         params.enable_risk_manager = riskManager;
       }
 
       const { task_id } = await submitBacktest(params);
       setTask({ task_id, status: 'running', kind, progress: '已提交', run_id: null, error: null });
 
-      pollRef.current = setInterval(async () => {
-        try {
-          const s = await getTaskStatus(task_id);
-          setTask(s);
-          if (s.status === 'completed' || s.status === 'failed') {
-            if (pollRef.current) clearInterval(pollRef.current);
-            pollRef.current = null;
-            if (s.status === 'completed') onComplete();
-          }
-        } catch { /* ignore poll errors */ }
-      }, 2000);
     } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-        || (e instanceof Error ? e.message : '提交失败');
+      const msg = errorMessage(e, '提交失败');
       setTask({
         task_id: '', status: 'failed', kind, progress: '',
         run_id: null, error: msg,
       });
     } finally {
+      submitLock.current = false;
       setSubmitting(false);
     }
   }
 
   const noSource = source === 'model' ? !selectedModel : !selectedPred;
-  const isRunning = task?.status === 'running' || task?.status === 'pending';
 
   return (
-    <div className="space-y-6">
+    <fieldset disabled={submitting || isRunning || assetLoading} className="space-y-6">
+      {assetError && <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert">{assetError}<button onClick={() => void loadAssets()} className="ml-3 underline">重新加载</button></div>}
+      {assetLoading && <p className="text-sm text-gray-500">正在读取可用模型、预测缓存与默认参数…</p>}
+      {formError && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{formError}</p>}
+      {pollError && <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800" role="alert">{pollError}</p>}
+      {(defaults?.limitations || []).length > 0 && <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-900"><p className="font-semibold">回测边界</p>{defaults?.limitations.map(item => <p key={item}>• {item}</p>)}</div>}
       {/* Type selector */}
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold text-gray-900">选择回测类型</h2>
@@ -312,20 +360,20 @@ function LaunchPanel({ onComplete }: { onComplete: () => void }) {
         {source === 'pred' ? (
           <FormSelect
             label="预测缓存" value={selectedPred} onChange={setSelectedPred}
-            options={preds.map((p) => ({ value: p.path, label: `${p.name} (${p.size_mb} MB)` }))}
+            options={preds.map((p) => ({ value: p.path, label: `${p.name} · ${p.size_mb} MB · ${dateTime(p.modified)}` }))}
             empty="无可用的预测缓存，请先运行 CLI: python main.py cache-predictions"
           />
         ) : (
           <FormSelect
             label="模型文件" value={selectedModel} onChange={setSelectedModel}
-            options={models.map((m) => ({ value: m.path, label: `${m.name} (${m.size_mb} MB)` }))}
+            options={models.map((m) => ({ value: m.path, label: `${m.name} · ${m.size_mb} MB · ${dateTime(m.modified)}` }))}
             empty="无可用的模型，请先运行 CLI: python main.py train"
           />
         )}
 
         <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
           <FormInput label="Top K" value={topK} onChange={setTopK} placeholder="10" type="number" />
-          <FormInput label="换仓频率(天)" value={rebalFreq} onChange={setRebalFreq} placeholder="5" type="number" />
+          <FormInput label="换仓间隔（交易日）" value={rebalFreq} onChange={setRebalFreq} placeholder="5" type="number" />
           <FormInput label="标签" value={tag} onChange={setTag} placeholder="可选" />
           <FormInput label="基准" value={benchmark} onChange={setBenchmark} placeholder="SH000300" />
         </div>
@@ -335,7 +383,7 @@ function LaunchPanel({ onComplete }: { onComplete: () => void }) {
           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
             <FormSelect
               label="成交价格" value={dealPrice} onChange={setDealPrice}
-              options={[{ value: 'open', label: '开盘价 (推荐)' }, { value: 'close', label: '收盘价 (乐观)' }]}
+              options={[{ value: 'open', label: '开盘价 (推荐)' }, { value: 'close', label: '收盘价（当日时点）' }]}
             />
           </div>
         )}
@@ -347,8 +395,7 @@ function LaunchPanel({ onComplete }: { onComplete: () => void }) {
               label="信号构建方式" value={method} onChange={setMethod}
               options={[
                 { value: 'top_k', label: 'Top K' },
-                { value: 'long_short', label: '多空' },
-                { value: 'quantile', label: '分位' },
+
               ]}
             />
             <FormInput label="分位组数" value={groupCount} onChange={setGroupCount} placeholder="10" type="number" />
@@ -361,7 +408,7 @@ function LaunchPanel({ onComplete }: { onComplete: () => void }) {
             <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
               <FormSelect
                 label="信号方式" value={method} onChange={setMethod}
-                options={[{ value: 'top_k', label: 'Top K' }, { value: 'quantile', label: '分位' }]}
+                options={[{ value: 'top_k', label: 'Top K（等权）' }]}
               />
               <FormSelect
                 label="成交价格" value={execPrice} onChange={setExecPrice}
@@ -375,8 +422,8 @@ function LaunchPanel({ onComplete }: { onComplete: () => void }) {
             </div>
             <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
               <FormInput label="初始资金" value={initialCapital} onChange={setInitialCapital} placeholder="1000000" type="number" />
-              <FormInput label="现金预留比例" value={cashReserve} onChange={setCashReserve} placeholder="0.02" type="number" />
-              <FormInput label="参与率上限" value={participationRate} onChange={setParticipationRate} placeholder="0.1" type="number" />
+              <FormInput label="现金预留（%）" value={cashReserve} onChange={setCashReserve} placeholder="2" type="number" />
+              <FormInput label="参与率上限（%）" value={participationRate} onChange={setParticipationRate} placeholder="10" type="number" />
               <div className="space-y-2">
                 <FormCheck label="允许部分成交" checked={partialFill} onChange={setPartialFill} />
                 <FormCheck label="启用风控" checked={riskManager} onChange={setRiskManager} />
@@ -390,7 +437,7 @@ function LaunchPanel({ onComplete }: { onComplete: () => void }) {
           <button
             className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
             onClick={handleSubmit}
-            disabled={submitting || isRunning || noSource}
+            disabled={submitting || isRunning || noSource || assetLoading || !defaults}
           >
             {isRunning ? '运行中…' : `启动${KIND_LABELS[kind]}`}
           </button>
@@ -400,7 +447,7 @@ function LaunchPanel({ onComplete }: { onComplete: () => void }) {
           )}
         </div>
       </div>
-    </div>
+    </fieldset>
   );
 }
 
@@ -447,6 +494,7 @@ function HistoryPanel({
         </button>
       </div>
 
+      <p className="mb-3 text-xs text-gray-400">显示最近 50 次记录 · 收益率按小数收益换算为百分比，胜率指盈利日占比。</p>
       {loading ? (
         <p className="text-sm text-gray-500">加载中…</p>
       ) : filtered.length === 0 ? (
@@ -462,7 +510,7 @@ function HistoryPanel({
                 <th className="py-2 pr-3">年化</th>
                 <th className="py-2 pr-3">Sharpe</th>
                 <th className="py-2 pr-3">最大回撤</th>
-                <th className="py-2 pr-3">胜率</th>
+                <th className="py-2 pr-3">盈利日占比</th>
                 <th className="py-2 pr-3">IC</th>
                 <th className="py-2">操作</th>
               </tr>
@@ -477,7 +525,7 @@ function HistoryPanel({
                   onClick={() => onSelect(r.id)}
                 >
                   <td className="py-2 pr-3 text-xs text-gray-600">
-                    {r.created_at?.slice(0, 19).replace('T', ' ') || '—'}
+                    {dateTime(r.created_at)}
                   </td>
                   <td className="py-2 pr-3">
                     <span className={`inline-block rounded px-1.5 py-0.5 text-xs font-medium ${
@@ -540,14 +588,17 @@ function DetailPanel({
       </div>
 
       {/* Charts */}
-      {charts && <ChartSection charts={charts} kind={kind} />}
+      {charts && <ChartSection charts={charts} kind={kind} report={detail.report} />}
 
       {/* Config */}
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold uppercase text-gray-400">配置快照</h2>
-        <pre className="max-h-48 overflow-auto rounded-lg bg-gray-50 p-4 text-xs text-gray-700">
-          {JSON.stringify(detail.config, null, 2)}
-        </pre>
+        <h2 className="mb-4 text-sm font-semibold text-gray-700">本次回测口径</h2>
+        <dl className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
+          {Object.entries({ '数据区间': `${detail.config.test_start || '未记录'} 至 ${detail.config.test_end || '未记录'}`, '基准': detail.config.benchmark || '未记录', 'Top K / 换仓间隔': `${detail.config.top_k ?? '—'} / ${detail.config.rebalance_freq ?? '—'} 个交易日`, '成交价格': detail.config.execution_price || detail.config.deal_price || '未记录', '初始资金': typeof detail.config.initial_capital === 'number' ? money(detail.config.initial_capital) : '归一化组合', '滑点': detail.config.slippage_bps != null ? `${detail.config.slippage_bps} bps` : '按交易成本模型' }).map(([label, value]) => <div key={label}><dt className="text-xs text-gray-400">{label}</dt><dd className="mt-1 break-words">{String(value)}</dd></div>)}
+        </dl>
+        {detail.report.benchmark_available === false && <p className="mt-4 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">本次缺少完整基准数据，不显示超额收益；图中也不将缺失基准补为 0。</p>}
+        {Array.isArray(detail.config.limitations) && <ul className="mt-4 space-y-1 text-xs leading-5 text-amber-800">{detail.config.limitations.map((item, index) => <li key={index}>• {String(item)}</li>)}</ul>}
+        <details className="mt-4"><summary className="cursor-pointer text-xs text-gray-500">查看完整配置与数据来源</summary><pre className="mt-3 max-h-64 overflow-auto rounded-lg bg-gray-50 p-4 text-xs text-gray-700">{JSON.stringify(detail.config, null, 2)}</pre></details>
       </div>
     </div>
   );
@@ -556,11 +607,14 @@ function DetailPanel({
 
 function MetricsGrid({ report, kind }: { report: Record<string, number>; kind: string }) {
   const cards: { label: string; value: string; color?: string }[] = [
+    { label: '累计收益', value: fmtPct(report.total_return), color: numColor(report.total_return) },
     { label: '年化收益', value: fmtPct(report.annual_return), color: numColor(report.annual_return) },
     { label: 'Sharpe', value: fmtNum(report.sharpe, 2) },
-    { label: '最大回撤', value: fmtPct(report.max_drawdown), color: 'text-red-600' },
-    { label: '胜率', value: fmtPct(report.win_rate) },
+    { label: '最大回撤', value: fmtPct(report.max_drawdown), color: 'text-amber-700' },
+    { label: '盈利日占比', value: fmtPct(report.win_rate) },
   ];
+  if (report.observation_days != null) cards.push({ label: '观测交易日', value: number(report.observation_days, 0) });
+  if (report.total_trades != null) cards.push({ label: '成交笔数', value: number(report.total_trades, 0) });
 
   if (kind === 'signal') {
     const icKey = Object.keys(report).find((k) => k.startsWith('ic_') && k.endsWith('_mean'));
@@ -591,8 +645,8 @@ function MetricsGrid({ report, kind }: { report: Record<string, number>; kind: s
 }
 
 
-function ChartSection({ charts, kind }: { charts: Record<string, unknown>; kind: string }) {
-  const sections: JSX.Element[] = [];
+function ChartSection({ charts, kind, report }: { charts: Record<string, unknown>; kind: string; report: Record<string, unknown> }) {
+  const sections: ReactElement[] = [];
 
   // Equity / NAV curve
   const equityData = kind === 'account'
@@ -609,22 +663,22 @@ function ChartSection({ charts, kind }: { charts: Record<string, unknown>; kind:
     const cumBenchKey = 'benchmark_cumulative';
 
     const cleaned = equityData
-      .filter((d) => d[cumPortKey] != null)
+      .filter((d) => d[cumPortKey] != null && Number.isFinite(Number(d[cumPortKey])))
       .map((d) => ({
         date: String(d[dateKey] ?? '').slice(0, 10),
         portfolio: Number(d[cumPortKey]),
-        benchmark: d[cumBenchKey] != null ? Number(d[cumBenchKey]) : undefined,
+        benchmark: d[cumBenchKey] != null && Number.isFinite(Number(d[cumBenchKey])) ? Number(d[cumBenchKey]) : undefined,
       }));
 
     if (cleaned.length > 0) {
       sections.push(
-        <ChartCard key="equity" title="净值曲线">
+        <ChartCard key="equity" title="净值曲线（起点 = 1）">
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={cleaned}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="date" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
               <YAxis tick={{ fontSize: 11 }} domain={['auto', 'auto']} />
-              <Tooltip />
+              <Tooltip formatter={value => typeof value === 'number' ? number(value, 4) : '—'} />
               <Legend />
               <Line type="monotone" dataKey="portfolio" name="组合" stroke="#2563eb" dot={false} strokeWidth={2} />
               <Line type="monotone" dataKey="benchmark" name="基准" stroke="#9ca3af" dot={false} strokeWidth={1.5} strokeDasharray="5 5" />
@@ -669,9 +723,12 @@ function ChartSection({ charts, kind }: { charts: Record<string, unknown>; kind:
     const raw = charts.bucket_returns as Record<string, unknown>[];
     const grouped: Record<number, number[]> = {};
     for (const row of raw) {
+      if (row.bucket == null || row.mean_return == null) continue;
       const bucket = Number(row.bucket);
+      const meanReturn = Number(row.mean_return);
+      if (!Number.isInteger(bucket) || bucket < 1 || !Number.isFinite(meanReturn)) continue;
       if (!grouped[bucket]) grouped[bucket] = [];
-      grouped[bucket].push(Number(row.mean_return));
+      grouped[bucket].push(meanReturn);
     }
     const bucketData = Object.entries(grouped)
       .sort(([a], [b]) => Number(a) - Number(b))
@@ -688,7 +745,7 @@ function ChartSection({ charts, kind }: { charts: Record<string, unknown>; kind:
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="bucket" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => `${(v * 100).toFixed(1)}%`} />
-              <Tooltip formatter={(v: number) => `${(v * 100).toFixed(2)}%`} />
+              <Tooltip formatter={value => typeof value === 'number' ? percent(value) : '—'} />
               <Bar dataKey="avg_return" name="平均收益" fill="#3b82f6" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -701,7 +758,7 @@ function ChartSection({ charts, kind }: { charts: Record<string, unknown>; kind:
   if (kind === 'signal' && charts.turnover) {
     const turnData = (charts.turnover as Record<string, unknown>[]).map((d) => ({
       date: String(d.date ?? ''),
-      turnover: d.turnover != null ? Number(d.turnover) : 0,
+      turnover: d.turnover != null && Number.isFinite(Number(d.turnover)) ? Number(d.turnover) : null,
     }));
 
     if (turnData.length > 0) {
@@ -712,7 +769,7 @@ function ChartSection({ charts, kind }: { charts: Record<string, unknown>; kind:
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="date" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
               <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`} />
-              <Tooltip formatter={(v: number) => `${(v * 100).toFixed(1)}%`} />
+              <Tooltip formatter={value => typeof value === 'number' ? percent(value) : '—'} />
               <Bar dataKey="turnover" name="换手率" fill="#8b5cf6" radius={[2, 2, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -722,27 +779,31 @@ function ChartSection({ charts, kind }: { charts: Record<string, unknown>; kind:
   }
 
   // Account backtest: order summary
-  if (kind === 'account' && charts.orders) {
-    const orders = charts.orders as Record<string, unknown>[];
-    const fillCount = (charts.fills as Record<string, unknown>[] | undefined)?.length ?? 0;
+  if (kind === 'account') {
+    const orders = charts.orders as Record<string, unknown>[] | undefined;
+    const fills = charts.fills as Record<string, unknown>[] | undefined;
     const riskEvents = charts.risk_events as Record<string, unknown>[] | undefined;
+    const reportedCount = (key: string) => typeof report[key] === 'number' && Number.isInteger(report[key]) && report[key] >= 0 ? report[key] as number : undefined;
+    const orderCount = reportedCount('order_count');
+    const fillCount = reportedCount('total_trades') ?? reportedCount('fill_count');
 
     sections.push(
       <ChartCard key="orders" title="交易概况">
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
-            <div className="text-2xl font-bold text-gray-900">{orders.length}</div>
+            <div className="text-2xl font-bold text-gray-900">{number(orderCount, 0)}</div>
             <div className="text-xs text-gray-500">下单数</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-green-600">{fillCount}</div>
+            <div className="text-2xl font-bold text-gray-900">{number(fillCount, 0)}</div>
             <div className="text-xs text-gray-500">成交数</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-red-600">{riskEvents?.length ?? 0}</div>
-            <div className="text-xs text-gray-500">风险事件</div>
+            <div className="text-2xl font-bold text-amber-700">{number(riskEvents?.length, 0)}</div>
+            <div className="text-xs text-gray-500">已载入风险记录</div>
           </div>
         </div>
+        <p className="mt-4 text-xs text-gray-400">订单与成交总数以本次报告为准。明细已载入订单 {number(orders?.length, 0)} 条、成交 {number(fills?.length, 0)} 条；每类明细最多载入 2,000 条。</p>
       </ChartCard>
     );
   }
@@ -753,7 +814,7 @@ function ChartSection({ charts, kind }: { charts: Record<string, unknown>; kind:
 }
 
 
-function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+function ChartCard({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
       <h3 className="mb-4 text-sm font-semibold text-gray-700">{title}</h3>
@@ -773,11 +834,14 @@ function FormInput({
   label: string; value: string; onChange: (v: string) => void;
   placeholder?: string; type?: string;
 }) {
+  const id = useId();
   return (
     <div>
-      <label className="mb-1 block text-xs font-medium text-gray-500">{label}</label>
+      <label htmlFor={id} className="mb-1 block text-xs font-medium text-gray-500">{label}</label>
       <input
+        id={id}
         type={type}
+        step={type === 'number' ? 'any' : undefined}
         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -793,6 +857,7 @@ function FormSelect({
   label: string; value: string; onChange: (v: string) => void;
   options: { value: string; label: string }[]; empty?: string;
 }) {
+  const id = useId();
   if (options.length === 0 && empty) {
     return (
       <div>
@@ -803,8 +868,9 @@ function FormSelect({
   }
   return (
     <div>
-      <label className="mb-1 block text-xs font-medium text-gray-500">{label}</label>
+      <label htmlFor={id} className="mb-1 block text-xs font-medium text-gray-500">{label}</label>
       <select
+        id={id}
         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -847,7 +913,7 @@ function TaskBadge({ task }: { task: BacktestTaskStatus }) {
   if (task.status === 'completed') {
     return <span className="text-sm font-medium text-green-600">回测完成</span>;
   }
-  return <span className="text-sm text-red-600">失败: {task.error?.slice(0, 80)}</span>;
+  return <span className="text-sm text-red-600">失败: {task.error || '原因未提供，请检查服务日志'}</span>;
 }
 
 
@@ -856,20 +922,18 @@ function TaskBadge({ task }: { task: BacktestTaskStatus }) {
 // ---------------------------------------------------------------------------
 
 function fmtPct(v: number | null | undefined): string {
-  if (v == null || isNaN(v)) return '—';
-  return `${(v * 100).toFixed(2)}%`;
+  return percent(v);
 }
 
 function fmtNum(v: number | null | undefined, digits: number): string {
-  if (v == null || isNaN(v)) return '—';
-  return v.toFixed(digits);
+  return number(v, digits);
 }
 
 function fmtMoney(v: number): string {
-  return v.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return number(v, 2);
 }
 
 function numColor(v: number | null | undefined): string {
   if (v == null) return 'text-gray-900';
-  return v >= 0 ? 'text-green-600' : 'text-red-600';
+  return pnlColor(v);
 }

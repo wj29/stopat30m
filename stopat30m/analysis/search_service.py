@@ -12,6 +12,7 @@ A股自选股智能分析系统 - 搜索服务模块
 """
 
 import logging
+import math
 import re
 import threading
 import time
@@ -70,6 +71,24 @@ class _PrintfStyleLogger:
 
 
 logger = _PrintfStyleLogger()
+
+
+def _safe_search_error(error=None, *, status_code=None) -> str:
+    """Describe a failure without upstream HTML, credentials, URLs or key fragments."""
+    status = status_code or getattr(error, "status_code", None)
+    if status == 401:
+        return "搜索服务认证失败（HTTP 401），请检查配置的 API 凭据。"
+    if status == 403:
+        return "搜索服务拒绝访问（HTTP 403），请检查权限或余额；不会绕过拒绝。"
+    if status == 429:
+        return "搜索服务限流（HTTP 429），请稍后重试。"
+    if isinstance(status, int):
+        return f"搜索服务请求失败（HTTP {status}）。"
+    if isinstance(error, requests.exceptions.Timeout):
+        return "搜索服务请求超时。"
+    if isinstance(error, requests.exceptions.RequestException):
+        return "搜索服务网络请求失败。"
+    return "搜索服务返回错误，请检查配置或服务状态。"
 
 _NEWS_STRATEGY_WINDOWS = {"short": 3, "medium": 7, "long": 14}
 
@@ -152,7 +171,7 @@ def fetch_url_content(url: str, timeout: int = 5) -> str:
 
         return text[:1500]  # 限制返回长度（比 bs4 稍微多一点，因为 newspaper 解析更干净）
     except Exception as e:
-        logger.debug(f"Fetch content failed for {url}: {e}")
+        logger.debug("网页正文提取失败，已跳过（不记录链接或响应内容）")
 
     return ""
 
@@ -184,8 +203,10 @@ class SearchResponse:
     
     def to_context(self, max_results: int = 5) -> str:
         """将搜索结果转换为可用于 AI 分析的上下文"""
-        if not self.success or not self.results:
-            return f"搜索 '{self.query}' 未找到相关结果。"
+        if not self.success:
+            return "新闻搜索不可用，未取得可核实新闻。请在系统设置配置自己的搜索服务；不能据此认定没有新闻或风险事件。"
+        if not self.results:
+            return "本次筛选未取得符合时效要求的可核实新闻，仅可按已有行情分析；不能据此认定没有新闻或风险事件。"
         
         lines = [f"【{self.query} 搜索结果】（来源：{self.provider}）"]
         for i, result in enumerate(self.results[:max_results], 1):
@@ -211,6 +232,7 @@ class BaseSearchProvider(ABC):
         self._key_usage: Dict[str, int] = {key: 0 for key in api_keys}
         self._key_errors: Dict[str, int] = {key: 0 for key in api_keys}
         self._state_lock = threading.RLock()
+        self._provider_cooldown_until = 0.0
     
     @property
     def name(self) -> str:
@@ -219,7 +241,7 @@ class BaseSearchProvider(ABC):
     @property
     def is_available(self) -> bool:
         """检查是否有可用的 API Key"""
-        return bool(self._api_keys)
+        return bool(self._api_keys) and time.time() >= self._provider_cooldown_until
     
     def _get_next_key(self) -> Optional[str]:
         """
@@ -228,6 +250,8 @@ class BaseSearchProvider(ABC):
         策略：轮询 + 跳过错误过多的 key
         """
         with self._state_lock:
+            if time.time() < self._provider_cooldown_until:
+                return None
             if not self._key_cycle:
                 return None
             
@@ -251,12 +275,15 @@ class BaseSearchProvider(ABC):
             if key in self._key_errors and self._key_errors[key] > 0:
                 self._key_errors[key] -= 1
     
-    def _record_error(self, key: str) -> None:
+    def _record_error(self, key: str, response: Optional[SearchResponse] = None) -> None:
         """记录错误"""
         with self._state_lock:
             self._key_errors[key] = self._key_errors.get(key, 0) + 1
             error_count = self._key_errors[key]
-        logger.warning(f"[{self._name}] API Key {key[:8]}... 错误计数: {error_count}")
+            message = response.error_message or "" if response is not None else ""
+            if any(f"HTTP {status}" in message for status in (401, 403, 429)):
+                self._provider_cooldown_until = time.time() + 300
+        logger.warning(f"[{self._name}] 凭据调用失败计数: {error_count}")
     
     @abstractmethod
     def _do_search(self, query: str, api_key: str, max_results: int, days: int = 7) -> SearchResponse:
@@ -292,20 +319,20 @@ class BaseSearchProvider(ABC):
                 self._record_success(api_key)
                 logger.info(f"[{self._name}] 搜索 '{query}' 成功，返回 {len(response.results)} 条结果，耗时 {response.search_time:.2f}s")
             else:
-                self._record_error(api_key)
+                self._record_error(api_key, response)
 
             return response
 
         except Exception as e:
             self._record_error(api_key)
             elapsed = time.time() - start_time
-            logger.error(f"[{self._name}] 搜索 '{query}' 失败: {e}")
+            logger.error(f"[{self._name}] 搜索失败: {_safe_search_error(e)}")
             return SearchResponse(
                 query=query,
                 results=[],
                 provider=self._name,
                 success=False,
-                error_message=str(e),
+                error_message=_safe_search_error(e),
                 search_time=elapsed
             )
 
@@ -338,6 +365,16 @@ class TavilySearchProvider(BaseSearchProvider):
     
     def __init__(self, api_keys: List[str]):
         super().__init__(api_keys, "Tavily")
+
+    @property
+    def is_available(self) -> bool:
+        if not super().is_available:
+            return False
+        try:
+            from tavily import TavilyClient
+            return callable(TavilyClient)
+        except ImportError:
+            return False
     
     def _do_search(
         self,
@@ -380,7 +417,7 @@ class TavilySearchProvider(BaseSearchProvider):
             
             # 记录原始响应到日志
             logger.info(f"[Tavily] 搜索完成，query='{query}', 返回 {len(response.get('results', []))} 条结果")
-            logger.debug(f"[Tavily] 原始响应: {response}")
+            logger.debug("[Tavily] 已取得结构化响应")
             
             # 解析结果
             results = []
@@ -401,10 +438,7 @@ class TavilySearchProvider(BaseSearchProvider):
             )
             
         except Exception as e:
-            error_msg = str(e)
-            # 检查是否是配额问题
-            if 'rate limit' in error_msg.lower() or 'quota' in error_msg.lower():
-                error_msg = f"API 配额已用尽: {error_msg}"
+            error_msg = _safe_search_error(e)
             
             return SearchResponse(
                 query=query,
@@ -444,20 +478,20 @@ class TavilySearchProvider(BaseSearchProvider):
                 self._record_success(api_key)
                 logger.info(f"[{self._name}] 搜索 '{query}' 成功，返回 {len(response.results)} 条结果，耗时 {response.search_time:.2f}s")
             else:
-                self._record_error(api_key)
+                self._record_error(api_key, response)
 
             return response
 
         except Exception as e:
             self._record_error(api_key)
             elapsed = time.time() - start_time
-            logger.error(f"[{self._name}] 搜索 '{query}' 失败: {e}")
+            logger.error(f"[{self._name}] 搜索失败: {_safe_search_error(e)}")
             return SearchResponse(
                 query=query,
                 results=[],
                 provider=self._name,
                 success=False,
-                error_message=str(e),
+                error_message=_safe_search_error(e),
                 search_time=elapsed
             )
     
@@ -527,6 +561,16 @@ class SerpAPISearchProvider(BaseSearchProvider):
     
     def __init__(self, api_keys: List[str]):
         super().__init__(api_keys, "SerpAPI")
+
+    @property
+    def is_available(self) -> bool:
+        if not super().is_available:
+            return False
+        try:
+            from serpapi import GoogleSearch
+            return callable(GoogleSearch)
+        except ImportError:
+            return False
     
     def _do_search(self, query: str, api_key: str, max_results: int, days: int = 7) -> SearchResponse:
         """执行 SerpAPI 搜索"""
@@ -567,9 +611,12 @@ class SerpAPISearchProvider(BaseSearchProvider):
             
             search = GoogleSearch(params)
             response = search.get_dict()
+            if not isinstance(response, dict) or response.get("error"):
+                return SearchResponse(query=query, results=[], provider=self.name, success=False,
+                    error_message=_safe_search_error())
             
             # 记录原始响应到日志
-            logger.debug(f"[SerpAPI] 原始响应 keys: {response.keys()}")
+            logger.debug("[SerpAPI] 已取得结构化搜索响应")
             
             # 解析结果
             results = []
@@ -684,7 +731,7 @@ class SerpAPISearchProvider(BaseSearchProvider):
                                 fetched_content,
                             )
                     except Exception as e:
-                        logger.debug(f"[SerpAPI] Fetch content failed: {e}")
+                        logger.debug("[SerpAPI] 正文提取失败，已保留搜索摘要")
 
                 results.append(SearchResult(
                     title=item.get('title', ''),
@@ -702,7 +749,7 @@ class SerpAPISearchProvider(BaseSearchProvider):
             )
             
         except Exception as e:
-            error_msg = str(e)
+            error_msg = _safe_search_error(e)
             return SearchResponse(
                 query=query,
                 results=[],
@@ -976,27 +1023,7 @@ class BochaSearchProvider(BaseSearchProvider):
             
             # 检查HTTP状态码
             if response.status_code != 200:
-                # 尝试解析错误信息
-                try:
-                    if response.headers.get('content-type', '').startswith('application/json'):
-                        error_data = response.json()
-                        error_message = error_data.get('message', response.text)
-                    else:
-                        error_message = response.text
-                except Exception:
-                    error_message = response.text
-                
-                # 根据错误码处理
-                if response.status_code == 403:
-                    error_msg = f"余额不足: {error_message}"
-                elif response.status_code == 401:
-                    error_msg = f"API KEY无效: {error_message}"
-                elif response.status_code == 400:
-                    error_msg = f"请求参数错误: {error_message}"
-                elif response.status_code == 429:
-                    error_msg = f"请求频率达到限制: {error_message}"
-                else:
-                    error_msg = f"HTTP {response.status_code}: {error_message}"
+                error_msg = _safe_search_error(status_code=response.status_code)
                 
                 logger.warning(f"[Bocha] 搜索失败: {error_msg}")
                 
@@ -1012,7 +1039,7 @@ class BochaSearchProvider(BaseSearchProvider):
             try:
                 data = response.json()
             except ValueError as e:
-                error_msg = f"响应JSON解析失败: {str(e)}"
+                error_msg = _safe_search_error(e)
                 logger.error(f"[Bocha] {error_msg}")
                 return SearchResponse(
                     query=query,
@@ -1024,7 +1051,7 @@ class BochaSearchProvider(BaseSearchProvider):
             
             # 检查响应code
             if data.get('code') != 200:
-                error_msg = data.get('msg') or f"API返回错误码: {data.get('code')}"
+                error_msg = _safe_search_error()
                 return SearchResponse(
                     query=query,
                     results=[],
@@ -1035,7 +1062,7 @@ class BochaSearchProvider(BaseSearchProvider):
             
             # 记录原始响应到日志
             logger.info(f"[Bocha] 搜索完成，query='{query}'")
-            logger.debug(f"[Bocha] 原始响应: {data}")
+            logger.debug("[Bocha] 已取得结构化响应")
             
             # 解析搜索结果
             results = []
@@ -1078,7 +1105,7 @@ class BochaSearchProvider(BaseSearchProvider):
                 error_message=error_msg
             )
         except requests.exceptions.RequestException as e:
-            error_msg = f"网络请求失败: {str(e)}"
+            error_msg = _safe_search_error(e)
             logger.error(f"[Bocha] {error_msg}")
             return SearchResponse(
                 query=query,
@@ -1088,7 +1115,7 @@ class BochaSearchProvider(BaseSearchProvider):
                 error_message=error_msg
             )
         except Exception as e:
-            error_msg = f"未知错误: {str(e)}"
+            error_msg = _safe_search_error(e)
             logger.error(f"[Bocha] {error_msg}")
             return SearchResponse(
                 query=query,
@@ -1160,25 +1187,7 @@ class AnspireSearchProvider(BaseSearchProvider):
             
             # 检查 HTTP 状态码
             if response.status_code != 200:
-                # 尝试解析错误信息
-                try:
-                    if response.headers.get('content-type', '').startswith('application/json'):
-                        error_data = response.json()
-                        error_message = error_data.get('message', response.text)
-                    else:
-                        error_message = response.text
-                except Exception:
-                    error_message = response.text
-                
-                # 根据错误码处理
-                if response.status_code == 403:
-                    error_msg = f"余额不足或权限不足：{error_message}"
-                elif response.status_code == 401:
-                    error_msg = f"API KEY 无效：{error_message}"
-                elif response.status_code == 400:
-                    error_msg = f"请求参数错误：{error_message}"
-                else:
-                    error_msg = f"HTTP {response.status_code}: {error_message}"
+                error_msg = _safe_search_error(status_code=response.status_code)
                 
                 logger.warning(f"[Anspire] 搜索失败：{error_msg}")
                 
@@ -1194,7 +1203,7 @@ class AnspireSearchProvider(BaseSearchProvider):
             try:
                 data = response.json()
             except ValueError as e:
-                error_msg = f"响应 JSON 解析失败：{str(e)}"
+                error_msg = _safe_search_error(e)
                 logger.error(f"[Anspire] {error_msg}")
                 return SearchResponse(
                     query=query,
@@ -1205,7 +1214,7 @@ class AnspireSearchProvider(BaseSearchProvider):
                 )
             
             if 'code' in data and data.get('code') != 200:
-                error_msg = data.get('msg') or f"API 返回错误码：{data.get('code')}"
+                error_msg = _safe_search_error()
                 logger.warning(f"[Anspire] 搜索失败：{error_msg}")
                 return SearchResponse(
                     query=query,
@@ -1217,7 +1226,7 @@ class AnspireSearchProvider(BaseSearchProvider):
             
             if 'results' not in data:
                 error_msg = "响应中缺少 results 字段"
-                logger.error(f"[Anspire] {error_msg}，原始响应：{data}")
+                logger.error(f"[Anspire] {error_msg}")
                 return SearchResponse(
                     query=query,
                     results=[],
@@ -1228,7 +1237,7 @@ class AnspireSearchProvider(BaseSearchProvider):
             
             # 记录原始响应到日志
             logger.info(f"[Anspire] 搜索完成，query='{query}'")
-            logger.debug(f"[Anspire] 原始响应：{data}")
+            logger.debug("[Anspire] 已取得结构化响应")
             
             results = []
             value_list = data.get('results', [])
@@ -1266,7 +1275,7 @@ class AnspireSearchProvider(BaseSearchProvider):
                 error_message=error_msg
             )
         except requests.exceptions.RequestException as e:
-            error_msg = f"网络请求失败：{str(e)}"
+            error_msg = _safe_search_error(e)
             logger.error(f"[Anspire] {error_msg}")
             return SearchResponse(
                 query=query,
@@ -1276,7 +1285,7 @@ class AnspireSearchProvider(BaseSearchProvider):
                 error_message=error_msg
             )
         except Exception as e:
-            error_msg = f"未知错误：{str(e)}"
+            error_msg = _safe_search_error(e)
             logger.error(f"[Anspire] {error_msg}")
             return SearchResponse(
                 query=query,
@@ -1441,7 +1450,7 @@ class MiniMaxSearchProvider(BaseSearchProvider):
             # Check base_resp status
             base_resp = data.get('base_resp', {})
             if base_resp.get('status_code', 0) != 0:
-                error_msg = base_resp.get('status_msg', 'Unknown API error')
+                error_msg = _safe_search_error()
                 return SearchResponse(
                     query=query,
                     results=[],
@@ -1490,14 +1499,14 @@ class MiniMaxSearchProvider(BaseSearchProvider):
                 success=False, error_message=error_msg,
             )
         except requests.exceptions.RequestException as e:
-            error_msg = f"Network error: {e}"
+            error_msg = _safe_search_error(e)
             logger.error(f"[MiniMax] {error_msg}")
             return SearchResponse(
                 query=query, results=[], provider=self.name,
                 success=False, error_message=error_msg,
             )
         except Exception as e:
-            error_msg = f"Unexpected error: {e}"
+            error_msg = _safe_search_error(e)
             logger.error(f"[MiniMax] {error_msg}")
             return SearchResponse(
                 query=query, results=[], provider=self.name,
@@ -1506,17 +1515,8 @@ class MiniMaxSearchProvider(BaseSearchProvider):
 
     @staticmethod
     def _parse_http_error(response) -> str:
-        """Parse HTTP error response from MiniMax API."""
-        try:
-            ct = response.headers.get('content-type', '')
-            if 'json' in ct:
-                err = response.json()
-                base_resp = err.get('base_resp', {})
-                msg = base_resp.get('status_msg') or err.get('message') or str(err)
-                return msg
-            return response.text[:200]
-        except Exception:
-            return f"HTTP {response.status_code}: {response.text[:200]}"
+        """Never echo the upstream response body."""
+        return _safe_search_error(status_code=response.status_code)
 
     @staticmethod
     def _extract_domain(url: str) -> str:
@@ -1611,7 +1611,7 @@ class BraveSearchProvider(BaseSearchProvider):
             try:
                 data = response.json()
             except ValueError as e:
-                error_msg = f"响应JSON解析失败: {str(e)}"
+                error_msg = _safe_search_error(e)
                 logger.error(f"[Brave] {error_msg}")
                 return SearchResponse(
                     query=query,
@@ -1622,7 +1622,7 @@ class BraveSearchProvider(BaseSearchProvider):
                 )
 
             logger.info(f"[Brave] 搜索完成，query='{query}'")
-            logger.debug(f"[Brave] 原始响应: {data}")
+            logger.debug("[Brave] 已取得结构化响应")
 
             # 解析搜索结果
             results = []
@@ -1669,7 +1669,7 @@ class BraveSearchProvider(BaseSearchProvider):
                 error_message=error_msg
             )
         except requests.exceptions.RequestException as e:
-            error_msg = f"网络请求失败: {str(e)}"
+            error_msg = _safe_search_error(e)
             logger.error(f"[Brave] {error_msg}")
             return SearchResponse(
                 query=query,
@@ -1679,7 +1679,7 @@ class BraveSearchProvider(BaseSearchProvider):
                 error_message=error_msg
             )
         except Exception as e:
-            error_msg = f"未知错误: {str(e)}"
+            error_msg = _safe_search_error(e)
             logger.error(f"[Brave] {error_msg}")
             return SearchResponse(
                 query=query,
@@ -1690,19 +1690,8 @@ class BraveSearchProvider(BaseSearchProvider):
             )
 
     def _parse_error(self, response) -> str:
-        """解析错误响应"""
-        try:
-            if response.headers.get('content-type', '').startswith('application/json'):
-                error_data = response.json()
-                # Brave API 返回的错误格式
-                if 'message' in error_data:
-                    return error_data['message']
-                if 'error' in error_data:
-                    return error_data['error']
-                return str(error_data)
-            return response.text[:200]
-        except Exception:
-            return f"HTTP {response.status_code}: {response.text[:200]}"
+        """只保留状态码，不回显上游响应。"""
+        return _safe_search_error(status_code=response.status_code)
 
     @staticmethod
     def _extract_domain(url: str) -> str:
@@ -1741,8 +1730,8 @@ class SearXNGSearchProvider(BaseSearchProvider):
     SearXNG search engine (self-hosted, no quota).
 
     Self-hosted instances are used when explicitly configured.
-    Otherwise, the provider can lazily discover public instances from
-    searx.space and rotate across them with per-request failover.
+    Public discovery is opt-in. One configured/chosen instance is used; a
+    refusal or browser challenge never causes rotation to another instance.
     """
 
     PUBLIC_INSTANCES_URL = "https://searx.space/data/instances.json"
@@ -1757,17 +1746,49 @@ class SearXNGSearchProvider(BaseSearchProvider):
     _public_instances_stale_retry_after: float = 0.0
     _public_instances_lock = threading.Lock()
 
-    def __init__(self, base_urls: Optional[List[str]] = None, *, use_public_instances: bool = False):
-        normalized_base_urls = [url.rstrip("/") for url in (base_urls or []) if url.strip()]
+    def __init__(self, base_urls: Optional[List[str]] = None, *, use_public_instances: bool = False, clock=None):
+        normalized_base_urls = []
+        for value in base_urls or []:
+            if not isinstance(value, str) or not value.strip():
+                continue
+            parsed = urlparse(value.strip())
+            if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
+                raise ValueError("SearXNG 地址必须为无凭据、无查询参数的 http/https URL。")
+            normalized_base_urls.append(value.strip().rstrip("/"))
         super().__init__(normalized_base_urls, "SearXNG")
         self._base_urls = normalized_base_urls
         self._use_public_instances = bool(use_public_instances and not self._base_urls)
         self._cursor = 0
         self._cursor_lock = threading.Lock()
+        self._clock = clock or time.time
+        self._cooldown_until = 0.0
 
     @property
     def is_available(self) -> bool:
-        return bool(self._base_urls) or self._use_public_instances
+        return (bool(self._base_urls) or self._use_public_instances) and self._clock() >= self._cooldown_until
+
+    def _cooldown(self, seconds=300):
+        with self._state_lock:
+            self._cooldown_until = max(self._cooldown_until, self._clock() + seconds)
+
+    def _response_cooldown(self, response):
+        delay = 1800 if response.status_code in {401, 403} else 60
+        if response.status_code == 429:
+            delay = 300
+            raw = str(getattr(response, "headers", {}).get("Retry-After", "")).strip()
+            try:
+                parsed = float(raw)
+                if math.isfinite(parsed):
+                    delay = max(delay, parsed)
+            except ValueError:
+                try:
+                    stamp = parsedate_to_datetime(raw)
+                    if stamp.tzinfo is None:
+                        stamp = stamp.replace(tzinfo=timezone.utc)
+                    delay = max(delay, stamp.timestamp() - self._clock())
+                except (ValueError, TypeError, OverflowError):
+                    pass
+        self._cooldown(delay)
 
     @classmethod
     def reset_public_instance_cache(cls) -> None:
@@ -1778,24 +1799,7 @@ class SearXNGSearchProvider(BaseSearchProvider):
 
     @staticmethod
     def _parse_http_error(response) -> str:
-        """Parse HTTP error details for easier diagnostics."""
-        try:
-            raw_content_type = response.headers.get("content-type", "")
-            content_type = raw_content_type if isinstance(raw_content_type, str) else ""
-            if "json" in content_type:
-                error_data = response.json()
-                if isinstance(error_data, dict):
-                    message = error_data.get("error") or error_data.get("message")
-                    if message:
-                        return str(message)
-                return str(error_data)
-            raw_text = getattr(response, "text", "")
-            body = raw_text.strip() if isinstance(raw_text, str) else ""
-            return body[:200] if body else f"HTTP {response.status_code}"
-        except Exception:
-            raw_text = getattr(response, "text", "")
-            body = raw_text if isinstance(raw_text, str) else ""
-            return f"HTTP {response.status_code}: {body[:200]}"
+        return _safe_search_error(status_code=response.status_code)
 
     @staticmethod
     def _time_range(days: int) -> str:
@@ -1832,6 +1836,9 @@ class SearXNGSearchProvider(BaseSearchProvider):
             if not isinstance(raw_url, str) or not isinstance(item, dict):
                 continue
             if item.get("network_type") != "normal":
+                continue
+            parsed = urlparse(raw_url)
+            if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
                 continue
             http_status = (item.get("http") or {}).get("status_code")
             if http_status != 200:
@@ -1879,6 +1886,7 @@ class SearXNGSearchProvider(BaseSearchProvider):
                 response = requests.get(
                     cls.PUBLIC_INSTANCES_URL,
                     timeout=cls.PUBLIC_INSTANCES_TIMEOUT_SECONDS,
+                    allow_redirects=False,
                 )
                 if response.status_code != 200:
                     logger.warning(
@@ -1894,7 +1902,7 @@ class SearXNGSearchProvider(BaseSearchProvider):
                         return list(urls)
                     logger.warning("[SearXNG] searx.space 未返回可用公共实例，保留已有缓存")
             except Exception as exc:
-                logger.warning("[SearXNG] 拉取公共实例列表失败: %s", exc)
+                logger.warning("[SearXNG] 拉取公共实例列表失败，未记录上游响应")
 
             if stale_urls:
                 cls._public_instances_stale_retry_after = (
@@ -1951,10 +1959,12 @@ class SearXNGSearchProvider(BaseSearchProvider):
                 "pageno": 1,
             }
 
-            request_get = _get_with_retry if retry_enabled else requests.get
-            response = request_get(search_url, headers=headers, params=params, timeout=timeout)
+            # A search instance may intentionally reject API/JSON access.
+            # Do not follow redirects, retry HTTP denials or rotate hosts.
+            response = requests.get(search_url, headers=headers, params=params, timeout=timeout, allow_redirects=False)
 
             if response.status_code != 200:
+                self._response_cooldown(response)
                 error_msg = self._parse_http_error(response)
                 if response.status_code == 403:
                     error_msg = (
@@ -1970,17 +1980,21 @@ class SearXNGSearchProvider(BaseSearchProvider):
                 )
 
             try:
+                if "html" in str(response.headers.get("content-type", "")).lower():
+                    raise ValueError("HTML is not the JSON search API")
                 data = response.json()
             except Exception:
+                self._cooldown(1800)
                 return SearchResponse(
                     query=query,
                     results=[],
                     provider=self.name,
                     success=False,
-                    error_message="响应JSON解析失败",
+                    error_message="搜索实例未返回 JSON，可能要求浏览器验证；已停止请求并进入冷却。",
                 )
 
-            if not isinstance(data, dict):
+            if not isinstance(data, dict) or not isinstance(data.get("results"), list):
+                self._cooldown(300)
                 return SearchResponse(
                     query=query,
                     results=[],
@@ -2026,6 +2040,7 @@ class SearXNGSearchProvider(BaseSearchProvider):
             return SearchResponse(query=query, results=results, provider=self.name, success=True)
 
         except requests.exceptions.Timeout:
+            self._cooldown(60)
             return SearchResponse(
                 query=query,
                 results=[],
@@ -2034,20 +2049,22 @@ class SearXNGSearchProvider(BaseSearchProvider):
                 error_message="请求超时",
             )
         except requests.exceptions.RequestException as e:
+            self._cooldown(60)
             return SearchResponse(
                 query=query,
                 results=[],
                 provider=self.name,
                 success=False,
-                error_message=f"网络请求失败: {e}",
+                error_message=_safe_search_error(e),
             )
         except Exception as e:
+            self._cooldown(60)
             return SearchResponse(
                 query=query,
                 results=[],
                 provider=self.name,
                 success=False,
-                error_message=f"未知错误: {e}",
+                error_message=_safe_search_error(e),
             )
 
     @staticmethod
@@ -2063,22 +2080,23 @@ class SearXNGSearchProvider(BaseSearchProvider):
             return "未知来源"
 
     def search(self, query: str, max_results: int = 5, days: int = 7) -> SearchResponse:
-        """Execute SearXNG search with instance rotation and per-request failover."""
+        """Serialize one chosen instance; stop rather than rotate around failures."""
+        with self._state_lock:
+            if self._clock() < self._cooldown_until:
+                return SearchResponse(query=query, results=[], provider=self.name, success=False,
+                    error_message="搜索实例正在冷却，未发送请求；请稍后重试或在系统设置配置自己的服务。")
+            return self._search_one_instance(query, max_results, days)
+
+    def _search_one_instance(self, query: str, max_results: int, days: int) -> SearchResponse:
         start_time = time.time()
         if self._base_urls:
-            candidates = self._rotate_candidates(
-                self._base_urls,
-                max_attempts=len(self._base_urls),
-            )
-            retry_enabled = True
+            candidates = self._base_urls[:1]
+            retry_enabled = False
             timeout = self.SELF_HOSTED_TIMEOUT_SECONDS
             empty_error = "SearXNG 未配置可用实例"
         elif self._use_public_instances:
             public_instances = self._get_public_instances()
-            candidates = self._rotate_candidates(
-                public_instances,
-                max_attempts=min(len(public_instances), self.PUBLIC_INSTANCES_MAX_ATTEMPTS),
-            )
+            candidates = public_instances[:1]
             retry_enabled = False
             timeout = self.PUBLIC_INSTANCES_TIMEOUT_SECONDS
             empty_error = "未获取到可用的公共 SearXNG 实例"
@@ -2089,6 +2107,7 @@ class SearXNGSearchProvider(BaseSearchProvider):
             empty_error = "SearXNG 未配置可用实例"
 
         if not candidates:
+            self._cooldown(60)
             return SearchResponse(
                 query=query,
                 results=[],
@@ -2111,17 +2130,17 @@ class SearXNGSearchProvider(BaseSearchProvider):
             response.search_time = time.time() - start_time
             if response.success:
                 logger.info(
-                    "[%s] 搜索 '%s' 成功，实例=%s，返回 %s 条结果，耗时 %.2fs",
+                    "[%s] 搜索 '%s' 成功，返回 %s 条结果，耗时 %.2fs",
                     self.name,
                     query,
-                    base_url,
                     len(response.results),
                     response.search_time,
                 )
                 return response
 
-            errors.append(f"{base_url}: {response.error_message or '未知错误'}")
-            logger.warning("[%s] 实例 %s 搜索失败: %s", self.name, base_url, response.error_message)
+            self._cooldown(60)
+            errors.append(response.error_message or "搜索实例请求失败。")
+            logger.warning("[%s] 搜索失败，已停止并进入冷却: %s", self.name, response.error_message)
 
         elapsed = time.time() - start_time
         return SearchResponse(
@@ -2178,7 +2197,7 @@ class SearchService:
         serpapi_keys: Optional[List[str]] = None,
         minimax_keys: Optional[List[str]] = None,
         searxng_base_urls: Optional[List[str]] = None,
-        searxng_public_instances_enabled: bool = True,
+        searxng_public_instances_enabled: bool = False,
         news_max_age_days: int = 3,
         news_strategy_profile: str = "short",
     ):
@@ -2223,8 +2242,12 @@ class SearchService:
 
         # 2. Tavily（免费额度更多，每月 1000 次）
         if tavily_keys:
-            self._providers.append(TavilySearchProvider(tavily_keys))
-            logger.info(f"已配置 Tavily 搜索，共 {len(tavily_keys)} 个 API Key")
+            provider = TavilySearchProvider(tavily_keys)
+            if provider.is_available:
+                self._providers.append(provider)
+                logger.info(f"已配置 Tavily 搜索，共 {len(tavily_keys)} 个 API Key")
+            else:
+                logger.warning("已跳过 Tavily：未安装可用的 tavily-python SDK")
 
         # 3. Brave Search（隐私优先，全球覆盖）
         if brave_keys:
@@ -2233,8 +2256,12 @@ class SearchService:
 
         # 4. SerpAPI 作为备选（每月 100 次）
         if serpapi_keys:
-            self._providers.append(SerpAPISearchProvider(serpapi_keys))
-            logger.info(f"已配置 SerpAPI 搜索，共 {len(serpapi_keys)} 个 API Key")
+            provider = SerpAPISearchProvider(serpapi_keys)
+            if provider.is_available:
+                self._providers.append(provider)
+                logger.info(f"已配置 SerpAPI 搜索，共 {len(serpapi_keys)} 个 API Key")
+            else:
+                logger.warning("已跳过 SerpAPI：未安装含 GoogleSearch 的 google-search-results SDK")
 
         # 5. MiniMax（Coding Plan Web Search，结构化结果）
         if minimax_keys:
@@ -3367,7 +3394,7 @@ class SearchService:
                         logger.debug(f"[增强搜索] {provider.name} 无结果或失败")
                         
                 except Exception as e:
-                    logger.warning(f"[增强搜索] {provider.name} 搜索异常: {e}")
+                    logger.warning(f"[增强搜索] {provider.name} 搜索异常: {_safe_search_error(e)}")
                     continue
             
             # 短暂延迟避免请求过快
@@ -3485,6 +3512,8 @@ def get_search_service() -> SearchService:
 
                 def _csv_keys(key: str) -> List[str]:
                     raw = _cfg_get("search", key, "") or ""
+                    if isinstance(raw, (list, tuple)):
+                        return [value.strip() for value in raw if isinstance(value, str) and value.strip()]
                     return [x.strip() for x in str(raw).split(",") if x.strip()]
 
                 def _keys(primary: str, *legacy: str) -> List[str]:
@@ -3506,7 +3535,7 @@ def get_search_service() -> SearchService:
                     minimax_keys=_csv_keys("minimax_api_keys"),
                     searxng_base_urls=_csv_keys("searxng_base_urls"),
                     searxng_public_instances_enabled=bool(
-                        _cfg_get("search", "searxng_public_instances_enabled", True)
+                        _cfg_get("search", "searxng_public_instances_enabled", False)
                     ),
                     news_max_age_days=int(_cfg_get("search", "news_max_age_days", 3)),
                     news_strategy_profile=str(
@@ -3518,7 +3547,7 @@ def get_search_service() -> SearchService:
 
 
 def reset_search_service() -> None:
-    """重置搜索服务（用于测试）"""
+    """配置保存后重建后续服务实例；此操作本身不执行搜索。"""
     global _search_service
     with _search_service_lock:
         _search_service = None

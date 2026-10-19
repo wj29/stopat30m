@@ -8,11 +8,12 @@ import TradingPage from './pages/TradingPage';
 import SignalPage from './pages/SignalPage';
 import BacktestPage from './pages/BacktestPage';
 import SettingsPage from './pages/SettingsPage';
+import ModelSettingsPage from './pages/ModelSettingsPage';
+import OperationsPage from './pages/OperationsPage';
 import UsersPage from './pages/UsersPage';
 import MarketReviewPage from './pages/MarketReviewPage';
 import ModelLabPage from './pages/ModelLabPage';
 import WatchlistPage from './pages/WatchlistPage';
-import ChatPage from './pages/ChatPage';
 import RecordManagePage from './pages/RecordManagePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -51,7 +52,6 @@ export default function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route element={<RequireAuth />}>
               <Route path="/" element={<HomePage />} />
-              <Route path="/chat" element={<ChatPage />} />
               <Route path="/analysis" element={<AnalysisPage />} />
               <Route path="/watchlist" element={<WatchlistPage />} />
               <Route path="/market-review" element={<MarketReviewPage />} />
@@ -62,6 +62,8 @@ export default function App() {
               <Route path="/users" element={<UsersPage />} />
               <Route path="/records" element={<RecordManagePage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/model-settings" element={<ModelSettingsPage />} />
+              <Route path="/operations" element={<OperationsPage />} />
             </Route>
           </Routes>
         </BrowserRouter>

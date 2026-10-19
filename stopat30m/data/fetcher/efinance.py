@@ -42,22 +42,26 @@ class EfinanceFetcher(DataFetcher):
         return []
 
     def fetch_trade_calendar(self, start: str, end: str) -> list[str]:
-        # efinance has no calendar API; delegate to AKShare/BaoStock if available,
-        # otherwise fall back to pandas bday (approximate, includes non-trading days)
+        # efinance has no calendar endpoint. Only actual market-calendar
+        # providers may supply sessions; weekdays include exchange holidays.
+        errors = []
         try:
             from .akshare import AKShareFetcher
-            return AKShareFetcher(delay=0).fetch_trade_calendar(start, end)
-        except Exception:
-            pass
+            dates = AKShareFetcher(delay=0).fetch_trade_calendar(start, end)
+            if dates:
+                return dates
+            errors.append("AKShare returned no verified sessions")
+        except Exception as exc:
+            errors.append(f"AKShare: {type(exc).__name__}")
         try:
             from .baostock import BaoStockFetcher
-            return BaoStockFetcher(workers=1).fetch_trade_calendar(start, end)
-        except Exception:
-            pass
-        logger.warning("No real trade calendar available; using pandas bday_range (approximate)")
-        import pandas as pd
-        dates = pd.bdate_range(start, end)
-        return sorted(dates.strftime("%Y-%m-%d").tolist())
+            dates = BaoStockFetcher(workers=1).fetch_trade_calendar(start, end)
+            if dates:
+                return dates
+            errors.append("BaoStock returned no verified sessions")
+        except Exception as exc:
+            errors.append(f"BaoStock: {type(exc).__name__}")
+        raise RuntimeError("No verified exchange calendar is available; refusing weekday approximation. " + "; ".join(errors))
 
     def fetch_daily(self, symbol: str, start: str, end: str) -> pd.DataFrame | None:
         import efinance as ef

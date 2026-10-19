@@ -25,6 +25,8 @@ if _project_root not in sys.path:
 import pandas as pd
 import streamlit as st
 
+from stopat30m.formatting import format_metric, metric_number
+
 # ---------------------------------------------------------------------------
 # Page config
 # ---------------------------------------------------------------------------
@@ -346,39 +348,35 @@ def _render_sidebar_watermark() -> None:
 def _get_prices_and_names(
     instruments: list[str],
 ) -> tuple[dict[str, float], dict[str, str]]:
-    """Fetch prices and names for given instruments, using session-level cache.
+    """Use the central timestamp-aware quote cache on every request."""
+    from stopat30m.data.normalize import normalize_instrument
+    from stopat30m.data.realtime import fetch_spot_prices, fetch_stock_names
 
-    Only fetches instruments not already cached. Merges results into the
-    shared cache so subsequent pages/calls don't re-fetch.
-    """
-    from stopat30m.trading.rebalancer import (
-        fetch_spot_prices, fetch_stock_names, normalize_instrument,
-    )
-
-    if "shared_prices" not in st.session_state:
-        st.session_state["shared_prices"] = {}
-        st.session_state["shared_names"] = {}
-
-    cached_prices = st.session_state["shared_prices"]
-    cached_names = st.session_state["shared_names"]
-
-    normed = [normalize_instrument(c) for c in instruments]
-    missing = [inst for inst in normed if inst not in cached_prices]
-
-    if missing:
-        with st.spinner(f"获取 {len(missing)} 只股票行情..."):
-            new_prices = fetch_spot_prices(missing)
-            new_names = fetch_stock_names(missing)
-            cached_prices.update(new_prices)
-            cached_names.update(new_names)
-
-    return cached_prices, cached_names
+    normed = list(dict.fromkeys(normalize_instrument(code) for code in instruments))
+    with st.spinner(f"获取 {len(normed)} 只股票行情..."):
+        prices = fetch_spot_prices(normed)
+        names = fetch_stock_names(normed)
+    # Names may be reused for display; prices never live in session state.
+    st.session_state.setdefault("shared_names", {}).update(names)
+    st.session_state.pop("shared_prices", None)
+    return prices, names
 
 
 def _invalidate_price_cache() -> None:
-    """Clear the shared price cache (e.g. on refresh button)."""
+    """Invalidate both the central quote cache and obsolete session values."""
+    from stopat30m.data.realtime import invalidate_cache
+    invalidate_cache()
     st.session_state.pop("shared_prices", None)
     st.session_state.pop("shared_names", None)
+
+
+def _refresh_paper_quotes(broker, instruments: list[str]) -> dict[str, float]:
+    """Preserve source timestamps and revoke unavailable execution prices."""
+    from stopat30m.data.normalize import normalize_instrument
+    from stopat30m.data.realtime import fetch_spot_quotes
+
+    normed = list(dict.fromkeys(normalize_instrument(code) for code in instruments))
+    return broker.update_quotes(fetch_spot_quotes(normed), instruments=normed)
 
 
 def _get_paper_broker():
@@ -435,7 +433,7 @@ def page_overview() -> None:
         instruments = list(positions.keys())
         if instruments:
             prices, stock_names = _get_prices_and_names(instruments)
-            broker.update_prices(prices)
+            prices = _refresh_paper_quotes(broker, instruments)
         else:
             prices, stock_names = {}, {}
 
@@ -621,15 +619,11 @@ def _quick_sell(sellable: list[dict], broker, use_paper: bool) -> None:
 
 def _quick_sell_paper(broker, instrument: str, qty: int, otype: str, limit_price: float | None) -> None:
     from stopat30m.trading.models import Order, OrderDirection, OrderStatus, OrderType
-    from stopat30m.trading.rebalancer import fetch_spot_prices
 
-    if otype == "MARKET":
-        prices = fetch_spot_prices([instrument])
-        if prices:
-            broker.update_prices(prices)
-        else:
-            st.error("无法获取实时价格")
-            return
+    prices = _refresh_paper_quotes(broker, [instrument])
+    if not prices:
+        st.error("无法获取带有效时点的实时价格")
+        return
 
     order = Order(
         instrument=instrument,
@@ -685,7 +679,7 @@ def _tab_positions(broker, use_paper: bool, bare_code, normalize_instrument) -> 
 
         instruments = list(bp.keys())
         prices, stock_names = _get_prices_and_names(instruments)
-        broker.update_prices(prices)
+        prices = _refresh_paper_quotes(broker, instruments)
 
         for inst, pos in bp.items():
             price = prices.get(inst, pos.current_price)
@@ -903,7 +897,7 @@ def _tab_rebalance(broker, use_paper: bool, normalize_instrument) -> None:
             st.error("所有实时数据源均不可用，请检查网络后重试")
             return
         if use_paper:
-            broker.update_prices(prices)
+            prices = _refresh_paper_quotes(broker, all_instruments)
 
         result = compute_rebalance_plan(
             signals=signals, positions=positions,
@@ -917,8 +911,8 @@ def _tab_rebalance(broker, use_paper: bool, normalize_instrument) -> None:
     if result is None:
         return
 
-    prices = st.session_state.get("shared_prices", {})
-    stock_names = st.session_state.get("shared_names", {})
+    plan_instruments = result.trades["instrument"].astype(str).tolist() if "instrument" in result.trades else []
+    prices, stock_names = _get_prices_and_names(plan_instruments)
     plan = result.trades
     cf = result.capital_flow
 
@@ -1023,7 +1017,7 @@ def _tab_manual_trade(broker, use_paper: bool) -> None:
 def _manual_trade_paper(broker) -> None:
     """Manual buy/sell via PaperBroker."""
     from stopat30m.trading.models import Order, OrderDirection, OrderStatus, OrderType
-    from stopat30m.trading.rebalancer import fetch_spot_prices, normalize_instrument
+    from stopat30m.data.normalize import normalize_instrument
 
     acct = broker.get_account()
     st.info(f"账户现金: ¥{acct.cash:,.0f}")
@@ -1048,14 +1042,11 @@ def _manual_trade_paper(broker) -> None:
 
         inst = normalize_instrument(instrument.strip())
 
-        if order_type == "MARKET":
-            with st.spinner("获取实时价格..."):
-                prices = fetch_spot_prices([inst])
-            if prices:
-                broker.update_prices(prices)
-            else:
-                st.error("无法获取实时价格")
-                return
+        with st.spinner("获取实时价格..."):
+            prices = _refresh_paper_quotes(broker, [inst])
+        if not prices:
+            st.error("无法获取带有效时点的实时价格")
+            return
 
         order = Order(
             instrument=inst,
@@ -1128,7 +1119,8 @@ def _execute_via_broker(broker, result, prices, sells_only: bool) -> None:
     from stopat30m.trading.executor import execute_plan
     from stopat30m.trading.models import OrderStatus
 
-    broker.update_prices(prices)
+    instruments = result.trades["instrument"].astype(str).tolist()
+    _refresh_paper_quotes(broker, instruments)
     report = execute_plan(result, broker, sells_only=sells_only)
 
     if report.total_rejected > 0:
@@ -1407,16 +1399,16 @@ def page_signal_backtest() -> None:
     )
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("平均候选数", f"{summary.get('avg_candidate_count', 0):,.1f}")
-    c2.metric("平均换手", f"{summary.get('avg_turnover', 0):.2%}")
-    c3.metric(f"{eval_horizon}D IC", f"{summary.get(f'ic_{eval_horizon}d_mean', 0):.4f}")
-    c4.metric(f"{eval_horizon}D RankIC", f"{summary.get(f'rank_ic_{eval_horizon}d_mean', 0):.4f}")
+    c1.metric("平均候选数", format_metric(summary.get('avg_candidate_count'), ',.1f'))
+    c2.metric("平均换手", format_metric(summary.get('avg_turnover'), '.2%'))
+    c3.metric(f"{eval_horizon}D IC", format_metric(summary.get(f'ic_{eval_horizon}d_mean'), '.4f'))
+    c4.metric(f"{eval_horizon}D RankIC", format_metric(summary.get(f'rank_ic_{eval_horizon}d_mean'), '.4f'))
 
     c5, c6, c7, c8 = st.columns(4)
-    c5.metric(f"BUY {eval_horizon}D 收益", f"{summary.get(f'buy_mean_return_{eval_horizon}d', 0):.2%}")
-    c6.metric(f"BUY {eval_horizon}D 胜率", f"{summary.get(f'buy_win_rate_{eval_horizon}d', 0):.2%}")
-    c7.metric("分层 Top-Bottom", f"{summary.get('top_bottom_spread', 0):.2%}")
-    c8.metric("Top-K 年化", f"{topk_report.get('annual_return', 0):.2%}")
+    c5.metric(f"BUY {eval_horizon}D 收益", format_metric(summary.get(f'buy_mean_return_{eval_horizon}d'), '.2%'))
+    c6.metric(f"BUY {eval_horizon}D 胜率", format_metric(summary.get(f'buy_win_rate_{eval_horizon}d'), '.2%'))
+    c7.metric("分层 Top-Bottom", format_metric(summary.get('top_bottom_spread'), '.2%'))
+    c8.metric("Top-K 年化", format_metric(topk_report.get('annual_return'), '.2%'))
 
     st.markdown("---")
     if not topk_returns.empty:
@@ -1517,24 +1509,24 @@ def page_account_backtest() -> None:
     st.caption(
         f"执行价 {config.get('execution_price', '?')} | Top-{config.get('top_k', '?')} | "
         f"调仓频率 {config.get('rebalance_freq', '?')} 天 | "
-        f"初始资金 ¥{config.get('initial_capital', 0):,.0f}"
+        f"初始资金 {format_metric(config.get('initial_capital'), ',.0f', prefix='¥')}"
     )
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("期末权益", f"¥{report.get('ending_equity', 0):,.0f}")
-    c2.metric("年化收益", f"{report.get('annual_return', 0):.2%}")
-    c3.metric("夏普比率", f"{report.get('sharpe', 0):.2f}")
-    c4.metric("最大回撤", f"{report.get('max_drawdown', 0):.2%}")
+    c1.metric("期末权益", format_metric(report.get('ending_equity'), ',.0f', prefix='¥'))
+    c2.metric("年化收益", format_metric(report.get('annual_return'), '.2%'))
+    c3.metric("夏普比率", format_metric(report.get('sharpe'), '.2f'))
+    c4.metric("最大回撤", format_metric(report.get('max_drawdown'), '.2%'))
 
     c5, c6, c7, c8 = st.columns(4)
-    c5.metric("总费用", f"¥{report.get('total_fees', 0):,.2f}")
-    c6.metric("委托数", int(report.get("order_count", 0)))
-    c7.metric("拒单数", int(report.get("rejected_orders", 0)))
-    c8.metric("部分成交", int(report.get("partial_fills", 0)))
+    c5.metric("总费用", format_metric(report.get('total_fees'), ',.2f', prefix='¥'))
+    c6.metric("委托数", format_metric(report.get("order_count"), "d"))
+    c7.metric("拒单数", format_metric(report.get("rejected_orders"), "d"))
+    c8.metric("部分成交", format_metric(report.get("partial_fills"), "d"))
 
     c9, c10 = st.columns(2)
-    c9.metric("现金利用率", f"{report.get('cash_utilization', 0):.2%}")
-    c10.metric("日均成交额", f"¥{report.get('avg_daily_turnover', 0):,.0f}")
+    c9.metric("现金利用率", format_metric(report.get('cash_utilization'), '.2%'))
+    c10.metric("日均成交额", format_metric(report.get('avg_daily_turnover'), ',.0f', prefix='¥'))
 
     st.markdown("---")
     if not nav.empty:
@@ -1611,16 +1603,16 @@ def page_model_eval() -> None:
 
         st.subheader("预测能力 (IC)")
         col1, col2, col3, col4, col5, col6 = st.columns(6)
-        ic = metrics.get("IC_mean", 0)
-        icir = metrics.get("ICIR", 0)
-        ric = metrics.get("RankIC_mean", 0)
-        ricir = metrics.get("RankICIR", 0)
-        col1.metric("IC", f"{ic:.4f}")
-        col2.metric("IC Std", f"{metrics.get('IC_std', 0):.4f}")
-        col3.metric("ICIR", f"{icir:.4f}")
-        col4.metric("Rank IC", f"{ric:.4f}")
-        col5.metric("Rank IC Std", f"{metrics.get('RankIC_std', 0):.4f}")
-        col6.metric("Rank ICIR", f"{ricir:.4f}")
+        ic = metrics.get("IC_mean")
+        icir = metrics.get("ICIR")
+        ric = metrics.get("RankIC_mean")
+        ricir = metrics.get("RankICIR")
+        col1.metric("IC", format_metric(ic, ".4f"))
+        col2.metric("IC Std", format_metric(metrics.get('IC_std'), '.4f'))
+        col3.metric("ICIR", format_metric(icir, ".4f"))
+        col4.metric("Rank IC", format_metric(ric, ".4f"))
+        col5.metric("Rank IC Std", format_metric(metrics.get('RankIC_std'), '.4f'))
+        col6.metric("Rank ICIR", format_metric(ricir, ".4f"))
 
         _show_ic_assessment(ic, icir, ric, ricir)
     else:
@@ -1628,7 +1620,8 @@ def page_model_eval() -> None:
 
     # --- Backtest Results ---
     st.markdown("---")
-    backtest_dir = OUTPUT_DIR / "backtest"
+    runs = _list_run_dirs("backtest")
+    backtest_dir = runs[0] if runs else OUTPUT_DIR / "backtest"
     report_file = backtest_dir / "report.json"
     returns_file = backtest_dir / "returns.csv"
 
@@ -1645,25 +1638,25 @@ def page_model_eval() -> None:
     st.caption(
         f"Top-{bt_config.get('top_k', '?')} 等权组合 | "
         f"调仓周期 {bt_config.get('rebalance_freq', '?')} 天 | "
-        f"买入费率 {bt_config.get('buy_cost', 0):.2%} | "
-        f"卖出费率 {bt_config.get('sell_cost', 0):.2%} | "
+        f"买入费率 {format_metric(bt_config.get('buy_cost'), '.2%')} | "
+        f"卖出费率 {format_metric(bt_config.get('sell_cost'), '.2%')} | "
         f"基准 {bt_config.get('benchmark', '?')}"
     )
 
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("年化收益", f"{report.get('annual_return', 0):.2%}")
-    col2.metric("夏普比率", f"{report.get('sharpe', 0):.2f}")
-    col3.metric("最大回撤", f"{report.get('max_drawdown', 0):.2%}")
-    col4.metric("胜率", f"{report.get('win_rate', 0):.2%}")
+    col1.metric("年化收益", format_metric(report.get('annual_return'), '.2%'))
+    col2.metric("夏普比率", format_metric(report.get('sharpe'), '.2f'))
+    col3.metric("最大回撤", format_metric(report.get('max_drawdown'), '.2%'))
+    col4.metric("盈利日占比", format_metric(report.get('win_rate'), '.2%'))
 
     col5, col6, col7, col8 = st.columns(4)
-    col5.metric("Sortino", f"{report.get('sortino', 0):.2f}")
-    col6.metric("Calmar", f"{report.get('calmar', 0):.2f}")
-    col7.metric("盈亏比", f"{report.get('profit_loss_ratio', 0):.2f}")
+    col5.metric("Sortino", format_metric(report.get('sortino'), '.2f'))
+    col6.metric("Calmar", format_metric(report.get('calmar'), '.2f'))
+    col7.metric("盈亏比", format_metric(report.get('profit_loss_ratio'), '.2f'))
     if "excess_return" in report:
-        col8.metric("超额收益", f"{report['excess_return']:.2%}")
+        col8.metric("超额收益", format_metric(report.get("excess_return"), ".2%"))
     else:
-        col8.metric("交易天数", report.get("total_trades", 0))
+        col8.metric("成交笔数", format_metric(report.get("total_trades"), "d"))
 
     _show_backtest_assessment(report)
 
@@ -1683,7 +1676,8 @@ def page_model_eval() -> None:
         st.subheader("回撤曲线")
         if "portfolio_cumulative" in returns_df.columns:
             cum = returns_df["portfolio_cumulative"]
-            drawdown = (cum - cum.cummax()) / cum.cummax()
+            peak = cum.cummax().clip(lower=1.0)
+            drawdown = (cum - peak) / peak
             dd_df = pd.DataFrame({"回撤": drawdown})
             st.area_chart(dd_df)
 
@@ -1709,6 +1703,9 @@ def page_model_eval() -> None:
 
 def _rate(value: float, thresholds: list[tuple[float, str, str]]) -> tuple[str, str]:
     """Return (level_label, color) for a metric value given ascending thresholds."""
+    value = metric_number(value)
+    if value is None:
+        return "暂无有效数据", "gray"
     for threshold, label, color in thresholds:
         if value < threshold:
             return label, color
@@ -1717,34 +1714,39 @@ def _rate(value: float, thresholds: list[tuple[float, str, str]]) -> tuple[str, 
 
 def _show_ic_assessment(ic: float, icir: float, ric: float, ricir: float) -> None:
     """Display an interpretive assessment of IC metrics."""
+    values = [metric_number(value) for value in (ic, icir, ric, ricir)]
+    if any(value is None for value in values):
+        st.info("IC 样本或稳定性指标不足，无法综合评级；缺失指标显示为 —。")
+        return
+    ic, icir, ric, ricir = values
     rows = []
 
     level, _ = _rate(abs(ic), [
         (0.02, "弱", "red"), (0.03, "偏弱", "orange"),
         (0.05, "及格", "blue"), (0.08, "良好", "green"), (999, "优秀", "green"),
     ])
-    rows.append(("IC (信息系数)", f"{ic:.4f}", level,
+    rows.append(("IC (信息系数)", format_metric(ic, ".4f"), level,
                  "预测值与实际收益的相关性。|IC| > 0.03 及格，> 0.05 良好"))
 
     level, _ = _rate(abs(icir), [
         (0.3, "不稳定", "red"), (0.5, "一般", "orange"),
         (1.0, "稳定", "blue"), (1.5, "很稳定", "green"), (999, "极稳定", "green"),
     ])
-    rows.append(("ICIR (信息比率)", f"{icir:.4f}", level,
+    rows.append(("ICIR (信息比率)", format_metric(icir, ".4f"), level,
                  "IC 的稳定性 = IC均值/IC标准差。> 0.5 可用，> 1.0 优秀"))
 
     level, _ = _rate(abs(ric), [
         (0.03, "弱", "red"), (0.05, "偏弱", "orange"),
         (0.08, "及格", "blue"), (0.12, "良好", "green"), (999, "优秀", "green"),
     ])
-    rows.append(("Rank IC (排序相关)", f"{ric:.4f}", level,
+    rows.append(("Rank IC (排序相关)", format_metric(ric, ".4f"), level,
                  "预测排序与实际排序的相关性。比 IC 更鲁棒，> 0.05 及格，> 0.1 良好"))
 
     level, _ = _rate(abs(ricir), [
         (0.3, "不稳定", "red"), (0.5, "一般", "orange"),
         (1.0, "稳定", "blue"), (1.5, "很稳定", "green"), (999, "极稳定", "green"),
     ])
-    rows.append(("Rank ICIR", f"{ricir:.4f}", level,
+    rows.append(("Rank ICIR", format_metric(ricir, ".4f"), level,
                  "Rank IC 的稳定性。> 0.5 可用，> 1.0 优秀"))
 
     with st.expander("指标解读", expanded=True):
@@ -1752,22 +1754,22 @@ def _show_ic_assessment(ic: float, icir: float, ric: float, ricir: float) -> Non
             st.markdown(f"**{name}** = {value} → **{level}**  \n{desc}")
 
         # Overall verdict
-        if abs(ric) >= 0.05 and abs(ricir) >= 0.5:
-            st.success("综合评价：模型具备有效预测能力，可用于实盘信号生成")
-        elif abs(ric) >= 0.03:
-            st.warning("综合评价：模型有一定预测能力但不够稳定，建议优化后再实盘使用")
+        if ric >= 0.05 and ricir >= 0.5:
+            st.success("样本内排序相关性为正，可继续进行样本外验证；不能据此证明实盘有效")
+        elif ric >= 0.03:
+            st.warning("综合评价：当前样本的预测相关性较弱或不够稳定，需进一步验证")
         else:
-            st.error("综合评价：模型预测能力较弱，不建议直接用于实盘")
+            st.error("综合评价：当前样本未显示稳定的正向预测能力")
 
 
 def _show_backtest_assessment(report: dict) -> None:
     """Display an interpretive assessment of backtest performance metrics."""
-    annual = report.get("annual_return", 0)
-    sharpe = report.get("sharpe", 0)
-    mdd = abs(report.get("max_drawdown", 0))
-    sortino = report.get("sortino", 0)
-    win_rate = report.get("win_rate", 0)
-    calmar = report.get("calmar", 0)
+    annual = metric_number(report.get("annual_return"))
+    sharpe = metric_number(report.get("sharpe"))
+    drawdown = metric_number(report.get("max_drawdown"))
+    mdd = abs(drawdown) if drawdown is not None else None
+    win_rate = metric_number(report.get("win_rate"))
+    calmar = metric_number(report.get("calmar"))
 
     rows = []
 
@@ -1775,48 +1777,52 @@ def _show_backtest_assessment(report: dict) -> None:
         (0, "亏损", "red"), (0.05, "微利", "orange"),
         (0.10, "一般", "blue"), (0.20, "良好", "green"), (999, "优秀", "green"),
     ])
-    rows.append(("年化收益", f"{annual:.2%}", level,
+    rows.append(("年化收益", format_metric(annual, ".2%"), level,
                  "< 5% 不如货基，5-15% 一般，15-30% 良好，> 30% 优秀"))
 
     level, _ = _rate(sharpe, [
         (0, "负收益风险比", "red"), (0.5, "偏低", "orange"),
         (1.0, "及格", "blue"), (1.5, "良好", "green"), (999, "优秀", "green"),
     ])
-    rows.append(("夏普比率", f"{sharpe:.2f}", level,
+    rows.append(("夏普比率", format_metric(sharpe, ".2f"), level,
                  "每承担1单位风险获得的超额收益。< 0.5 差，0.5-1.0 一般，> 1.5 优秀"))
 
     level, _ = _rate(mdd, [
         (0.10, "优秀", "green"), (0.20, "可接受", "blue"),
         (0.30, "偏高", "orange"), (999, "危险", "red"),
     ])
-    rows.append(("最大回撤", f"{mdd:.2%}", level,
+    rows.append(("最大回撤", format_metric(mdd, ".2%"), level,
                  "最大亏损幅度。< 10% 优秀，10-20% 可接受，> 30% 需警惕"))
 
     level, _ = _rate(win_rate, [
         (0.40, "偏低", "red"), (0.45, "一般", "orange"),
         (0.50, "及格", "blue"), (0.55, "良好", "green"), (999, "优秀", "green"),
     ])
-    rows.append(("胜率", f"{win_rate:.2%}", level,
+    rows.append(("盈利日占比", format_metric(win_rate, ".2%"), level,
                  "盈利天数占比。量化策略 > 50% 即可（配合盈亏比）"))
 
     level, _ = _rate(calmar, [
         (0, "负值", "red"), (0.5, "偏低", "orange"),
         (1.0, "及格", "blue"), (2.0, "良好", "green"), (999, "优秀", "green"),
     ])
-    rows.append(("Calmar (收益/回撤)", f"{calmar:.2f}", level,
+    rows.append(("Calmar (收益/回撤)", format_metric(calmar, ".2f"), level,
                  "年化收益 / 最大回撤。> 1 表示收益能覆盖回撤，> 2 良好"))
 
     with st.expander("回测指标解读", expanded=True):
         for name, value, level, desc in rows:
             st.markdown(f"**{name}** = {value} → **{level}**  \n{desc}")
 
-        # Overall
+        # Sample counts and essential metrics must be present before a verdict.
+        observations = metric_number(report.get("observation_days"))
+        if observations is None or observations < 2 or any(value is None for value in (annual, sharpe, mdd)):
+            st.info("缺少有效样本数量或必要收益/风险指标，无法综合评级；不能将缺失值视为 0。")
+            return
         if sharpe >= 1.0 and mdd <= 0.20 and annual > 0.10:
-            st.success("综合评价：策略表现良好，风险可控，可考虑实盘验证")
+            st.success("综合评价：当前回测样本的收益风险指标较好，仍需样本外及模拟验证")
         elif sharpe >= 0.5 and annual > 0:
             st.warning("综合评价：策略有正收益但风险收益比一般，建议继续优化")
         else:
-            st.error("综合评价：策略表现不佳，不建议实盘使用")
+            st.error("综合评价：当前回测样本的收益风险指标偏弱")
 
 
 def page_risk() -> None:
@@ -1826,7 +1832,7 @@ def page_risk() -> None:
     risk = portfolio.get("risk_status", {})
 
     if risk.get("circuit_breaker"):
-        st.error("熔断触发 - 所有交易已暂停")
+        st.warning("熔断触发：暂停增仓，允许通过现金、持仓及 T+1 检查的合规减仓")
     else:
         st.success("系统运行正常")
 

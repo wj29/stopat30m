@@ -19,8 +19,10 @@ from __future__ import annotations
 import importlib
 import os
 import time
+import numpy as np
 from datetime import datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 from loguru import logger
@@ -219,8 +221,14 @@ def fetch_daily_ohlcv(
     norm = normalize_instrument(code)
     bare = bare_code(norm)
 
-    end = datetime.now().strftime("%Y-%m-%d")
-    start = (datetime.now() - pd.Timedelta(days=days * 2)).strftime("%Y-%m-%d")
+    if days < 1:
+        raise ValueError("days must be positive")
+    now = datetime.now(ZoneInfo("Asia/Shanghai"))
+    end = now.strftime("%Y-%m-%d")
+    start = (now - pd.Timedelta(days=days * 2)).strftime("%Y-%m-%d")
+    # Today is only the upper bound for valid bar dates. Without a complete
+    # exchange calendar, do not invent a "last session" from business days.
+    candidates: list[tuple[pd.DataFrame, str]] = []
 
     for src_key in resolve_daily_sources():
         fetcher = _try_load_fetcher(src_key)
@@ -228,13 +236,55 @@ def fetch_daily_ohlcv(
             continue
         try:
             df = fetcher.fetch_daily(bare, start, end)
-            if df is not None and not df.empty:
+            df = _validate_daily_frame(df, end)
+            if df is not None:
                 logger.debug(f"OHLCV from {src_key} for {code}: {len(df)} rows")
-                return df.tail(days), src_key
+                candidates.append((df, src_key))
+                if str(df["date"].iloc[-1]) == end:
+                    return _daily_result(df, src_key, days, now), src_key
         except Exception as e:
             logger.debug(f"{src_key} OHLCV failed for {code}: {e}")
 
-    return _fetch_ohlcv_from_qlib(norm, days), "qlib"
+    local = _validate_daily_frame(_fetch_ohlcv_from_qlib(norm, days), end)
+    if local is not None:
+        candidates.append((local, "qlib"))
+    if not candidates:
+        return None, ""
+    best, source = max(candidates, key=lambda item: item[0]["date"].iloc[-1])
+    return _daily_result(best, source, days, now), source
+
+
+def _validate_daily_frame(df: pd.DataFrame | None, end: str) -> pd.DataFrame | None:
+    """Normalize ordering and reject malformed bars instead of accepting nonempty data."""
+    required = ["date", "open", "high", "low", "close", "volume"]
+    if df is None or df.empty or any(col not in df.columns for col in required):
+        return None
+    frame = df.copy()
+    dates = pd.to_datetime(frame["date"], errors="coerce", utc=True)
+    frame["date"] = dates.dt.tz_convert("Asia/Shanghai").dt.strftime("%Y-%m-%d")
+    for col in required[1:]:
+        frame[col] = pd.to_numeric(frame[col], errors="coerce")
+    numbers = frame[required[1:]]
+    valid = numbers.notna().all(axis=1) & np.isfinite(numbers).all(axis=1)
+    valid &= (frame[["open", "close", "high", "low"]] > 0).all(axis=1)
+    valid &= frame["volume"] >= 0
+    valid &= frame["high"] >= frame[["open", "close", "low"]].max(axis=1)
+    valid &= frame["low"] <= frame[["open", "close", "high"]].min(axis=1)
+    valid &= frame["date"].notna() & (frame["date"] <= end)
+    frame = frame.loc[valid].drop_duplicates("date", keep="last").sort_values("date").reset_index(drop=True)
+    return frame if not frame.empty else None
+
+
+def _daily_result(df: pd.DataFrame, source: str, days: int, now: datetime) -> pd.DataFrame:
+    result = df.tail(days).copy()
+    as_of = str(result["date"].iloc[-1])
+    age_days = (now.date() - pd.Timestamp(as_of).date()).days
+    result.attrs.update({"source": source, "as_of": as_of, "fetched_at": now.isoformat(),
+                         "age_calendar_days": age_days, "is_realtime": False,
+                         "freshness": "stale" if age_days > 7 else "recent",
+                         "latest_session_verified": False,
+                         "warnings": ["未核验交易所完整交易日历；数据日期不等于获取时间。"]})
+    return result
 
 
 def _fetch_ohlcv_from_qlib(

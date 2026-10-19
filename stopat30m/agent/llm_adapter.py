@@ -10,10 +10,11 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
+
+from stopat30m.analysis.llm_transport import llm_request_options, safe_llm_error
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,7 @@ class LLMToolAdapter:
         self._timeout = cfg.get("timeout", 90)
         self._num_retries = cfg.get("num_retries", 2)
 
-        self._extra_params: Dict[str, Any] = {}
+        self._extra_params = llm_request_options(cfg)
         self._setup(cfg)
 
     def _setup(self, cfg: dict) -> None:
@@ -65,51 +66,6 @@ class LLMToolAdapter:
         except ImportError:
             logger.warning("litellm not installed — agent LLM calls will fail")
             return
-
-        key_env_map = {
-            "deepseek_api_key": "DEEPSEEK_API_KEY",
-            "openai_api_key": "OPENAI_API_KEY",
-            "gemini_api_key": "GEMINI_API_KEY",
-            "anthropic_api_key": "ANTHROPIC_API_KEY",
-            "aihubmix_api_key": "AIHUBMIX_KEY",
-        }
-        base_url_env_map = {
-            "deepseek_base_url": "DEEPSEEK_BASE_URL",
-            "openai_base_url": "OPENAI_BASE_URL",
-            "ollama_api_base": "OLLAMA_API_BASE",
-        }
-
-        for cfg_key, env_var in key_env_map.items():
-            value = str(cfg.get(cfg_key, "")).strip()
-            if value and not os.environ.get(env_var):
-                os.environ[env_var] = value
-
-        for cfg_key, env_var in base_url_env_map.items():
-            value = str(cfg.get(cfg_key, "")).strip()
-            if value and not os.environ.get(env_var):
-                os.environ[env_var] = value
-
-        model = self._model
-        aihubmix_key = str(cfg.get("aihubmix_api_key", "")).strip()
-        if aihubmix_key and self._is_openai_compat(model):
-            if not os.environ.get("OPENAI_API_KEY"):
-                os.environ["OPENAI_API_KEY"] = aihubmix_key
-            self._extra_params["api_base"] = "https://aihubmix.com/v1"
-        elif model.startswith("deepseek/"):
-            base = str(cfg.get("deepseek_base_url", "")).strip()
-            if base:
-                self._extra_params["api_base"] = base
-        elif self._is_openai_compat(model):
-            base = str(cfg.get("openai_base_url", "")).strip()
-            if base:
-                self._extra_params["api_base"] = base
-        elif model.startswith("ollama/"):
-            base = str(cfg.get("ollama_api_base", "")).strip() or "http://localhost:11434"
-            self._extra_params["api_base"] = base
-
-    @staticmethod
-    def _is_openai_compat(model: str) -> bool:
-        return model.startswith("openai/") or "/" not in model
 
     _TRANSIENT_PATTERNS = (
         "Expecting value: line 1 column 1",
@@ -161,17 +117,17 @@ class LLMToolAdapter:
                 is_transient = any(pat in err_str for pat in self._TRANSIENT_PATTERNS)
                 if is_transient and attempt < self._MAX_TRANSIENT_RETRIES:
                     logger.warning(
-                        "LLM transient error (attempt %d/%d), retrying in %.1fs: %s",
+                        "LLM transient error (attempt %d/%d), retrying in %.1fs; type=%s",
                         attempt + 1, self._MAX_TRANSIENT_RETRIES + 1,
-                        self._TRANSIENT_RETRY_DELAY, err_str[:200],
+                        self._TRANSIENT_RETRY_DELAY, type(e).__name__,
                     )
                     time.sleep(self._TRANSIENT_RETRY_DELAY)
                     continue
-                logger.warning("LLM call failed: %s", e)
-                return LLMResponse(content=str(e), provider="error")
+                logger.warning("LLM call failed; type=%s", type(e).__name__)
+                return LLMResponse(content=safe_llm_error(e), provider="error")
 
         if response is None:
-            msg_str = str(last_error) if last_error else "No response"
+            msg_str = safe_llm_error(last_error) if last_error else "AI服务没有返回有效响应。"
             return LLMResponse(content=msg_str, provider="error")
 
         choice = response.choices[0]

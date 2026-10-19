@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from loguru import logger
 
 from .broker.base import AbstractBroker
+from .broker.paper import PaperBroker
 from .models import Order, OrderDirection, OrderStatus, OrderType
 from .rebalancer import RebalancePlan
 from .risk import RiskManager
@@ -79,10 +80,25 @@ def execute_plan(
     if plan.trades.empty:
         return report
 
-    # Push plan prices into broker so MARKET orders can resolve
-    plan_prices = _extract_prices(plan.trades)
-    if plan_prices:
-        broker.update_prices(plan_prices)
+    paper_mode = isinstance(broker, PaperBroker)
+    execution_prices: dict[str, float] = {}
+    if paper_mode:
+        from stopat30m.data.realtime import fetch_spot_quotes
+        instruments = sorted({str(row.get("instrument", "")).strip().upper()
+                              for _, row in plan.trades.iterrows()
+                              if row.get("direction") in {"BUY", "SELL"} and str(row.get("instrument", "")).strip()}
+                             | set(broker.get_positions()))
+        try:
+            quotes = fetch_spot_quotes(instruments, ttl=0)
+        except Exception as exc:
+            logger.warning(f"Execution quotes unavailable: {exc}")
+            quotes = {}
+        execution_prices = broker.update_quotes(quotes, instruments=instruments)
+    else:
+        # Historical brokers receive their prices from the historical plan.
+        plan_prices = _extract_prices(plan.trades)
+        if plan_prices:
+            broker.update_prices(plan_prices)
 
     sells = plan.sells
     buys = plan.buys if not sells_only else sells.iloc[0:0]  # empty DF
@@ -91,6 +107,10 @@ def execute_plan(
         order = _row_to_order(row, order_type=order_type)
         if order is None:
             continue
+        if paper_mode and order.instrument not in execution_prices:
+            result = broker.reject_order(order, "缺少带有效源时间的实时行情，拒绝使用计划价或旧持仓价成交")
+            _classify(result, report)
+            continue
         result = broker.submit_order(order)
         _classify(result, report)
 
@@ -98,7 +118,15 @@ def execute_plan(
         order = _row_to_order(row, order_type=order_type)
         if order is None:
             continue
+        if paper_mode and order.instrument not in execution_prices:
+            result = broker.reject_order(order, "缺少带有效源时间的实时行情，拒绝使用计划价或旧持仓价成交")
+            _classify(result, report)
+            continue
         if risk_manager is not None:
+            if paper_mode and any(inst not in execution_prices for inst in broker.get_positions()):
+                result = broker.reject_order(order, "持仓缺少有效实时行情，无法核验账户风险")
+                _classify(result, report)
+                continue
             pos_values = {
                 inst: p.market_value
                 for inst, p in broker.get_positions().items()
@@ -107,14 +135,17 @@ def execute_plan(
                 symbol=order.instrument,
                 direction=order.direction.value,
                 volume=order.quantity,
-                price=float(row.get("price", 0)),
+                price=execution_prices[order.instrument] if paper_mode else float(row.get("price", 0)),
                 current_equity=broker.get_account().equity,
                 current_positions=pos_values,
                 current_date=trade_date,
             )
             if not approved:
-                order.status = OrderStatus.REJECTED
-                order.reject_reason = f"风控拒绝: {reason}"
+                if paper_mode:
+                    order = broker.reject_order(order, f"风控拒绝: {reason}")
+                else:
+                    order.status = OrderStatus.REJECTED
+                    order.reject_reason = f"风控拒绝: {reason}"
                 report.rejected.append(order)
                 logger.warning(f"Risk rejected {order.instrument}: {reason}")
                 continue

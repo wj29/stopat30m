@@ -25,7 +25,8 @@ api.interceptors.response.use(
         window.location.href = '/login';
       }
     }
-    console.error('API error:', error.response?.data || error.message);
+    // Server validation bodies may describe sensitive fields. Individual
+    // screens render safe messages; do not copy response bodies to the console.
     return Promise.reject(error);
   },
 );

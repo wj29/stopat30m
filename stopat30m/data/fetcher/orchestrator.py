@@ -21,7 +21,7 @@ from .meta import (
     build_meta_from_scan,
     fetch_stock_listing_info,
 )
-from .qlib_dumper import QlibDumper, append_binary, read_bin_file, write_fresh_binary
+from .qlib_dumper import QlibDumper, append_binary, read_bin_file, write_fresh_binary, write_current_index_snapshots
 
 
 # ---------------------------------------------------------------------------
@@ -926,13 +926,7 @@ def append_with_source(
     lines = [f"{sym}\t{s}\t{e}" for sym, (s, e) in sorted(instruments.items())]
     (inst_dir / "all.txt").write_text("\n".join(lines) + "\n")
 
-    for filename, raw_codes in [("csi300.txt", csi300), ("csi500.txt", csi500)]:
-        if not raw_codes:
-            continue
-        qlib_codes = {to_qlib_symbol(c) for c in raw_codes}
-        subset = [f"{sym}\t{s}\t{e}" for sym, (s, e) in sorted(instruments.items()) if sym in qlib_codes]
-        if subset:
-            (inst_dir / filename).write_text("\n".join(subset) + "\n")
+    write_current_index_snapshots(target, csi300, csi500, source=f"{primary.name}.current_components")
 
     # Safety net: rebuild instruments and sync meta from binary files to
     # catch any desync caused by subprocesses writing features without

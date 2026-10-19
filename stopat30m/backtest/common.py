@@ -2,20 +2,30 @@ from __future__ import annotations
 
 import json
 import pickle
+import re
+import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import pandas as pd
 
 from stopat30m.config import get
 from stopat30m.data.provider import init_qlib
-from stopat30m.factors.handler import AlphaExtendedHandler
+if TYPE_CHECKING:
+    from stopat30m.factors.handler import AlphaExtendedHandler
 
 from stopat30m.config import PROJECT_ROOT
 
 BACKTEST_ROOT = PROJECT_ROOT / "output" / "backtests"
 PREDICTION_ROOT = PROJECT_ROOT / "output" / "predictions"
+
+BACKTEST_LIMITATIONS = [
+    "研究回测，不是券商级成交仿真；无法保证实际成交与历史撮合一致。",
+    "本地行情可能使用复权价格；账户回测尚未完整处理分红、除权与持仓股数变化。",
+    "股票池可能使用当前指数成分回溯历史，存在幸存者偏差；未证明历史成分完整。",
+    "不同来源的成交量单位与复权基准尚未全面核验，流动性限制结果仅供研究。",
+]
 
 
 def now_tag() -> str:
@@ -23,8 +33,9 @@ def now_tag() -> str:
 
 
 def create_run_dir(kind: str, tag: str = "") -> Path:
-    suffix = f"_{tag}" if tag else ""
-    run_dir = BACKTEST_ROOT / kind / f"{now_tag()}{suffix}"
+    safe_tag = re.sub(r"[^\w.-]+", "_", tag)[:80]
+    suffix = f"_{safe_tag}" if safe_tag else ""
+    run_dir = BACKTEST_ROOT / kind / f"{now_tag()}_{uuid.uuid4().hex[:8]}{suffix}"
     run_dir.mkdir(parents=True, exist_ok=True)
     return run_dir
 
@@ -116,6 +127,7 @@ def load_model_predictions(
     test_only: bool = True,
     on_step: Any | None = None,
 ) -> tuple[pd.Series, pd.Series | None, AlphaExtendedHandler]:
+    from stopat30m.factors.handler import AlphaExtendedHandler
     if on_step:
         on_step("[1/5] Initializing Qlib...")
     init_qlib()

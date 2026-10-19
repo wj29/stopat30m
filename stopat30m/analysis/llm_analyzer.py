@@ -14,7 +14,6 @@ Architecture:
 from __future__ import annotations
 
 import json
-import os
 import time
 from typing import Any, Optional
 
@@ -23,6 +22,7 @@ from loguru import logger
 
 from stopat30m.config import get
 
+from .llm_transport import LLMTransportError, llm_request_options, safe_llm_error, status_code
 from .schemas import DashboardResult, LLMAnalysisResult
 from .trend_analyzer import TrendAnalysisResult
 
@@ -485,27 +485,6 @@ def build_user_prompt(
 
 
 # ---------------------------------------------------------------------------
-# Config key → environment variable mapping
-# ---------------------------------------------------------------------------
-
-_KEY_ENV_MAP = {
-    "deepseek_api_key": "DEEPSEEK_API_KEY",
-    "openai_api_key": "OPENAI_API_KEY",
-    "gemini_api_key": "GEMINI_API_KEY",
-    "anthropic_api_key": "ANTHROPIC_API_KEY",
-    "aihubmix_api_key": "AIHUBMIX_KEY",
-}
-
-_BASE_URL_ENV_MAP = {
-    "deepseek_base_url": "DEEPSEEK_BASE_URL",
-    "openai_base_url": "OPENAI_BASE_URL",
-    "ollama_api_base": "OLLAMA_API_BASE",
-}
-
-_AIHUBMIX_BASE = "https://aihubmix.com/v1"
-
-
-# ---------------------------------------------------------------------------
 # Integrity check (ported from DSA check_content_integrity)
 # ---------------------------------------------------------------------------
 
@@ -602,10 +581,8 @@ class LLMAnalyzer:
         self._integrity_retries = cfg.get("integrity_retries", 1)
         self._enabled = cfg.get("enabled", True)
 
-        self._extra_params: dict[str, Any] = {}
+        self._extra_params = llm_request_options(cfg)
         self._setup_litellm()
-        self._inject_keys(cfg)
-        self._resolve_base_urls(cfg)
 
     @staticmethod
     def _setup_litellm() -> None:
@@ -614,41 +591,6 @@ class LLMAnalyzer:
             litellm.drop_params = True
         except ImportError:
             pass
-
-    def _inject_keys(self, cfg: dict) -> None:
-        for cfg_key, env_var in _KEY_ENV_MAP.items():
-            value = str(cfg.get(cfg_key, "")).strip()
-            if value and not os.environ.get(env_var):
-                os.environ[env_var] = value
-        for cfg_key, env_var in _BASE_URL_ENV_MAP.items():
-            value = str(cfg.get(cfg_key, "")).strip()
-            if value and not os.environ.get(env_var):
-                os.environ[env_var] = value
-
-    def _resolve_base_urls(self, cfg: dict) -> None:
-        model = self._model
-        aihubmix_key = str(cfg.get("aihubmix_api_key", "")).strip()
-        if aihubmix_key and self._is_openai_compatible(model):
-            if not os.environ.get("OPENAI_API_KEY"):
-                os.environ["OPENAI_API_KEY"] = aihubmix_key
-            self._extra_params["api_base"] = _AIHUBMIX_BASE
-            logger.info(f"LLM: using AIHubMix proxy for {model}")
-            return
-        if model.startswith("deepseek/"):
-            base = str(cfg.get("deepseek_base_url", "")).strip()
-            if base:
-                self._extra_params["api_base"] = base
-        elif self._is_openai_compatible(model):
-            base = str(cfg.get("openai_base_url", "")).strip()
-            if base:
-                self._extra_params["api_base"] = base
-        elif model.startswith("ollama/"):
-            base = str(cfg.get("ollama_api_base", "")).strip() or "http://localhost:11434"
-            self._extra_params["api_base"] = base
-
-    @staticmethod
-    def _is_openai_compatible(model: str) -> bool:
-        return model.startswith("openai/") or "/" not in model
 
     _TRANSIENT_PATTERNS = (
         "Expecting value: line 1 column 1",
@@ -667,12 +609,12 @@ class LLMAnalyzer:
                 is_transient = any(pat in err_str for pat in self._TRANSIENT_PATTERNS)
                 if is_transient and attempt < max_retries:
                     logger.warning(
-                        "LLM transient error (attempt %d/%d), retrying: %s",
-                        attempt + 1, max_retries + 1, err_str[:200],
+                        "LLM transient error (attempt {}/{}), retrying; type={}",
+                        attempt + 1, max_retries + 1, type(e).__name__,
                     )
                     time.sleep(delay)
                     continue
-                raise
+                raise LLMTransportError(safe_llm_error(e), status_code(e)) from None
 
     @property
     def is_available(self) -> bool:
@@ -756,11 +698,12 @@ class LLMAnalyzer:
             return self._to_legacy_result(dashboard_result, raw_text, self._model)
 
         except Exception as e:
-            logger.warning(f"LLM analysis failed: {e}")
+            message = safe_llm_error(e)
+            logger.warning("LLM analysis failed; type={}", type(e).__name__)
             return LLMAnalysisResult(
-                summary=f"LLM分析失败: {e}",
+                summary=message,
                 model_used=self._model,
-                raw_response=str(e),
+                raw_response="",
             )
 
     def generate_text(

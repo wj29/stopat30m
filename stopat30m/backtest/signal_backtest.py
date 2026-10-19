@@ -8,6 +8,7 @@ import pandas as pd
 from loguru import logger
 
 from stopat30m.backtest.common import (
+    BACKTEST_LIMITATIONS,
     create_run_dir,
     fetch_benchmark_close,
     fetch_price_fields,
@@ -62,6 +63,12 @@ class SignalBacktestEngine:
         group_count: int = 10,
         benchmark: str = "SH000300",
     ) -> None:
+        if method != "top_k":
+            raise ValueError("Signal backtest currently supports top_k only; other portfolio methods are not implemented.")
+        if top_k < 1 or rebalance_freq < 1 or group_count < 2:
+            raise ValueError("top_k/rebalance_freq must be positive, group_count at least two.")
+        if horizons is not None and (not horizons or any(h < 1 for h in horizons)):
+            raise ValueError("Horizons must be positive trading-day counts.")
         self.top_k = top_k
         self.method = method
         self.rebalance_freq = rebalance_freq
@@ -245,7 +252,9 @@ class SignalBacktestEngine:
             col = f"ic_{horizon}d"
             rcol = f"rank_ic_{horizon}d"
             if col in daily_ic.columns:
-                summary_metrics[f"{col}_mean"] = _safe_round(pd.to_numeric(daily_ic[col], errors="coerce").dropna().mean())
+                valid_ic = pd.to_numeric(daily_ic[col], errors="coerce").dropna()
+                summary_metrics[f"{col}_mean"] = _safe_round(valid_ic.mean())
+                summary_metrics[f"{col}_observations"] = len(valid_ic)
             if rcol in daily_rank_ic.columns:
                 summary_metrics[f"{rcol}_mean"] = _safe_round(pd.to_numeric(daily_rank_ic[rcol], errors="coerce").dropna().mean())
 
@@ -257,7 +266,7 @@ class SignalBacktestEngine:
         if not bucket_returns.empty:
             pivot = bucket_returns.groupby("bucket")["mean_return"].mean()
             if not pivot.empty:
-                summary_metrics["top_bottom_spread"] = round(float(pivot.max() - pivot.min()), 6)
+                summary_metrics["top_bottom_spread"] = round(float(pivot.sort_index().iloc[-1] - pivot.sort_index().iloc[0]), 6)
 
         if not benchmark_close.empty:
             summary_metrics["benchmark_start"] = str(benchmark_close.index.min().date())
@@ -279,6 +288,7 @@ class SignalBacktestEngine:
             "test_end": str(dates[-1].date()),
             "instruments": len(instruments),
             "eval_horizon": self.eval_horizon,
+            "limitations": BACKTEST_LIMITATIONS + ["IC与持有期统计以信号日收盘价为基点，不等同于可成交收益。"],
         }
 
         return SignalBacktestResult(
@@ -296,10 +306,10 @@ class SignalBacktestEngine:
         )
 
 
-def _safe_round(value: Any, digits: int = 6) -> float:
+def _safe_round(value: Any, digits: int = 6) -> float | None:
     try:
         if pd.isna(value):
-            return 0.0
+            return None
         return round(float(value), digits)
     except Exception:
-        return 0.0
+        return None

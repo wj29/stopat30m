@@ -72,19 +72,21 @@ function ChatSessionsPanel() {
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 30;
 
-  const load = () => {
-    setLoading(true);
+  const [revision, setRevision] = useState(0);
+  const load = () => { setLoading(true); setRevision(value => value + 1); };
+  useEffect(() => {
+    let active = true;
     adminListChatSessions(PAGE_SIZE, page * PAGE_SIZE)
-      .then((d) => { setItems(d.items); setTotal(d.total); })
+      .then(d => { if (active) { setItems(d.items); setTotal(d.total); } })
       .catch(() => {})
-      .finally(() => setLoading(false));
-  };
-  useEffect(load, [page]);
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [page, revision]);
 
   const toggleSelect = (id: number) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   };
@@ -146,7 +148,7 @@ function ChatSessionsPanel() {
               ))}
             </tbody>
           </table>
-          <Pagination total={total} pageSize={PAGE_SIZE} page={page} onChange={setPage} />
+          <Pagination total={total} pageSize={PAGE_SIZE} page={page} onChange={next => { setPage(next); setLoading(true); setSelected(new Set()); }} />
         </>
       )}
     </section>
@@ -166,19 +168,21 @@ function AnalysisPanel() {
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 30;
 
-  const load = () => {
-    setLoading(true);
+  const [revision, setRevision] = useState(0);
+  const load = () => { setLoading(true); setRevision(value => value + 1); };
+  useEffect(() => {
+    let active = true;
     adminListAnalysisHistory(PAGE_SIZE, page * PAGE_SIZE)
-      .then((d) => { setItems(d.items); setTotal(d.total); })
+      .then(d => { if (active) { setItems(d.items); setTotal(d.total); } })
       .catch(() => {})
-      .finally(() => setLoading(false));
-  };
-  useEffect(load, [page]);
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [page, revision]);
 
   const toggleSelect = (id: number) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   };
@@ -252,7 +256,7 @@ function AnalysisPanel() {
               ))}
             </tbody>
           </table>
-          <Pagination total={total} pageSize={PAGE_SIZE} page={page} onChange={setPage} />
+          <Pagination total={total} pageSize={PAGE_SIZE} page={page} onChange={next => { setPage(next); setLoading(true); setSelected(new Set()); }} />
         </>
       )}
     </section>
@@ -269,19 +273,21 @@ function MarketReviewPanel() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const load = () => {
-    setLoading(true);
+  const [revision, setRevision] = useState(0);
+  const load = () => { setLoading(true); setRevision(value => value + 1); };
+  useEffect(() => {
+    let active = true;
     adminListMarketReviews()
-      .then(setItems)
+      .then(value => { if (active) setItems(value); })
       .catch(() => {})
-      .finally(() => setLoading(false));
-  };
-  useEffect(load, []);
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [revision]);
 
   const toggleSelect = (name: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      next.has(name) ? next.delete(name) : next.add(name);
+      if (next.has(name)) next.delete(name); else next.add(name);
       return next;
     });
   };
@@ -353,14 +359,16 @@ function LogsPanel() {
   const [loading, setLoading] = useState(true);
   const [clearing, setClearing] = useState(false);
 
-  const load = () => {
-    setLoading(true);
+  const [revision, setRevision] = useState(0);
+  const load = () => { setLoading(true); setRevision(value => value + 1); };
+  useEffect(() => {
+    let active = true;
     adminGetLogs(300)
-      .then(setLogs)
+      .then(value => { if (active) setLogs(value); })
       .catch(() => {})
-      .finally(() => setLoading(false));
-  };
-  useEffect(load, []);
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [revision]);
 
   const handleClear = async () => {
     if (!confirm('确认清空日志文件？')) return;

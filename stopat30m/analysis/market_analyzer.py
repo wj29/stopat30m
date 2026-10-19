@@ -599,13 +599,21 @@ Focus on index trend, liquidity, and sector rotation to shape the next-session t
                     logger.info(f"[大盘] 搜索 '{query}' 获取 {len(response.results)} 条结果")
             logger.info(f"[大盘] 共获取 {len(all_news)} 条市场新闻")
         except Exception as e:
-            logger.error(f"[大盘] 搜索市场新闻失败: {e}")
+            logger.error("[大盘] 搜索市场新闻失败，异常类型：{}", type(e).__name__)
         return all_news
 
     def generate_market_review(self, overview: MarketOverview, news: List) -> str:
+        def disclose_missing_news(report):
+            if news:
+                return report
+            warning = ("No verifiable news was retrieved. This report uses available market data only; "
+                       "missing news does not mean there were no events or risks."
+                       if self._get_review_language() == "en" else
+                       "新闻检索未取得可核实结果，本报告仅依据已取得的行情；未检索到新闻不代表没有事件或风险。")
+            return f"> {warning}\n\n{report}"
         if not self.analyzer or not self.analyzer.is_available:
             logger.warning("[大盘] AI分析器未配置或不可用，使用模板生成报告")
-            return self._generate_template_review(overview, news)
+            return disclose_missing_news(self._generate_template_review(overview, news))
 
         prompt = self._build_review_prompt(overview, news)
         logger.info("[大盘] 调用大模型生成复盘报告...")
@@ -613,9 +621,9 @@ Focus on index trend, liquidity, and sector rotation to shape the next-session t
 
         if review:
             logger.info("[大盘] 复盘报告生成成功，长度: %d 字符", len(review))
-            return self._inject_data_into_review(review, overview)
+            return disclose_missing_news(self._inject_data_into_review(review, overview))
         logger.warning("[大盘] 大模型返回为空，使用模板报告")
-        return self._generate_template_review(overview, news)
+        return disclose_missing_news(self._generate_template_review(overview, news))
 
     def _inject_data_into_review(self, review: str, overview: MarketOverview) -> str:
         stats_block = self._build_stats_block(overview)
@@ -759,10 +767,10 @@ Lagging: {bottom_sectors_text if bottom_sectors_text else "N/A"}"""
                 else ""
             )
             indices_placeholder = indices_text if indices_text else "No index data (API error)"
-            news_placeholder = news_text if news_text else "No relevant news"
+            news_placeholder = news_text if news_text else "News retrieval returned no verifiable evidence. Do not invent news, events, sources or their market impact. This does not mean there were no events or risks."
         else:
             indices_placeholder = indices_text if indices_text else "暂无指数数据（接口异常）"
-            news_placeholder = news_text if news_text else "暂无相关新闻"
+            news_placeholder = news_text if news_text else "新闻检索未取得可核实证据；不得编造新闻、事件、来源或事件影响。未检索到新闻不代表没有事件或风险。"
 
         if review_language == "en":
             report_title = self._get_review_title(overview.date).removeprefix("## ").strip()

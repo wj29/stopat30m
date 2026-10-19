@@ -8,11 +8,13 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 from stopat30m.storage.database import init_db
 
 from .v1.router import api_v1_router
+from .spa import SPAStaticFiles
 
 
 @asynccontextmanager
@@ -28,6 +30,15 @@ def create_app(static_dir: str | None = None) -> FastAPI:
         version="0.1.0",
         lifespan=lifespan,
     )
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_error_without_submitted_values(request, exc):
+        # The frontend needs field locations and messages, never submitted
+        # passwords, API keys or validation context copied from the request.
+        return JSONResponse(status_code=422, content={"detail": [
+            {key: error[key] for key in ("type", "loc", "msg") if key in error}
+            for error in exc.errors()
+        ]})
 
     from stopat30m.config import get
     cfg_origins = get("server", "cors_origins", "http://localhost:5173,http://localhost:3000")
@@ -47,7 +58,7 @@ def create_app(static_dir: str | None = None) -> FastAPI:
     # Serve React build if available (production mode)
     spa_dir = Path(static_dir) if static_dir else Path(__file__).parent.parent / "web" / "frontend" / "dist"
     if spa_dir.is_dir() and (spa_dir / "index.html").exists():
-        app.mount("/", StaticFiles(directory=str(spa_dir), html=True), name="spa")
+        app.mount("/", SPAStaticFiles(directory=str(spa_dir), html=True), name="spa")
 
     return app
 

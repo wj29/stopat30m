@@ -1,178 +1,194 @@
-"""Trading center API: positions, manual trades, rebalancing."""
+"""Personal account, cash movements and manually recorded executions."""
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Any
+import math
+from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, ConfigDict, Field, StrictInt
 from sqlalchemy.orm import Session
 
 from stopat30m.api.deps import get_db_session
 from stopat30m.auth.deps import get_current_user
-from stopat30m.data.normalize import bare_code, normalize_instrument
-from stopat30m.data.realtime import fetch_spot_prices, fetch_stock_names
-from stopat30m.storage.models import TradeRecord, User
+from stopat30m.storage.models import PortfolioCashFlow, PortfolioExecution, TradeRecord, User
+from stopat30m.trading import portfolio
 
 router = APIRouter(prefix="/trading")
 
 
-class ManualTradeRequest(BaseModel):
-    instrument: str
-    direction: str = Field(..., pattern="^(BUY|SELL)$")
-    quantity: int = Field(..., gt=0)
-    price: float = Field(..., gt=0)
-    note: str = ""
+class RequestBase(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
+    idempotency_key: str = Field(..., min_length=1, max_length=100)
 
 
-class RebalanceRequest(BaseModel):
-    signal_file: str | None = None
-    use_paper: bool = True
+class InitializeRequest(RequestBase):
+    initial_capital: float = Field(..., ge=0, le=1e12)
+    name: str = Field("个人账户", min_length=1, max_length=80)
+    opened_date: str | None = None
 
 
-# -- Positions --
+class CashFlowRequest(RequestBase):
+    direction: Literal["DEPOSIT", "WITHDRAW"]
+    amount: float = Field(..., gt=0, le=1e12)
+    effective_date: str | None = None
+    note: str = Field("", max_length=500)
+
+
+class ManualTradeRequest(RequestBase):
+    instrument: str = Field(..., min_length=1, max_length=20)
+    direction: Literal["BUY", "SELL"]
+    quantity: StrictInt = Field(..., gt=0, le=1_000_000_000)
+    price: float = Field(..., gt=0, le=1e6)
+    trade_date: str | None = None
+    commission: float | None = Field(None, ge=0, le=1e12)
+    stamp_tax: float | None = Field(None, ge=0, le=1e12)
+    transfer_fee: float | None = Field(None, ge=0, le=1e12)
+    note: str = Field("", max_length=500)
+
+
+def _invoke(fn, *args, **kwargs):
+    try:
+        return fn(*args, **kwargs)
+    except portfolio.PortfolioError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+
+def _legacy_number(value):
+    return value if value is not None and math.isfinite(value) else None
+
+
+def _account_response(db: Session, user: User) -> dict:
+    account = portfolio.get_account(db, user.id, required=False)
+    counts = portfolio.legacy_counts(db, user.id, user.role == "admin")
+    if account is None:
+        return {"initialized": False, "account": None, **counts}
+    positions = portfolio.holdings(db, account.id)
+    instruments = [inst for inst, pos in positions.items() if pos.quantity > 0]
+    quotes = {}
+    if instruments:
+        from stopat30m.data.realtime import fetch_spot_quotes
+        try:
+            quotes = fetch_spot_quotes(instruments)
+        except Exception:
+            # Quote failure must leave monetary facts readable and unknown
+            # valuations explicitly null. It must not imply a zero share price.
+            quotes = {}
+    summary, _ = portfolio.valuation(db, account, quotes)
+    return {"initialized": True, "account": summary, **counts}
+
+
+@router.get("/account")
+def account_summary(user: User = Depends(get_current_user), db: Session = Depends(get_db_session)) -> dict:
+    return _invoke(_account_response, db, user)
+
+
+@router.post("/account/initialize")
+def initialize_account(req: InitializeRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db_session)) -> dict:
+    _, replayed = _invoke(portfolio.initialize_account, db, user.id, **req.model_dump())
+    # Confirm durability before sending a financial receipt. A yield dependency
+    # may otherwise commit only after the response has already been emitted.
+    db.commit()
+    return {**_account_response(db, user), "replayed": replayed}
+
+
+@router.post("/cash-flows")
+def record_cash_flow(req: CashFlowRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db_session)) -> dict:
+    row, replayed = _invoke(portfolio.record_cash_flow, db, user.id, **req.model_dump())
+    db.commit()
+    return portfolio.cash_flow_dict(row, replayed)
+
+
+@router.get("/cash-flows")
+def get_cash_flows(
+    limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0),
+    user: User = Depends(get_current_user), db: Session = Depends(get_db_session),
+) -> dict:
+    account = portfolio.get_account(db, user.id, required=False)
+    if account is None:
+        return {"items": [], "total": 0, "limit": limit, "offset": offset}
+    query = db.query(PortfolioCashFlow).filter_by(account_id=account.id)
+    total = query.count()
+    rows = query.order_by(PortfolioCashFlow.id.desc()).offset(offset).limit(limit).all()
+    return {"items": [portfolio.cash_flow_dict(row) for row in rows], "total": total, "limit": limit, "offset": offset}
+
 
 @router.get("/positions")
-def get_positions(
-    show_all: bool = False,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db_session),
-) -> dict:
-    """Get current portfolio positions derived from trade records."""
-    query = db.query(TradeRecord).order_by(TradeRecord.trade_date)
-    if not (show_all and user.role == "admin"):
-        query = query.filter(
-            (TradeRecord.user_id == user.id) | (TradeRecord.user_id == None)  # noqa: E711
-        )
-    trades = query.all()
-    positions: dict[str, dict[str, Any]] = {}
+def get_positions(user: User = Depends(get_current_user), db: Session = Depends(get_db_session)) -> dict:
+    account = portfolio.get_account(db, user.id, required=False)
+    counts = portfolio.legacy_counts(db, user.id, user.role == "admin")
+    if account is None:
+        return {"initialized": False, "positions": [], "total_value": None,
+                "total_cost": 0, "total_pnl": None, "valuation_complete": False, **counts}
+    positions = portfolio.holdings(db, account.id)
+    instruments = [inst for inst, pos in positions.items() if pos.quantity > 0]
+    quotes = {}
+    if instruments:
+        from stopat30m.data.realtime import fetch_spot_quotes
+        try:
+            quotes = fetch_spot_quotes(instruments)
+        except Exception:
+            quotes = {}
+    summary, rows = _invoke(portfolio.valuation, db, account, quotes)
+    return {"initialized": True, "positions": rows, "total_value": summary["market_value"],
+            "total_cost": summary["total_cost"], "total_pnl": summary["unrealized_pnl"],
+            "valuation_complete": summary["valuation_complete"], "as_of": summary["as_of"],
+            "valuation_warnings": summary["valuation_warnings"], **counts}
 
-    for t in trades:
-        inst = normalize_instrument(t.instrument)
-        if inst not in positions:
-            positions[inst] = {"quantity": 0, "total_cost": 0.0, "realized_pnl": 0.0}
-
-        pos = positions[inst]
-        if t.direction == "BUY":
-            pos["total_cost"] += t.amount + (t.commission or 0) + (t.stamp_tax or 0) + (t.transfer_fee or 0)
-            pos["quantity"] += t.quantity
-        elif t.direction == "SELL":
-            if pos["quantity"] > 0:
-                avg_cost = pos["total_cost"] / pos["quantity"]
-                sell_cost = t.quantity * avg_cost
-                pos["total_cost"] -= sell_cost
-                pos["realized_pnl"] += t.amount - sell_cost - (t.commission or 0) - (t.stamp_tax or 0)
-            pos["quantity"] -= t.quantity
-
-    active = {k: v for k, v in positions.items() if v["quantity"] > 0}
-    if not active:
-        return {"positions": [], "total_value": 0, "total_cost": 0}
-
-    instruments = list(active.keys())
-    prices = fetch_spot_prices(instruments)
-    names = fetch_stock_names(instruments)
-
-    result = []
-    total_value = 0.0
-    total_cost = 0.0
-    for inst, pos in active.items():
-        price = prices.get(inst, 0)
-        market_value = pos["quantity"] * price
-        avg_cost = pos["total_cost"] / pos["quantity"] if pos["quantity"] > 0 else 0
-        pnl = market_value - pos["total_cost"]
-        pnl_pct = pnl / pos["total_cost"] * 100 if pos["total_cost"] > 0 else 0
-
-        result.append({
-            "instrument": inst,
-            "code": bare_code(inst),
-            "name": names.get(inst, ""),
-            "quantity": pos["quantity"],
-            "avg_cost": round(avg_cost, 4),
-            "current_price": round(price, 4),
-            "market_value": round(market_value, 2),
-            "cost": round(pos["total_cost"], 2),
-            "pnl": round(pnl, 2),
-            "pnl_pct": round(pnl_pct, 2),
-        })
-        total_value += market_value
-        total_cost += pos["total_cost"]
-
-    return {
-        "positions": result,
-        "total_value": round(total_value, 2),
-        "total_cost": round(total_cost, 2),
-        "total_pnl": round(total_value - total_cost, 2),
-    }
-
-
-# -- Manual trades --
 
 @router.post("/trade")
 def submit_trade(req: ManualTradeRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db_session)) -> dict:
-    """Record a manual trade."""
-    inst = normalize_instrument(req.instrument)
-    amount = req.quantity * req.price
+    row, replayed = _invoke(portfolio.record_trade, db, user.id, **req.model_dump())
+    db.commit()
+    return portfolio.execution_dict(row, replayed)
 
-    from stopat30m.trading.rules import calculate_fees
-    from stopat30m.trading.models import OrderDirection
-
-    direction = OrderDirection.BUY if req.direction == "BUY" else OrderDirection.SELL
-    fees = calculate_fees(direction, req.quantity, req.price)
-
-    record = TradeRecord(
-        trade_date=datetime.utcnow(),
-        instrument=inst,
-        direction=req.direction,
-        quantity=req.quantity,
-        price=req.price,
-        amount=round(amount, 2),
-        commission=fees.commission,
-        stamp_tax=fees.stamp_tax,
-        transfer_fee=fees.transfer_fee,
-        total_cost=round(amount + fees.commission + fees.stamp_tax + fees.transfer_fee, 2),
-        note=req.note,
-        source="manual_api",
-        user_id=user.id,
-    )
-    db.add(record)
-    db.flush()
-
-    return {"id": record.id, "instrument": inst, "direction": req.direction, "quantity": req.quantity, "price": req.price}
-
-
-# -- Trade history --
 
 @router.get("/trades")
 def get_trades(
-    limit: int = 50,
-    offset: int = 0,
-    instrument: str | None = None,
-    show_all: bool = False,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db_session),
-) -> list[dict]:
-    """List trade records."""
-    query = db.query(TradeRecord).order_by(TradeRecord.trade_date.desc())
-    if not (show_all and user.role == "admin"):
-        query = query.filter(
-            (TradeRecord.user_id == user.id) | (TradeRecord.user_id == None)  # noqa: E711
-        )
+    limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0), instrument: str | None = None,
+    user: User = Depends(get_current_user), db: Session = Depends(get_db_session),
+) -> dict:
+    account = portfolio.get_account(db, user.id, required=False)
+    if account is None:
+        return {"items": [], "total": 0, "limit": limit, "offset": offset}
+    query = db.query(PortfolioExecution).filter_by(account_id=account.id)
     if instrument:
-        query = query.filter(TradeRecord.instrument == normalize_instrument(instrument))
-    records = query.offset(offset).limit(limit).all()
-    return [
-        {
-            "id": r.id,
-            "trade_date": r.trade_date.isoformat() if r.trade_date else "",
-            "instrument": r.instrument,
-            "direction": r.direction,
-            "quantity": r.quantity,
-            "price": r.price,
-            "amount": r.amount,
-            "commission": r.commission,
-            "note": r.note,
-            "source": r.source,
-        }
-        for r in records
-    ]
+        query = query.filter_by(instrument=_invoke(portfolio._instrument, instrument))
+    total = query.count()
+    rows = query.order_by(PortfolioExecution.id.desc()).offset(offset).limit(limit).all()
+    return {"items": [portfolio.execution_dict(row) for row in rows], "total": total, "limit": limit, "offset": offset}
+
+
+@router.get("/legacy-trades")
+def get_legacy_trades(
+    limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0),
+    include_unassigned: bool = False, user: User = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> dict:
+    if include_unassigned and user.role != "admin":
+        raise HTTPException(status_code=403, detail="只有管理员可以查看无归属历史流水")
+    query = db.query(TradeRecord)
+    predicate = TradeRecord.user_id == user.id
+    if include_unassigned:
+        predicate = predicate | TradeRecord.user_id.is_(None)
+    query = query.filter(predicate)
+    total = query.count()
+    rows = query.order_by(TradeRecord.trade_date.desc(), TradeRecord.id.desc()).offset(offset).limit(limit).all()
+    items = []
+    for row in rows:
+        fees = [row.commission, row.stamp_tax, row.transfer_fee]
+        total_fee = round(sum(fees), 2) if all(value is not None and math.isfinite(value) and value >= 0 for value in fees) else None
+        valid_amount = row.amount is not None and math.isfinite(row.amount) and row.amount > 0
+        net_amount = None
+        if valid_amount and total_fee is not None and row.direction in {"BUY", "SELL"}:
+            net_amount = round(-(row.amount + total_fee) if row.direction == "BUY" else row.amount - total_fee, 2)
+        items.append({
+            "id": row.id, "trade_date": row.trade_date.isoformat() if row.trade_date else None,
+            "instrument": row.instrument, "direction": row.direction, "quantity": row.quantity,
+            "price": _legacy_number(row.price), "amount": _legacy_number(row.amount),
+            "commission": _legacy_number(row.commission),
+            "stamp_tax": _legacy_number(row.stamp_tax), "transfer_fee": _legacy_number(row.transfer_fee),
+            "total_fee": total_fee, "net_amount": net_amount,
+            "note": row.note, "source": row.source, "legacy": True, "unassigned": row.user_id is None,
+        })
+    return {"items": items, "total": total, "limit": limit, "offset": offset}

@@ -1,0 +1,50 @@
+{
+  "recorded_on": "2026-10-19",
+  "protocol": "m2_etf_protocol.json",
+  "no_final_oos_performance_used_to_change_rules": true,
+  "incidents": [
+    {
+      "source": "baostock 0.9.4",
+      "request": "2013-01-01 to 2025-12-31",
+      "problem": "Large result get_data() pagination calls removed pandas.DataFrame.append().",
+      "action": "Read public fields/next/get_row_data cursor, validate every page and final error_code; no pandas monkeypatch."
+    },
+    {
+      "source": "baostock ETF history",
+      "request": "adjustflag=1 (hfq), 2013-01-01 to 2025-12-31",
+      "observations": {
+        "SH510500": {
+          "rows": 3112,
+          "returned_flag_3": 2714,
+          "returned_flag_1": 398
+        },
+        "SZ159915": {
+          "rows": 3157,
+          "returned_flag_3": 3157
+        }
+      },
+      "problem": "Requested adjusted history contains rows labelled unadjusted. It cannot yet establish the declared corporate-action-adjusted series.",
+      "action": "Strict download validation rejected the artifact before any OOS performance calculation. Investigate source data/corporate-action coverage or use an explicitly declared alternative provider; do not silently relabel raw prices as adjusted."
+    },
+    {
+      "source": "Eastmoney public historical-price endpoint",
+      "request": "One SH510500 raw-price connectivity probe, 2015-04-08 to 2015-04-21",
+      "observations": {
+        "request_executed": true,
+        "result": "ConnectionError: RemoteDisconnected (remote end closed connection without response)",
+        "http_status_received": false,
+        "http_429_observed": false
+      },
+      "problem": "This client did not receive an HTTP response. A single connection failure cannot establish rate limiting or a provider-wide outage.",
+      "action": "Keep the probe separate from the unexecuted full download. Use bounded transient retries, a fixed official endpoint and persistent low-frequency request state; do not report a usable snapshot or OOS performance."
+    }
+  ],
+  "online_validation_status": {
+    "status": "blocked_auto_approval_service",
+    "explicit_user_authorization_received": true,
+    "unexecuted_action": "Eastmoney full raw/HFQ download under m2_etf_eastmoney_protocol.json",
+    "reason": "Automatic approval review capacity error and repeated deadline timeouts; no unsafe determination.",
+    "final_oos_report_created": false,
+    "strategy_performance_assessed": false
+  }
+}

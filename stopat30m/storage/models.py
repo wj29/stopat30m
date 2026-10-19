@@ -8,13 +8,17 @@ from sqlalchemy import (
     JSON,
     Boolean,
     Column,
+    CheckConstraint,
+    Date,
     DateTime,
     Float,
     ForeignKey,
     Index,
     Integer,
+    Numeric,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import DeclarativeBase
 
@@ -202,6 +206,77 @@ class TradeRecord(Base):
     user_id = Column(Integer, nullable=True, index=True)
 
 
+class PortfolioAccount(Base):
+    """Personal, cash-only account. Legacy trade_records stay separate."""
+
+    __tablename__ = "portfolio_accounts"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
+    name = Column(String(80), nullable=False, default="个人账户")
+    currency = Column(String(3), nullable=False, default="CNY")
+    opened_date = Column(Date, nullable=False)
+    last_event_date = Column(Date, nullable=False)
+    initial_capital = Column(Numeric(20, 2), nullable=False)
+    cash = Column(Numeric(20, 2), nullable=False)
+    net_deposits = Column(Numeric(20, 2), nullable=False)
+    initialization_key = Column(String(100), nullable=False)
+    initialization_payload = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    __table_args__ = (CheckConstraint("cash >= 0", name="ck_portfolio_cash_nonnegative"),)
+
+
+class PortfolioCashFlow(Base):
+    """External cash movements, distinct from trading gains and losses."""
+
+    __tablename__ = "portfolio_cash_flows"
+    id = Column(Integer, primary_key=True)
+    account_id = Column(Integer, ForeignKey("portfolio_accounts.id"), nullable=False, index=True)
+    direction = Column(String(10), nullable=False)
+    amount = Column(Numeric(20, 2), nullable=False)
+    effective_date = Column(Date, nullable=False)
+    cash_after = Column(Numeric(20, 2), nullable=False)
+    note = Column(String(500), nullable=False, default="")
+    idempotency_key = Column(String(100), nullable=False)
+    request_payload = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    __table_args__ = (
+        UniqueConstraint("account_id", "idempotency_key", name="uq_portfolio_cash_request"),
+        CheckConstraint("amount >= 0", name="ck_portfolio_cash_amount"),
+        CheckConstraint("direction IN ('INITIAL', 'DEPOSIT', 'WITHDRAW')", name="ck_portfolio_cash_direction"),
+    )
+
+
+class PortfolioExecution(Base):
+    """Immutable execution facts; holdings and P&L are rebuilt from these."""
+
+    __tablename__ = "portfolio_executions"
+    id = Column(Integer, primary_key=True)
+    account_id = Column(Integer, ForeignKey("portfolio_accounts.id"), nullable=False, index=True)
+    trade_date = Column(Date, nullable=False, index=True)
+    instrument = Column(String(10), nullable=False, index=True)
+    direction = Column(String(4), nullable=False)
+    quantity = Column(Integer, nullable=False)
+    price = Column(Numeric(20, 4), nullable=False)
+    amount = Column(Numeric(20, 2), nullable=False)
+    commission = Column(Numeric(20, 2), nullable=False)
+    stamp_tax = Column(Numeric(20, 2), nullable=False)
+    transfer_fee = Column(Numeric(20, 2), nullable=False)
+    net_amount = Column(Numeric(20, 2), nullable=False)
+    realized_pnl = Column(Numeric(20, 2), nullable=False, default=0)
+    cash_after = Column(Numeric(20, 2), nullable=False)
+    note = Column(String(500), nullable=False, default="")
+    source = Column(String(30), nullable=False, default="manual_record")
+    idempotency_key = Column(String(100), nullable=False)
+    request_payload = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    __table_args__ = (
+        UniqueConstraint("account_id", "idempotency_key", name="uq_portfolio_execution_request"),
+        CheckConstraint("quantity > 0 AND price > 0 AND amount > 0", name="ck_portfolio_execution_positive"),
+        CheckConstraint("commission >= 0 AND stamp_tax >= 0 AND transfer_fee >= 0", name="ck_portfolio_execution_fees"),
+        CheckConstraint("direction IN ('BUY', 'SELL')", name="ck_portfolio_execution_direction"),
+    )
+
+
 class BacktestRun(Base):
     """Backtest run summary (replaces JSON report files)."""
 
@@ -242,4 +317,43 @@ class SignalHistory(Base):
 
     __table_args__ = (
         Index("ix_signal_date_inst", "signal_date", "instrument"),
+    )
+
+
+class PortfolioNav(Base):
+    """Latest observed valuation per Shanghai day, never a reconstructed close."""
+
+    __tablename__ = "portfolio_nav"
+    id = Column(Integer, primary_key=True)
+    account_id = Column(Integer, ForeignKey("portfolio_accounts.id"), nullable=False, index=True)
+    snapshot_date = Column(Date, nullable=False)
+    recorded_at = Column(String(40), nullable=False)
+    revision = Column(Integer, nullable=False, default=1)
+    ledger_version = Column(String(64), nullable=False)
+    cash = Column(Numeric(20, 2), nullable=False)
+    market_value = Column(Numeric(20, 2), nullable=False)
+    equity = Column(Numeric(20, 2), nullable=False)
+    net_deposits = Column(Numeric(20, 2), nullable=False)
+    realized_pnl = Column(Numeric(20, 2), nullable=False)
+    unrealized_pnl = Column(Numeric(20, 2), nullable=False)
+    total_fees = Column(Numeric(20, 2), nullable=False)
+    total_pnl = Column(Numeric(20, 2), nullable=False)
+    facts = Column(Text, nullable=False)
+    __table_args__ = (
+        UniqueConstraint("account_id", "snapshot_date", name="uq_portfolio_nav_day"),
+        CheckConstraint("revision > 0 AND cash >= 0 AND market_value >= 0", name="ck_portfolio_nav_values"),
+    )
+
+
+class PortfolioNavReceipt(Base):
+    """Immutable NAV receipts keep old retry keys valid after a daily upsert."""
+
+    __tablename__ = "portfolio_nav_receipts"
+    id = Column(Integer, primary_key=True)
+    account_id = Column(Integer, ForeignKey("portfolio_accounts.id"), nullable=False, index=True)
+    nav_id = Column(Integer, ForeignKey("portfolio_nav.id"), nullable=False)
+    idempotency_key = Column(String(100), nullable=False)
+    receipt = Column(Text, nullable=False)
+    __table_args__ = (
+        UniqueConstraint("account_id", "idempotency_key", name="uq_portfolio_nav_request"),
     )

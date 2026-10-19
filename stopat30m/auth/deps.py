@@ -37,7 +37,12 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user_id = int(payload.get("sub", 0))
+    try:
+        user_id = int(payload.get("sub", 0))
+        if user_id <= 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=401, detail="无效的用户身份") from None
     user = db.query(User).filter(User.id == user_id, User.is_active == True).first()  # noqa: E712
     if user is None:
         raise HTTPException(

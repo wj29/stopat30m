@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import struct
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from loguru import logger
 
-from stopat30m.data.normalize import to_qlib_symbol
+from stopat30m.data.historical_universe import HistoricalUniverse, normalize_member
+from stopat30m.data.research_calendar import SHANGHAI
 
 from .base import QLIB_FIELDS
 
@@ -22,8 +24,8 @@ class QlibDumper:
         <qlib_dir>/
             calendars/day.txt
             instruments/all.txt
-            instruments/csi300.txt
-            instruments/csi500.txt
+            instruments/csi300.current_snapshot.json
+            instruments/csi500.current_snapshot.json
             features/<symbol>/
                 open.day.bin
                 close.day.bin
@@ -101,18 +103,7 @@ class QlibDumper:
         (inst_dir / "all.txt").write_text("\n".join(lines) + "\n")
         logger.info(f"Instruments: {len(lines)} stocks written to all.txt")
 
-        for filename, raw_codes in [("csi300.txt", csi300_codes), ("csi500.txt", csi500_codes)]:
-            if not raw_codes:
-                continue
-            qlib_codes = {to_qlib_symbol(c) for c in raw_codes}
-            subset = []
-            for sym in sorted(self._instruments):
-                if sym in qlib_codes:
-                    s, e = self._instruments[sym]
-                    subset.append(f"{sym}\t{s}\t{e}")
-            if subset:
-                (inst_dir / filename).write_text("\n".join(subset) + "\n")
-                logger.info(f"Index {filename}: {len(subset)} stocks")
+        write_current_index_snapshots(self.qlib_dir, csi300_codes, csi500_codes)
 
     def finalize(
         self,
@@ -121,6 +112,50 @@ class QlibDumper:
     ) -> None:
         self.write_calendar()
         self.write_instruments(csi300_codes, csi500_codes)
+
+
+def write_current_index_snapshots(
+    qlib_dir: str | Path,
+    csi300_codes: list[str] | None = None,
+    csi500_codes: list[str] | None = None,
+    *, source: str = "legacy_current_component_lookup",
+) -> list[Path]:
+    """Retain current components without rewriting historical Qlib index ranges.
+
+    Existing csi*.txt files may be genuine imported history or old unverified
+    output. Leave them intact and flag their audit status; only a separately
+    audited HistoricalUniverse.write_qlib may produce trusted historical ranges.
+    """
+    target = Path(qlib_dir) / "instruments"
+    target.mkdir(parents=True, exist_ok=True)
+    observed = datetime.now(SHANGHAI).date()
+    following = (observed + timedelta(days=1)).isoformat()
+    written = []
+    for name, codes in (("csi300", csi300_codes), ("csi500", csi500_codes)):
+        if not codes:
+            continue
+        members = sorted({normalize_member(code) for code in codes})
+        existing = target / (name + ".txt")
+        snapshot = HistoricalUniverse.from_dict({
+            "name": name, "kind": "snapshot", "coverage_start": observed.isoformat(),
+            "coverage_end": observed.isoformat(), "expected_size": len(members),
+            "metadata": {"historical_membership_verified": False,
+                         "legacy_historical_file_present": existing.exists(),
+                         "legacy_historical_file": str(existing),
+                         "effective_date_verified": False},
+            "intervals": [{"instrument": member, "effective_from": observed.isoformat(),
+                           "effective_to": following, "known_at": datetime.now(SHANGHAI).isoformat(),
+                           "source": source, "source_url": "legacy:current-component-fetch"}
+                          for member in members],
+        })
+        path = snapshot.save(target / (name + ".current_snapshot.json"))
+        written.append(path)
+        logger.warning(
+            f"{name}: current components saved only as reference snapshot {path}; "
+            "historical index membership was not generated or overwritten. "
+            "Existing index files require an independent point-in-time audit."
+        )
+    return written
 
 
 # ---------------------------------------------------------------------------

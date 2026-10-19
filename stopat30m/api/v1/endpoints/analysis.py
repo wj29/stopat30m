@@ -120,18 +120,21 @@ _review_lock = threading.Lock()
 _review_job = ReviewJob()
 
 
-def _run_market_review_bg() -> None:
+def _review_error(exc: Exception) -> str:
+    if getattr(exc, "status_code", None) == 401:
+        return "AI/上游服务鉴权失败（HTTP 401），请在系统设置核对对应服务密钥和地址；这不是网页登录失效。"
+    if getattr(exc, "status_code", None) == 404:
+        return "AI 服务未找到模型或接口（HTTP 404）。请在系统设置检查已保存的模型列表、接口协议与基础地址。"
+    if isinstance(exc, ModuleNotFoundError):
+        dependency = (exc.name or "").split(".")[0]
+        if dependency in {"markdown2", "litellm", "json_repair", "akshare", "efinance"}:
+            return f"缺少复盘依赖 {dependency}，请安装 requirements-web.txt 中的依赖并重启服务后重试。"
+    return f"大盘复盘失败（{type(exc).__name__}），请检查服务端运行状态和配置后重试。"
+
+
+def _run_market_review_bg(job: ReviewJob) -> None:
     """Execute market review in background thread with step tracking."""
     from loguru import logger
-
-    global _review_job
-    job = _review_job
-    job.status = ReviewStatus.RUNNING
-    job.started_at = time.time()
-    job.finished_at = 0.0
-    job.report = ""
-    job.error = ""
-    job.steps = []
 
     def _step(msg: str) -> int:
         idx = len(job.steps)
@@ -144,14 +147,16 @@ def _run_market_review_bg() -> None:
         s.duration_ms = int((time.time() - t0) * 1000)
 
     try:
+        # Record initialization before imports: a missing optional dependency
+        # must leave a failed initialization step instead of an empty job.
+        i = _step("初始化分析组件")
+        t0 = time.time()
         from stopat30m.analysis.llm_analyzer import LLMAnalyzer
         from stopat30m.analysis.market_analyzer import MarketAnalyzer
         from stopat30m.analysis.search_service import get_search_service
         from stopat30m.notification.service import NotificationService
 
         # Step 1: init
-        i = _step("初始化分析组件")
-        t0 = time.time()
         analyzer = LLMAnalyzer()
         search_svc = get_search_service()
         notifier = NotificationService()
@@ -190,17 +195,31 @@ def _run_market_review_bg() -> None:
         # Step 6: notify
         i = _step("推送通知")
         t0 = time.time()
-        if report and notifier.is_available():
-            notifier.send(f"🎯 大盘复盘\n\n{report}", email_send_to_all=True)
-        _done(i, t0)
+        if not report:
+            job.steps[i].message = "无复盘报告，已跳过通知"
+            _done(i, t0)
+        elif not notifier.is_available():
+            job.steps[i].message = "未配置通知，已跳过"
+            _done(i, t0)
+        elif notifier.send(f"🎯 大盘复盘\n\n{report}", email_send_to_all=True) is True:
+            job.steps[i].message = "通知已发送（至少一个渠道确认成功）"
+            _done(i, t0)
+        else:
+            job.steps[i].message = "通知发送未确认成功，报告已生成"
+            job.steps[i].duration_ms = max(0, int((time.time() - t0) * 1000))
+            logger.warning("大盘复盘报告已生成，但通知发送未确认成功。")
 
         job.report = report or ""
         job.status = ReviewStatus.DONE
         logger.info(f"大盘复盘完成，报告长度 {len(job.report)} 字符")
     except Exception as exc:
-        logger.error(f"大盘复盘失败: {exc}")
-        job.error = str(exc)
+        # Upstream exception text can contain URLs, headers and credentials.
+        # Only fixed guidance/type information belongs in public progress.
+        logger.error("大盘复盘失败，异常类型：{}", type(exc).__name__)
+        job.error = _review_error(exc)
         job.status = ReviewStatus.FAILED
+        if job.steps and not job.steps[-1].done:
+            job.steps[-1].duration_ms = max(0, int((time.time() - t0) * 1000))
     finally:
         job.finished_at = time.time()
 
@@ -216,10 +235,20 @@ def trigger_market_review(user: User = Depends(get_current_user)) -> dict[str, A
                 "message": "复盘正在进行中，请勿重复触发",
                 **_review_job.to_dict(),
             }
-        _review_job = ReviewJob()
-        t = threading.Thread(target=_run_market_review_bg, daemon=True)
-        t.start()
-    return {"triggered": True, "message": "复盘已触发，后台执行中", **_review_job.to_dict()}
+        # Reserve the slot before the worker is scheduled, and pass the exact
+        # job object; a delayed thread must never adopt a later global job.
+        job = ReviewJob(status=ReviewStatus.RUNNING, started_at=time.time())
+        _review_job = job
+        try:
+            t = threading.Thread(target=_run_market_review_bg, args=(job,), daemon=True)
+            t.start()
+        except Exception:
+            job.status, job.finished_at = ReviewStatus.FAILED, time.time()
+            job.steps.append(ReviewStep(message="启动复盘后台任务"))
+            job.error = "无法启动复盘后台任务，请检查服务端运行状态后重试。"
+            raise HTTPException(status_code=503, detail=job.error) from None
+        response = {"triggered": True, "message": "复盘已触发", **job.to_dict()}
+    return response
 
 
 @router.get("/market-review/status")
@@ -231,8 +260,6 @@ def get_market_review_status(user: User = Depends(get_current_user)) -> dict[str
 @router.get("/market-review/stream")
 def stream_market_review_status(user: User = Depends(get_current_user)) -> StreamingResponse:
     """SSE stream for market review progress. Completes when job finishes."""
-    import queue as _queue
-
     def _generate():
         last_step_count = 0
         while True:

@@ -16,22 +16,46 @@ _config_cache: dict[str, Any] | None = None
 
 
 def load_config(path: str | Path | None = None) -> dict[str, Any]:
-    """Load YAML config, with env-var override support."""
-    global _config_cache
+    """Load base YAML, optional ignored local YAML, then environment overrides."""
+    global _config_cache, _DEFAULT_CONFIG_PATH
     if _config_cache is not None and path is None:
         return _config_cache
 
-    config_path = Path(path) if path else _DEFAULT_CONFIG_PATH
+    config_path = Path(path).expanduser().resolve() if path else _DEFAULT_CONFIG_PATH
     if not config_path.exists():
         raise FileNotFoundError(f"Config file not found: {config_path}")
 
-    with open(config_path, "r", encoding="utf-8") as f:
-        cfg = yaml.safe_load(f)
+    cfg = _read_config(config_path)
+    local_path = config_path.with_name(f"{config_path.stem}.local{config_path.suffix}")
+    if local_path.is_file():
+        cfg = _merge_config(cfg, _read_config(local_path))
 
     cfg = _apply_env_overrides(cfg)
+    if path is not None:
+        # The CLI's explicit configuration is also the file edited by the web
+        # settings service and reloaded after its cache is invalidated.
+        _DEFAULT_CONFIG_PATH = config_path
     _config_cache = cfg
     logger.info(f"Loaded config from {config_path}")
     return cfg
+
+
+def _read_config(path: Path) -> dict[str, Any]:
+    try:
+        value = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError:
+        # YAML parser excerpts can contain credentials. Name the file only.
+        raise ValueError(f"Invalid configuration YAML: {path.name}") from None
+    if not isinstance(value, dict):
+        raise ValueError(f"Configuration must be a mapping: {path.name}")
+    return value
+
+
+def _merge_config(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(base)
+    for key, value in override.items():
+        merged[key] = _merge_config(merged[key], value) if isinstance(merged.get(key), dict) and isinstance(value, dict) else value
+    return merged
 
 
 def _apply_env_overrides(cfg: dict[str, Any]) -> dict[str, Any]:
