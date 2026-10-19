@@ -173,7 +173,7 @@ py main.py signal --model-path ./output/models/model_lgbm.pkl
 py main.py signal --model-path ./output/models/model_lgbm.pkl --date 2025-03-10 --publish
 ```
 
-### 5. 启动交易
+### 6. 启动交易
 
 ```bash
 # 模拟交易 (读取信号文件)
@@ -183,14 +183,14 @@ py main.py trade --signal-source ./output/signals/
 py main.py trade
 ```
 
-### 6. 监控面板
+### 7. 监控面板
 
 ```bash
 py main.py dashboard
 # 或直接: streamlit run stopat30m/web/dashboard.py
 ```
 
-### 7. 查看因子库
+### 8. 查看因子库
 
 ```bash
 py main.py info
