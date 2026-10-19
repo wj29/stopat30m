@@ -1,5 +1,7 @@
 # A2：A 股数据与整数股执行验证
 
+> 当前运行期已在 A3 因原生推理精度修复而另行冻结；旧期零成交、账本完整保留，旧任务已停止并禁用。当前结果、运行目录和命令见 [A3收益诊断](A3_PROFIT_DIAGNOSTICS.md)。
+
 本阶段沿用官方 Alpha158、固定 LightGBM 参数和历史沪深300成分区间，先验证数据与现金/股数账，再决定是否开启独立前瞻模拟。此前 A1 的分数敞口收益不作为本阶段可执行收益。
 
 ## 数据完成情况
@@ -56,26 +58,24 @@ macOS原生LaunchAgent计划工作日09:35/09:40/09:44及16:45/17:15/17:45运行
 
 净值与回撤图：`output/research/ashare/analysis/a2_20261019/oos_nav_drawdown.png`。
 
-## 已启用的前瞻期间
+## A2 时点启用的前瞻期间（已停用并保留）
 
 最新候选：`output/research/ashare/models/forward_20261019/`，真实冻结于2026-10-19 19:06:15（上海时间）。数据截止10月19日，最后成熟训练信号为10月9日，共1,049,136行。模型SHA：`98bb0def3f432450c91f36333b92f84f7e9a5a192a03f25b91c84c4608089702`。原历史模型/预测与OOS结果没有替换。
 
 独立模拟目录：`output/research/ashare/forward/latest_20261019/`。已成功消费10月19日真实300只收盘数据、保存当天信号，模型与动量各20个目标；两账户各100,000元现金，尚无成交或前瞻盈利。首次可能执行为**2026-10-20 09:35**，以当时新鲜最新报价为准。
 
-macOS专属任务`com.stopat30m.asharepaper.9bea963b9a32`已加载并启用。首次系统运行退出码0，正确重放已完成收盘阶段，`network_called=false`，账本SHA完全不变。它当前等待后续时点，不是持续占用CPU的常驻进程。启动验收、任务定义、注册回执与stdout/stderr在模拟目录的`runner/`。
+A2时点的macOS专属任务`com.stopat30m.asharepaper.9bea963b9a32`当时已加载，现已停止并禁用；不得重新加载与新期间并行运行。首次系统运行退出码0，正确重放已完成收盘阶段，`network_called=false`，账本SHA完全不变。该旧任务当时等待后续时点，现已停用。启动验收、任务定义、注册回执与stdout/stderr在模拟目录的`runner/`。
+
+当前命令使用新期间（旧目录继续保留以供核对）：
 
 ```bash
-# 每日查看扣费净值、回撤、费用、最近信号与失败；没有成交时明确显示no_fills
 .venv/bin/python main.py research ashare-forward-status \
-  --paper-dir output/research/ashare/forward/latest_20261019
+  --paper-dir output/research/ashare/forward/latest_20261019_precision_v2
 
-# 必要时手动执行当前时段；重复执行不会重复交易，过时不补开盘
 .venv/bin/python main.py research ashare-paper-run \
-  --paper-dir output/research/ashare/forward/latest_20261019 --phase auto
+  --paper-dir output/research/ashare/forward/latest_20261019_precision_v2 --phase auto
 
-# macOS查看或停止本次专属任务（只控制调度，不删除账本）
-launchctl print gui/502/com.stopat30m.asharepaper.9bea963b9a32
-# launchctl bootout gui/502/com.stopat30m.asharepaper.9bea963b9a32
+launchctl print gui/502/com.stopat30m.asharepaper.7efe740fa41f
 ```
 
 状态命令动态读取已校验账本。首日摘要另导出至`output/research/ashare/reports/latest_20261019/`，该导出是当时快照，不替代后续动态状态。`--raw`可查看完整账本。

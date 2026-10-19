@@ -1,0 +1,855 @@
+{
+  "as_of": "2026-10-19",
+  "baseline_code_commit": "116d7fc",
+  "baseline_cost_attribution": {
+    "costs": {
+      "actual_per_trade_slippage_bps_quantiles": {
+        "0": 2.0210185933711156,
+        "0.5": 8.741258741258306,
+        "0.9": 20.445724301990435,
+        "1": 54.94505494505475
+      },
+      "actual_slippage_bps_of_reference_notional": 11.351795305915642,
+      "adverse_tick_rounding_excess_cny": "7466.363498",
+      "at_minimum_commission_order_count": 1782,
+      "commission_cny": "8910.00",
+      "declared_slippage_budget_cny_before_tick_rounding": "1596.776502",
+      "minimum_commission_excess_cny": "6514.78",
+      "proportional_commission_without_minimum_cny": "2395.22",
+      "slippage_cost_cny": "9063.14",
+      "stamp_tax_cny": "1986.95",
+      "total_direct_fees_cny": "10977.10",
+      "total_friction_cny": "20040.24",
+      "transfer_fee_cny": "80.15"
+    },
+    "currency": "CNY",
+    "execution": {
+      "below_board_minimum_count_is_not_a_claim_about_all_sell_eligibility": true,
+      "mean_cash_cny": 31037.40965197216,
+      "mean_cash_fraction": 0.2960156752660947,
+      "mean_observed_position_count": 16.220417633410673,
+      "mean_risky_exposure_fraction": 0.7039843247339053,
+      "rejected_order_count": 831,
+      "rejected_order_reasons": {
+        "T+1 lock or insufficient board-valid lot size": 831
+      },
+      "rejected_requested_quantity_below_board_buy_minimum": 831,
+      "small_trade_notional_thresholds_cny": {
+        "100": {
+          "count_fraction": 0.0,
+          "notional_cny": "0",
+          "trade_count": 0
+        },
+        "1000": {
+          "count_fraction": 0.008978675645342313,
+          "notional_cny": "9545.0",
+          "trade_count": 16
+        },
+        "2000": {
+          "count_fraction": 0.011784511784511785,
+          "notional_cny": "16694.0",
+          "trade_count": 21
+        },
+        "500": {
+          "count_fraction": 0.003928170594837262,
+          "notional_cny": "2823.0",
+          "trade_count": 7
+        }
+      }
+    },
+    "final_equity_cny": "106281.25",
+    "fixed_ledger_addback_is_not_a_counterfactual_rerun": true,
+    "fixed_ledger_addback_limitations": "Original traded quantities and subsequent holdings stay fixed. Saved costs are not reinvested; cash, integer-lot feasibility and future portfolio choices can change in a full zero-cost rerun. Slippage is already embedded in execution prices, and is not debited again as a fee.",
+    "fixed_ledger_pnl_bridge_cny": {
+      "less_actual_slippage": "9063.14",
+      "less_commission": "8910.00",
+      "less_sell_stamp_tax": "1986.95",
+      "less_transfer_fee": "80.15",
+      "net_profit": "6281.25",
+      "reference_fill_before_direct_fees": "26321.49"
+    },
+    "initial_equity_cny": "100000.00",
+    "net_profit_cny": "6281.25",
+    "net_total_return": 0.0628125,
+    "observed_sessions": 431,
+    "period": {
+      "end": "2026-10-16",
+      "start": "2025-01-02"
+    },
+    "trade_count": 1782,
+    "trade_roles": {
+      "new_target_entry": {
+        "all_friction_cny": "8984.02",
+        "commission_cny": "4420.00",
+        "notional_cny": "3984371.65",
+        "trade_count": 884
+      },
+      "retained_holding_resize": {
+        "all_friction_cny": "126.16",
+        "commission_cny": "105.00",
+        "notional_cny": "16694.00",
+        "trade_count": 21
+      },
+      "retained_target_first_fill": {
+        "all_friction_cny": "13.10",
+        "commission_cny": "10.00",
+        "notional_cny": "9686.00",
+        "trade_count": 2
+      },
+      "target_exit": {
+        "all_friction_cny": "10916.96",
+        "commission_cny": "4375.00",
+        "notional_cny": "3973163.86",
+        "trade_count": 875
+      }
+    },
+    "turnover": {
+      "annualized_both_sides_notional_over_average_equity": 44.683049197612746,
+      "annualized_one_way_turnover": 22.341524598806373,
+      "average_observed_equity_cny": 104471.15617169374,
+      "both_sides_notional_over_average_equity": 76.42219922290117,
+      "both_sides_traded_notional_cny": "7983915.51",
+      "reference_notional_cny": "7983882.5100"
+    }
+  },
+  "baseline_target_stability": {
+    "mean_new_target_count": 12.616279069767442,
+    "mean_retained_fraction": 0.36918604651162784,
+    "mean_retained_target_count": 7.383720930232558,
+    "scheduled_signal_count": 87,
+    "successive_signal_pairs": 86
+  },
+  "cases": {
+    "M0_E0": {
+      "case_id": "M0_E0",
+      "execution_id": "E0",
+      "history_review_is_fresh_oos": false,
+      "metrics": {
+        "annual_return": 0.0363,
+        "annual_volatility": 0.1087,
+        "benchmark_available": false,
+        "calmar": 0.3119,
+        "commission_cny": "8910.00",
+        "final_equity_cny": "106281.25",
+        "incomplete_valuation_days": 0,
+        "max_drawdown": -0.1163,
+        "mean_non_cash_equity_fraction": 0.7039843247339053,
+        "notional_cny": "7983915.51",
+        "observation_days": 431,
+        "profit_loss_ratio": 1.0198,
+        "rejected_order_count": 831,
+        "sharpe": 0.1102,
+        "slippage_cost_cny": "9063.14",
+        "sortino": 0.1498,
+        "stamp_tax_cny": "1986.95",
+        "total_fee_cny": "10977.10",
+        "total_return": 0.062813,
+        "trade_count": 1782,
+        "transfer_fee_cny": "80.15",
+        "win_rate": 0.5104
+      },
+      "qualified_for_candidate_selection": false,
+      "return_status": "completed_observed_history_review_not_fresh_oos"
+    },
+    "M0_E1": {
+      "case_id": "M0_E1",
+      "execution_id": "E1",
+      "history_review_is_fresh_oos": false,
+      "metrics": {
+        "annual_return": 0.0606,
+        "annual_volatility": 0.1093,
+        "benchmark_available": false,
+        "calmar": 0.4669,
+        "commission_cny": "6465.00",
+        "final_equity_cny": "110595.12",
+        "incomplete_valuation_days": 0,
+        "max_drawdown": -0.1299,
+        "mean_non_cash_equity_fraction": 0.7383402506470758,
+        "notional_cny": "5962655.36",
+        "observation_days": 431,
+        "profit_loss_ratio": 1.037,
+        "rejected_order_count": 0,
+        "sharpe": 0.3229,
+        "slippage_cost_cny": "6610.42",
+        "sortino": 0.441,
+        "stamp_tax_cny": "1478.83",
+        "total_fee_cny": "8003.49",
+        "total_return": 0.105951,
+        "trade_count": 1293,
+        "transfer_fee_cny": "59.66",
+        "win_rate": 0.5151
+      },
+      "qualified_for_candidate_selection": false,
+      "return_status": "completed_observed_history_review_not_fresh_oos"
+    },
+    "M0_E2": {
+      "case_id": "M0_E2",
+      "execution_id": "E2",
+      "history_review_is_fresh_oos": false,
+      "metrics": {
+        "annual_return": 0.0558,
+        "annual_volatility": 0.1228,
+        "benchmark_available": false,
+        "calmar": 0.4145,
+        "commission_cny": "7980.00",
+        "final_equity_cny": "109737.08",
+        "incomplete_valuation_days": 0,
+        "max_drawdown": -0.1347,
+        "mean_non_cash_equity_fraction": 0.8676412856845832,
+        "notional_cny": "7313242.83",
+        "observation_days": 431,
+        "profit_loss_ratio": 0.9611,
+        "rejected_order_count": 0,
+        "sharpe": 0.2632,
+        "slippage_cost_cny": "8143.08",
+        "sortino": 0.358,
+        "stamp_tax_cny": "1808.95",
+        "total_fee_cny": "9862.22",
+        "total_return": 0.097371,
+        "trade_count": 1596,
+        "transfer_fee_cny": "73.27",
+        "win_rate": 0.5313
+      },
+      "qualified_for_candidate_selection": false,
+      "return_status": "completed_observed_history_review_not_fresh_oos"
+    },
+    "M1_E0": {
+      "case_id": "M1_E0",
+      "execution_id": "E0",
+      "history_review_is_fresh_oos": false,
+      "metrics": {
+        "annual_return": -0.0491,
+        "annual_volatility": 0.1025,
+        "benchmark_available": false,
+        "calmar": -0.4003,
+        "commission_cny": "7250.00",
+        "final_equity_cny": "91753.49",
+        "incomplete_valuation_days": 5,
+        "max_drawdown": -0.1226,
+        "mean_non_cash_equity_fraction": 0.7236771036462879,
+        "notional_cny": "6057029.72",
+        "observation_days": 431,
+        "profit_loss_ratio": 0.8754,
+        "rejected_order_count": 999,
+        "sharpe": -0.7284,
+        "slippage_cost_cny": "7558.32",
+        "sortino": -0.9467,
+        "stamp_tax_cny": "1501.22",
+        "total_fee_cny": "8812.65",
+        "total_return": -0.082465,
+        "trade_count": 1450,
+        "transfer_fee_cny": "61.43",
+        "win_rate": 0.5128
+      },
+      "qualified_for_candidate_selection": false,
+      "return_status": "provisional_not_validated_comparable_return"
+    },
+    "M1_E1": {
+      "case_id": "M1_E1",
+      "execution_id": "E1",
+      "history_review_is_fresh_oos": false,
+      "metrics": {
+        "annual_return": -0.0015,
+        "annual_volatility": 0.1063,
+        "benchmark_available": false,
+        "calmar": -0.016,
+        "commission_cny": "4865.00",
+        "final_equity_cny": "99744.41",
+        "incomplete_valuation_days": 5,
+        "max_drawdown": -0.0932,
+        "mean_non_cash_equity_fraction": 0.7648318683410867,
+        "notional_cny": "4297395.16",
+        "observation_days": 431,
+        "profit_loss_ratio": 0.9568,
+        "rejected_order_count": 2,
+        "sharpe": -0.2389,
+        "slippage_cost_cny": "5312.98",
+        "sortino": -0.317,
+        "stamp_tax_cny": "1058.85",
+        "total_fee_cny": "5967.47",
+        "total_return": -0.002556,
+        "trade_count": 973,
+        "transfer_fee_cny": "43.62",
+        "win_rate": 0.5128
+      },
+      "qualified_for_candidate_selection": false,
+      "return_status": "provisional_not_validated_comparable_return"
+    },
+    "M1_E2": {
+      "case_id": "M1_E2",
+      "execution_id": "E2",
+      "history_review_is_fresh_oos": false,
+      "metrics": {
+        "annual_return": -0.0188,
+        "annual_volatility": 0.1153,
+        "benchmark_available": false,
+        "calmar": -0.137,
+        "commission_cny": "5800.00",
+        "final_equity_cny": "96804.65",
+        "incomplete_valuation_days": 5,
+        "max_drawdown": -0.1373,
+        "mean_non_cash_equity_fraction": 0.8716859591666949,
+        "notional_cny": "5031353.02",
+        "observation_days": 431,
+        "profit_loss_ratio": 0.8984,
+        "rejected_order_count": 2,
+        "sharpe": -0.3635,
+        "slippage_cost_cny": "6389.34",
+        "sortino": -0.474,
+        "stamp_tax_cny": "1237.60",
+        "total_fee_cny": "7088.68",
+        "total_return": -0.031954,
+        "trade_count": 1160,
+        "transfer_fee_cny": "51.08",
+        "win_rate": 0.522
+      },
+      "qualified_for_candidate_selection": false,
+      "return_status": "provisional_not_validated_comparable_return"
+    }
+  },
+  "conclusions": [
+    "Baseline execution friction consumes 20040.24 CNY of fixed-ledger reference-fill profit 26321.49 CNY; fixed-ledger addback is not a counterfactual rerun.",
+    "Rank buffering improves the observed M0 review, while exposure, holdings and drawdown change; no winner is selected.",
+    "The fully rerun zero-execution-friction E0 case reaches 14.47% CAGR and does not meet the 20% research goal.",
+    "Annual rolling five-year training does not show stable predictive improvement or qualifying net-return evidence for replacing M0."
+  ],
+  "cost_ablation_cases": {
+    "M0_E0": {
+      "case_id": "M0_E0",
+      "execution_id": "E0",
+      "history_review_is_fresh_oos": false,
+      "metrics": {
+        "annual_return": 0.0363,
+        "annual_volatility": 0.1087,
+        "benchmark_available": false,
+        "calmar": 0.3119,
+        "commission_cny": "8910.00",
+        "final_equity_cny": "106281.25",
+        "incomplete_valuation_days": 0,
+        "max_drawdown": -0.1163,
+        "mean_non_cash_equity_fraction": 0.7039843247339053,
+        "notional_cny": "7983915.51",
+        "observation_days": 431,
+        "profit_loss_ratio": 1.0198,
+        "rejected_order_count": 831,
+        "sharpe": 0.1102,
+        "slippage_cost_cny": "9063.14",
+        "sortino": 0.1498,
+        "stamp_tax_cny": "1986.95",
+        "total_fee_cny": "10977.10",
+        "total_return": 0.062813,
+        "trade_count": 1782,
+        "transfer_fee_cny": "80.15",
+        "win_rate": 0.5104
+      }
+    },
+    "M0_E0_no_minimum": {
+      "case_id": "M0_E0_no_minimum",
+      "execution_id": "E0",
+      "history_review_is_fresh_oos": false,
+      "metrics": {
+        "annual_return": 0.0876,
+        "annual_volatility": 0.11,
+        "benchmark_available": false,
+        "calmar": 0.8264,
+        "commission_cny": "2521.63",
+        "final_equity_cny": "115442.01",
+        "incomplete_valuation_days": 0,
+        "max_drawdown": -0.106,
+        "mean_non_cash_equity_fraction": 0.7174636829672244,
+        "notional_cny": "8405222.02",
+        "observation_days": 431,
+        "profit_loss_ratio": 1.045,
+        "rejected_order_count": 815,
+        "sharpe": 0.5496,
+        "slippage_cost_cny": "9442.64",
+        "sortino": 0.7627,
+        "stamp_tax_cny": "2092.66",
+        "total_fee_cny": "4698.40",
+        "total_return": 0.15442,
+        "trade_count": 1804,
+        "transfer_fee_cny": "84.11",
+        "win_rate": 0.5244
+      }
+    },
+    "M0_E0_no_slippage": {
+      "case_id": "M0_E0_no_slippage",
+      "execution_id": "E0",
+      "history_review_is_fresh_oos": false,
+      "metrics": {
+        "annual_return": 0.0996,
+        "annual_volatility": 0.1109,
+        "benchmark_available": false,
+        "calmar": 1.0672,
+        "commission_cny": "9015.00",
+        "final_equity_cny": "117631.34",
+        "incomplete_valuation_days": 0,
+        "max_drawdown": -0.0933,
+        "mean_non_cash_equity_fraction": 0.7210150946256911,
+        "notional_cny": "8562515.73",
+        "observation_days": 431,
+        "profit_loss_ratio": 1.0527,
+        "rejected_order_count": 820,
+        "sharpe": 0.6453,
+        "slippage_cost_cny": "0.00",
+        "sortino": 0.8991,
+        "stamp_tax_cny": "2134.25",
+        "total_fee_cny": "11235.03",
+        "total_return": 0.176313,
+        "trade_count": 1803,
+        "transfer_fee_cny": "85.78",
+        "win_rate": 0.5267
+      }
+    },
+    "M0_E0_zero_execution_friction": {
+      "case_id": "M0_E0_zero_execution_friction",
+      "execution_id": "E0",
+      "history_review_is_fresh_oos": false,
+      "metrics": {
+        "annual_return": 0.1447,
+        "annual_volatility": 0.1131,
+        "benchmark_available": false,
+        "calmar": 1.7694,
+        "commission_cny": "0.00",
+        "final_equity_cny": "126007.06",
+        "incomplete_valuation_days": 0,
+        "max_drawdown": -0.0818,
+        "mean_non_cash_equity_fraction": 0.7335857728916784,
+        "notional_cny": "9076580.74",
+        "observation_days": 431,
+        "profit_loss_ratio": 1.0386,
+        "rejected_order_count": 806,
+        "sharpe": 0.9908,
+        "slippage_cost_cny": "0.00",
+        "sortino": 1.3925,
+        "stamp_tax_cny": "0.00",
+        "total_fee_cny": "0.00",
+        "total_return": 0.260071,
+        "trade_count": 1831,
+        "transfer_fee_cny": "0.00",
+        "win_rate": 0.5452
+      }
+    }
+  },
+  "cost_ablation_is_deployable_optimization": false,
+  "forward_paper": {
+    "candidate_dir": "output/research/ashare/models/forward_20261019_precision_v2",
+    "candidate_frozen_at_cst": "2026-10-19T19:37:17+08:00",
+    "first_scheduled_execution_cst": "2026-10-20T09:35:00+08:00",
+    "initial_cash_cny_per_strategy": "100000",
+    "job_first_exit_code": 0,
+    "job_loaded": true,
+    "paper_dir": "output/research/ashare/forward/latest_20261019_precision_v2",
+    "real_broker_orders": false,
+    "registration_receipt": {
+      "path": "output/research/ashare/forward/latest_20261019_precision_v2/runner/registration.json",
+      "sha256": "945dc2d67f012d7252d4736d213cc6407cf6561b1afe1beb2f86500329253edc"
+    },
+    "requires_awake_logged_in_computer": true,
+    "simulated_fills_at_acceptance": 0,
+    "startup": {
+      "completed_close_replay_network_called": false,
+      "completed_close_replay_state_unchanged": true,
+      "eligible_stocks": 300,
+      "first_possible_execution": "2026-10-20",
+      "job_label": "com.stopat30m.asharepaper.7efe740fa41f",
+      "live_order_count": 0,
+      "model_sha256": "98bb0def3f432450c91f36333b92f84f7e9a5a192a03f25b91c84c4608089702",
+      "old_job_label": "com.stopat30m.asharepaper.9bea963b9a32",
+      "old_job_stopped_and_disabled": true,
+      "old_scores_equal": true,
+      "old_state_unchanged": true,
+      "old_targets_equal": true,
+      "reason": "Preserve native Qlib float32 inference; same model weights and execution policy",
+      "signal_sha256": "f1f6faefd632255b21af1ac05b900062c93f2d1ed3bee64e0b76b0730c2547b6",
+      "state_sha256": "30b7fb6d24b3ba93abd639ae7583c7c790bcaf9c7f93158d395befb4e36cd54e",
+      "strategy_selection_changed": false,
+      "targets_per_strategy": {
+        "model": 20,
+        "momentum": 20
+      },
+      "validation_status": "passed"
+    },
+    "startup_validation": {
+      "path": "output/research/ashare/forward/latest_20261019_precision_v2/runner/startup_validation.json",
+      "sha256": "5406a89868ecbcd2bef5492ba61795e0263b4290f946eba47ed0d74f5116acd6"
+    },
+    "training_rows": 1049136
+  },
+  "history_review_is_fresh_oos": false,
+  "kind": "a3_profit_cost_turnover_and_model_diagnostics",
+  "method_reference": "https://qlib.readthedocs.io/en/latest/component/strategy.html#topkdropoutstrategy",
+  "observed_history_period": {
+    "end": "2026-10-16",
+    "initial_cash_cny": "100000.00",
+    "sessions": 431,
+    "start": "2025-01-02"
+  },
+  "precision_repair": {
+    "audit": {
+      "path": "output/research/ashare/analysis/a3_20261019_inference_precision/report.json",
+      "sha256": "1dafcbea690d3c1ce655d2c8637e6cb15718ffcdc9502ed75df3846b2a591d72"
+    },
+    "corrected_real_features_bit_exact": true,
+    "corrected_real_scores_bit_exact": true,
+    "kind": "inference_correctness_fix_same_model_not_strategy_selection",
+    "old_real_20261019_rank_position_changes": 0,
+    "old_real_20261019_score_changes": 0,
+    "postfix_validation": {
+      "path": "output/research/ashare/analysis/a3_20261019_inference_precision/postfix_validation.json",
+      "sha256": "0595dd0eea252fc1b247306f1e15a2faf7ebeabb56958c8728412a3db43589c3"
+    },
+    "processed_dtype_after": "float32",
+    "processed_dtype_before": "float64",
+    "targeted_tests_passed": 37
+  },
+  "predeclared_protocol": {
+    "path": "docs/research/a3_optimization_spec.json",
+    "sha256": "fd9fe63fa9b963f108b96e8955da1675a582c0715f2323f364f793a9497b3b50"
+  },
+  "predictive_diagnostics": {
+    "M0": {
+      "2023": {
+        "rank_ic_mean": 0.05435753232498512,
+        "rank_ic_mean_95pct_hac_interval": [
+          0.028364592374009047,
+          0.0803504722759612
+        ],
+        "sample_count": 72592,
+        "sessions": 242,
+        "top20_gross_forward_excess_mean": 0.0038698868626380477
+      },
+      "2024": {
+        "rank_ic_mean": 0.10304451866452416,
+        "rank_ic_mean_95pct_hac_interval": [
+          0.064878813572077,
+          0.14121022375697131
+        ],
+        "sample_count": 72474,
+        "sessions": 242,
+        "top20_gross_forward_excess_mean": 0.006010950532090999
+      },
+      "2025": {
+        "rank_ic_mean": 0.04988866988718191,
+        "rank_ic_mean_95pct_hac_interval": [
+          0.007942260798757608,
+          0.09183507897560621
+        ],
+        "sample_count": 72504,
+        "sessions": 243,
+        "top20_gross_forward_excess_mean": 0.001025583456702012
+      },
+      "2026": {
+        "rank_ic_mean": 0.07476412503245393,
+        "rank_ic_mean_95pct_hac_interval": [
+          0.03259715999247854,
+          0.11693109007242933
+        ],
+        "sample_count": 54799,
+        "sessions": 183,
+        "top20_gross_forward_excess_mean": 0.00837908849559758
+      },
+      "all": {
+        "rank_ic_mean": 0.07021547033295111,
+        "rank_ic_mean_95pct_hac_interval": [
+          0.05110382295891341,
+          0.08932711770698881
+        ],
+        "sample_count": 272369,
+        "sessions": 910,
+        "top20_gross_forward_excess_mean": 0.004586541345271841
+      }
+    },
+    "M1": {
+      "2023": {
+        "rank_ic_mean": 0.03766418325592243,
+        "rank_ic_mean_95pct_hac_interval": [
+          0.012040474106727404,
+          0.06328789240511747
+        ],
+        "sample_count": 72592,
+        "sessions": 242,
+        "top20_gross_forward_excess_mean": 0.002736201842337562
+      },
+      "2024": {
+        "rank_ic_mean": 0.09780587795481972,
+        "rank_ic_mean_95pct_hac_interval": [
+          0.051719719524368886,
+          0.14389203638527057
+        ],
+        "sample_count": 72474,
+        "sessions": 242,
+        "top20_gross_forward_excess_mean": 0.005501177118694009
+      },
+      "2025": {
+        "rank_ic_mean": 0.030058281783971706,
+        "rank_ic_mean_95pct_hac_interval": [
+          -0.02120434463306299,
+          0.0813209082010064
+        ],
+        "sample_count": 72504,
+        "sessions": 243,
+        "top20_gross_forward_excess_mean": -0.00189005569260146
+      },
+      "2026": {
+        "rank_ic_mean": 0.08447580634188671,
+        "rank_ic_mean_95pct_hac_interval": [
+          0.035095296950733525,
+          0.1338563157330399
+        ],
+        "sample_count": 54799,
+        "sessions": 183,
+        "top20_gross_forward_excess_mean": 0.005023784019235411
+      },
+      "all": {
+        "rank_ic_mean": 0.0610406481835934,
+        "rank_ic_mean_95pct_hac_interval": [
+          0.03846455292594546,
+          0.08361674344124134
+        ],
+        "sample_count": 272369,
+        "sessions": 910,
+        "top20_gross_forward_excess_mean": 0.0026961699459204015
+      }
+    }
+  },
+  "rolling_model_predictions": {
+    "archived_implementations": {
+      "forward_training_helpers": {
+        "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/analysis/a3_20261019/source_provenance/ashare_forward_at_fit.py",
+        "sha256": "b877fd734185d6d45a558c034effbf42058527497a6aea2fbfd69be27c1dcc8e"
+      },
+      "native_trainer": {
+        "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/analysis/a3_20261019/source_provenance/native_trainer.py",
+        "sha256": "d4f27eb48d0f8763b966757f0afe402272fbd92befd8be6882b59c25297192d1"
+      },
+      "original_rolling_fit": {
+        "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/analysis/a3_20261019/source_provenance/ashare_rolling_research_original_fit.py",
+        "recovered_from": "output/research/ashare/experiments/a3_20261019_predictions/rolling_implementation_original.py",
+        "sha256": "f45c8ae7d5fc3ef0d98251cba7c60be15c2886fbbeb9a4ce341de8287d234b08"
+      },
+      "rolling": {
+        "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/analysis/a3_20261019/source_provenance/ashare_rolling_research_at_inference.py",
+        "sha256": "e31214380bb01c6dc418b573ca93e5d953a47533c39ab4c397493332f067aaff"
+      }
+    },
+    "baseline_reproduction": {
+      "atol": 1e-11,
+      "max_absolute_score_error": 0.0,
+      "original_rows": 129409,
+      "overlap_rows": 129409,
+      "refit_baseline": false,
+      "rtol": 1e-11
+    },
+    "folds": [
+      {
+        "data_cutoff": "2022-12-30",
+        "execution_year": 2023,
+        "first_execution_session": "2023-01-03",
+        "first_training_signal": "2018-01-02",
+        "fitted_at": "2026-10-19T11:26:17.867093+00:00",
+        "last_label_execution_end": "2022-12-30",
+        "last_training_signal": "2022-12-22",
+        "model_sha256": "4af8a864654281d9d00669ba8d29a88648c9e0bf7b3631c79824e83da6400e78",
+        "signal_end": "2023-12-29",
+        "signal_start": "2022-12-30",
+        "train_signal_end": "2022-12-22",
+        "train_start": "2018-01-01",
+        "training_rows": 359127
+      },
+      {
+        "data_cutoff": "2023-12-29",
+        "execution_year": 2024,
+        "first_execution_session": "2024-01-02",
+        "first_training_signal": "2019-01-02",
+        "fitted_at": "2026-10-19T11:26:56.413557+00:00",
+        "last_label_execution_end": "2023-12-29",
+        "last_training_signal": "2023-12-21",
+        "model_sha256": "6b449e723bcb46a2584047f6c77da2f7036a7a73abd7ef25a0722d1df32cbc79",
+        "signal_end": "2024-12-31",
+        "signal_start": "2023-12-29",
+        "train_signal_end": "2023-12-21",
+        "train_start": "2019-01-01",
+        "training_rows": 361649
+      },
+      {
+        "data_cutoff": "2024-12-31",
+        "execution_year": 2025,
+        "first_execution_session": "2025-01-02",
+        "first_training_signal": "2020-01-02",
+        "fitted_at": "2026-10-19T11:27:35.192745+00:00",
+        "last_label_execution_end": "2024-12-31",
+        "last_training_signal": "2024-12-23",
+        "model_sha256": "a7e31c376aca1f883c5f90cc58997bca87a8aa29c7b1d7f5f2bd49a6bdda464e",
+        "signal_end": "2025-12-31",
+        "signal_start": "2024-12-31",
+        "train_signal_end": "2024-12-23",
+        "train_start": "2020-01-01",
+        "training_rows": 361247
+      },
+      {
+        "data_cutoff": "2025-12-31",
+        "execution_year": 2026,
+        "first_execution_session": "2026-01-05",
+        "first_training_signal": "2021-01-04",
+        "fitted_at": "2026-10-19T11:28:14.605336+00:00",
+        "last_label_execution_end": "2025-12-31",
+        "last_training_signal": "2025-12-23",
+        "model_sha256": "63c1c829d2ec0a85216bce741ee32e307deaffc27b616efedc2135d8af847cd0",
+        "signal_end": "2026-10-16",
+        "signal_start": "2025-12-31",
+        "train_signal_end": "2025-12-23",
+        "train_start": "2021-01-01",
+        "training_rows": 361055
+      }
+    ],
+    "manifest": {
+      "path": "output/research/ashare/experiments/a3_20261019_predictions_v2/manifest.json",
+      "sha256": "fc8ce6131d3d7972ed4fee301e87e5b9a5d3c103374581ffd4482a55d8d1847f"
+    },
+    "prediction_rows": 551018,
+    "predictions": {
+      "path": "output/research/ashare/experiments/a3_20261019_predictions_v2/predictions.csv",
+      "sha256": "44b80dbc1bfab998ee30ee6673891b0a35dff021b33b8ac8cb6d9670abad5cba"
+    },
+    "source_provenance_receipt": {
+      "path": "output/research/ashare/analysis/a3_20261019/source_provenance/receipt.json",
+      "sha256": "04b0d66d8ed1aedde6e4736e343b7d12349c837794ea8267a2b591ef1a68cfb7"
+    }
+  },
+  "rolling_valuation_caveat": {
+    "audit": {
+      "path": "output/research/ashare/analysis/a3_20261019_rolling_audit.json",
+      "sha256": "e7c35f52bcf27ba4f3689134e4af738b00e2722dff485b43ad0a38935c550f40"
+    },
+    "carried_price_cny": "29.50",
+    "carried_price_date": "2025-01-09",
+    "dates": [
+      "2025-01-10",
+      "2025-01-13",
+      "2025-01-14",
+      "2025-01-15",
+      "2025-01-16"
+    ],
+    "held_quantity_per_case": 100,
+    "instrument": "SZ000408",
+    "m1_returns_provisional": true,
+    "primary_issuer_cross_check": {
+      "access_method": "web PDF text extraction; original PDF bytes were not downloaded or hashed",
+      "documents": [
+        {
+          "announcement_number": "2025-003",
+          "document_date": "2025-01-10",
+          "facts": {
+            "expected_initial_max_sessions": 2,
+            "reason": "planning a possible change of company control",
+            "suspension_start": "2025-01-10"
+          },
+          "url": "https://static.cninfo.com.cn/finalpage/2025-01-10/1222286144.PDF"
+        },
+        {
+          "announcement_number": "2025-004",
+          "document_date": "2025-01-14",
+          "facts": {
+            "continued_suspension_start": "2025-01-14",
+            "expected_additional_max_sessions": 3
+          },
+          "url": "https://static.cninfo.com.cn/finalpage/2025-01-14/1222322233.PDF"
+        },
+        {
+          "announcement_number": "2025-006",
+          "document_date": "2025-01-17",
+          "facts": {
+            "historical_suspension_start": "2025-01-10",
+            "resumption_session": "2025-01-17"
+          },
+          "url": "https://static.cninfo.com.cn/finalpage/2025-01-17/1222355440.PDF"
+        }
+      ],
+      "publication_timestamp_status": "document dates verified; intraday public release timestamps not established"
+    },
+    "simulated_fills_during_suspension": 0,
+    "source_status": "explicit_tradestatus_0",
+    "unknown_data_gap_days_per_case": 0
+  },
+  "schema_version": 1,
+  "selection": {
+    "development_collection_blocker": {
+      "receipt": {
+        "path": "output/research/ashare/collections/development_20261019_evidence/official_transport_review.json",
+        "sha256": "385055d10a183ec6b816f34c1519f25ca32f98932d8ccecff4fecf1fcbf42c4f"
+      },
+      "status": "blocked_pending_original_source_transport_recovery",
+      "tcp_failure_observation": {
+        "attempt_count": 3,
+        "diagnostic_error_code": "10002007",
+        "diagnostic_error_message": "网络接收错误。",
+        "successful_original_market_responses": 0,
+        "timeouts_seconds": [
+          8,
+          8,
+          30
+        ]
+      }
+    },
+    "development_raw_execution_verified": false,
+    "feature_presence_audit_units": {
+      "historical_union_instruments": 350,
+      "source_sessions": 484,
+      "unavailable_constituent_trading_day_records": 90
+    },
+    "fresh_forward_start": "2026-10-20",
+    "missing_requirements": [
+      "audited historical raw execution metadata and preclose/ST/tradestatus",
+      "historical cash/stock corporate action execution evidence",
+      "effective historical exchange rules and stamp-tax regime"
+    ],
+    "required_development_year": 2023,
+    "required_validation_year": 2024,
+    "selected_candidate": null,
+    "status": "blocked_required_2023_2024_execution_data_and_historical_rules_not_verified",
+    "strategy_policy_changed": false
+  },
+  "source_reports": {
+    "cost_ablation": {
+      "manifest": {
+        "path": "output/research/ashare/experiments/a3_20261019_cost_ablation/manifest.json",
+        "sha256": "8e056ae20568bce2c00d2e7703e92e99f0d5c40de15bb4da426777e47a50f820"
+      },
+      "report": {
+        "path": "output/research/ashare/experiments/a3_20261019_cost_ablation/report.json",
+        "sha256": "413da538b6186bce89f56457a354c2ccfa6568df5764776ca48f181afa1cf026"
+      }
+    },
+    "execution": {
+      "manifest": {
+        "path": "output/research/ashare/experiments/a3_20261019_execution_review_v2/manifest.json",
+        "sha256": "c7f731cd5a52f37030012cc71f62acdd2fd30d08753034f79a8442410d1639fa"
+      },
+      "report": {
+        "path": "output/research/ashare/experiments/a3_20261019_execution_review_v2/report.json",
+        "sha256": "a98fd934110431e0c9ba7756ec05c852956813635dffb96aa11d9ea37a13d58d"
+      },
+      "reproduction_note": "Use execution_review_v2 with archived source implementation; execution_review v1 is an intermediate development artifact."
+    },
+    "rolling": {
+      "manifest": {
+        "path": "output/research/ashare/experiments/a3_20261019_rolling_review/manifest.json",
+        "sha256": "45cc8fd93aa3b787c43f110afe3f1f4ea8382f60b3eb1461158bb89124b0deb6"
+      },
+      "report": {
+        "path": "output/research/ashare/experiments/a3_20261019_rolling_review/report.json",
+        "sha256": "d6f5036b64fc6cea53395faba718025940011cffcb3844486286a390225f5a6c"
+      }
+    }
+  },
+  "verification": {
+    "additional_targeted_cli_tests_passed": 20,
+    "diff_check": "passed",
+    "full_suite_count_is_prior_to_subsequent_cli_notice_and_optional_qlib_guard_changes": true,
+    "pip_check": "passed",
+    "pytest_passed": 990,
+    "pytest_skipped": 1,
+    "pytest_subtests_passed": 20
+  }
+}

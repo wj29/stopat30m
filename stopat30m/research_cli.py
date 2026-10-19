@@ -329,6 +329,84 @@ def ashare_resume_command(experiment_dir: Path, corporate_actions: Path | None, 
         click.echo(f"{strategy}: net annual return {metrics['annual_return']:.2%}; max drawdown {metrics['max_drawdown']:.2%}")
 
 
+def _ashare_research_progress(value) -> None:
+    click.echo(json.dumps(value, ensure_ascii=False) if isinstance(value, dict) else str(value))
+
+
+@research_group.command("ashare-diagnose")
+@click.option("--experiment-dir", type=click.Path(exists=True, file_okay=False, path_type=Path), required=True)
+@click.option("--training-origin", type=click.Path(exists=True, file_okay=False, path_type=Path), required=True)
+@click.option("--output-dir", type=click.Path(path_type=Path), required=True)
+def ashare_diagnose_command(experiment_dir: Path, training_origin: Path, output_dir: Path) -> None:
+    """Attribute existing fees, ticks, turnover and frozen prediction quality."""
+    try:
+        from stopat30m.ashare_diagnostics import run_diagnostics
+        result = run_diagnostics(experiment_dir, training_origin, output_dir)
+    except (ValueError, KeyError, OSError, RuntimeError, ImportError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo(f"A-share diagnostics: {output_dir}")
+    for strategy, values in result["strategy_cost_attribution"].items():
+        click.echo(f"{strategy}: net PnL {values['net_profit_cny']} CNY; "
+                   f"recorded execution friction {values['costs']['total_friction_cny']} CNY")
+    click.echo("Fixed-ledger cost add-backs are accounting attribution, not zero-cost portfolio reruns.")
+
+
+@research_group.command("ashare-optimize-review")
+@click.option("--baseline-dir", type=click.Path(exists=True, file_okay=False, path_type=Path), required=True)
+@click.option("--spec", type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              default=PROJECT_ROOT / "docs/research/a3_optimization_spec.json", show_default=True)
+@click.option("--output-dir", type=click.Path(path_type=Path), required=True)
+@click.option("--cost-ablation", is_flag=True, help="Run baseline cost sensitivity; never a deployable optimization.")
+@click.option("--rolling-predictions-dir", type=click.Path(exists=True, file_okay=False, path_type=Path), default=None,
+              help="Review the frozen rolling M1 predictions with the same execution candidates.")
+def ashare_optimize_review_command(baseline_dir: Path, spec: Path, output_dir: Path,
+                                  cost_ablation: bool, rolling_predictions_dir: Path | None) -> None:
+    """Review declared execution/model candidates on previously observed history."""
+    if cost_ablation and rolling_predictions_dir is not None:
+        raise click.UsageError("--cost-ablation and --rolling-predictions-dir are mutually exclusive.")
+    try:
+        from stopat30m.ashare_optimization import run_existing_model_review, run_rolling_model_review
+        if rolling_predictions_dir is not None:
+            result = run_rolling_model_review(baseline_dir, rolling_predictions_dir, output_dir,
+                spec_path=spec, progress=_ashare_research_progress)
+        else:
+            result = run_existing_model_review(baseline_dir, output_dir, spec_path=spec,
+                cost_ablation=cost_ablation, progress=_ashare_research_progress)
+    except (ValueError, KeyError, OSError, RuntimeError, ImportError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo(f"Observed-history review: {output_dir}")
+    for candidate, values in result["cases"].items():
+        metrics = values["metrics"]
+        incomplete = metrics.get("incomplete_valuation_days")
+        click.echo(f"{candidate}: net annual return {metrics['annual_return']:.2%}; "
+                   f"max drawdown {metrics['max_drawdown']:.2%}; "
+                   f"incomplete valuation days {incomplete if incomplete is not None else 'unknown'}")
+        if incomplete is None or incomplete > 0:
+            click.echo(f"{candidate}: provisional; incomplete valuation is not a verified performance comparison.")
+    click.echo(f"Selection: {result['selection_status']}")
+    click.echo("Previously observed history is not fresh OOS; this command does not switch the active paper model.")
+
+
+@research_group.command("ashare-rolling-fit")
+@click.option("--snapshot", type=click.Path(exists=True, file_okay=False, path_type=Path), required=True)
+@click.option("--baseline-origin", type=click.Path(exists=True, file_okay=False, path_type=Path), required=True)
+@click.option("--spec", type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              default=PROJECT_ROOT / "docs/research/a3_optimization_spec.json", show_default=True)
+@click.option("--output-dir", type=click.Path(path_type=Path), required=True)
+def ashare_rolling_fit_command(snapshot: Path, baseline_origin: Path, spec: Path, output_dir: Path) -> None:
+    """Fit the four declared annual research folds; preserve baseline and paper."""
+    try:
+        from stopat30m.ashare_rolling_research import build_research_predictions
+        result = build_research_predictions(snapshot, baseline_origin, output_dir, spec,
+            progress=_ashare_research_progress)
+    except (ValueError, KeyError, OSError, RuntimeError, ImportError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    manifest = result["manifest"]
+    click.echo(f"Rolling research predictions: {output_dir}")
+    click.echo(f"Annual folds: {len(manifest['folds'])}; prediction rows: {manifest['prediction_rows']}")
+    click.echo("Fits are retrospective research performed now; no historical model-freeze time or paper switch is claimed.")
+
+
 @research_group.command("lock")
 @click.option("--spec", "spec_path", type=click.Path(exists=True, path_type=Path), default=DEFAULT_SPEC, show_default=True)
 @click.option("--protocol", "protocol_path", type=click.Path(path_type=Path), default=DEFAULT_PROTOCOL, show_default=True)

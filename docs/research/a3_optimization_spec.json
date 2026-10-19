@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "name": "A3 diagnosis-led turnover and model-recency optimization",
+  "declared_at": "2026-10-19T11:23:13.892233+00:00",
+  "baseline_code_commit": "116d7fc",
+  "baseline_comparison": {
+    "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/experiments/a2_20261019_integer_validation_v2",
+    "manifest_sha256": "4f02864aa102f9decf91729b58ad765b2b5c24c553c8c3eb1ce7df2eb92c630e"
+  },
+  "source_snapshot": "output/research/ashare/updates/rebuild_36_resolved_20261019/versions/snapshots/538d05c141006b73f1297a4fc8ed43d57af21a5b53f9cfc5cbda6e436748c2ac",
+  "source_manifest_sha256": "cb2001cebf7708641edbe1862aa167326418d7cd47c48f90af84b753f33a6065",
+  "development": [
+    "2023-01-01",
+    "2023-12-31"
+  ],
+  "validation": [
+    "2024-01-01",
+    "2024-12-31"
+  ],
+  "previously_observed_history_review": [
+    "2025-01-01",
+    "2026-10-16"
+  ],
+  "fresh_oos_start": "2026-10-20",
+  "history_review_is_fresh_oos": false,
+  "top_k": 20,
+  "rebalance_sessions": 5,
+  "rank_exit_threshold": 40,
+  "initial_cash_cny": "100000.00",
+  "execution_candidates": [
+    {
+      "id": "E0",
+      "policy": "original_equal_weight_rebalance",
+      "prior_close_affordability_filter": false
+    },
+    {
+      "id": "E1",
+      "policy": "rank_buffer_keep_existing_quantity",
+      "prior_close_affordability_filter": false
+    },
+    {
+      "id": "E2",
+      "policy": "rank_buffer_keep_existing_quantity",
+      "prior_close_affordability_filter": true
+    }
+  ],
+  "models": [
+    {
+      "id": "M0",
+      "policy": "existing_fixed_2012_2022",
+      "training_origin": "output/research/ashare/experiments/a2_20261019_repaired_training",
+      "refit": false
+    },
+    {
+      "id": "M1",
+      "policy": "annual_rolling_five_calendar_years",
+      "execution_years": [
+        2023,
+        2024,
+        2025,
+        2026
+      ],
+      "purge_future_sessions": 6,
+      "same_alpha158_and_fixed_lightgbm_params": true,
+      "hyperparameter_search": false,
+      "early_stopping": false
+    }
+  ],
+  "candidate_count": 6,
+  "candidate_set_frozen_before_a3_returns": true,
+  "selection": {
+    "period": "validation_2024_only",
+    "requires_development_and_validation_raw_execution_and_dividend_audits": true,
+    "must_outperform_same_cost_same_period_M0E0": true,
+    "net_total_return_positive": true,
+    "max_drawdown_at_most": "0.20",
+    "ties": [
+      "net_total_return_desc",
+      "absolute_max_drawdown_asc",
+      "traded_notional_asc",
+      "candidate_id_asc"
+    ],
+    "without_required_validation": "blocked_no_winner_no_active_paper_switch"
+  },
+  "cost_policy": {
+    "commission_rate": "0.0003",
+    "minimum_commission_cny": "5.00",
+    "transfer_rate": "0.00001",
+    "sell_stamp_before_20230828": "0.001",
+    "sell_stamp_from_20230828": "0.0005",
+    "adverse_slippage_bps": "2",
+    "adverse_whole_tick_rounding": true,
+    "cash_and_evidenced_stock_dividend_tax_reserve_rate": "0.20",
+    "never_lower_actual_fee_assumptions_to_select_optimized_policy": true
+  },
+  "cost_ablation_only": [
+    {
+      "id": "no_minimum",
+      "minimum_commission_cny": "0",
+      "other_friction_unchanged": true
+    },
+    {
+      "id": "no_slippage",
+      "slippage_bps": "0",
+      "other_friction_unchanged": true
+    },
+    {
+      "id": "zero_execution_friction",
+      "commission_rate": "0",
+      "minimum_commission_cny": "0",
+      "transfer_rate": "0",
+      "sell_stamp_rate": "0",
+      "slippage_bps": "0",
+      "dividend_tax_reserve_unchanged": true
+    }
+  ],
+  "cost_ablation_is_not_deployable_optimization": true,
+  "signal_rules": [
+    "Only prior-source-close ranking, prices and board-valid lot costs can change candidate eligibility.",
+    "Retain actual quantities for names within the rank buffer; never use tomorrow liquidity to replace them.",
+    "At next observed open, reject adverse daily limits, stale/missing metadata and unknown actions. Opening budget can reduce planned buys, never replace ranks with future availability.",
+    "One attempt per scheduled rebalance; no later historical backfill.",
+    "No automated live broker orders. Keep original forward period, model and rule hashes unchanged."
+  ],
+  "limitations": [
+    "All historic model fits are performed today with a reconstructed historical data vintage; no historical freeze time is fabricated.",
+    "Reused 2025-2026 results are explicitly exploratory sensitivity/history review after A2 was observed.",
+    "Qlib package historical membership/daily metadata are not an independent full announcement-time PIT database."
+  ],
+  "primary_method_reference": "https://qlib.readthedocs.io/en/latest/component/strategy.html"
+}

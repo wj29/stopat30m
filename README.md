@@ -6,7 +6,9 @@
 
 主研究方向为 **A 股个股**：Qlib 格式历史基座、逐股票增量接缝审计、官方 Alpha158 与固定 LightGBM 的时间分离对照，见 [研究工作流](docs/RESEARCH_WORKFLOW.md#当前主线a-股个股与-qlib-历史基座)。`python main.py research --help` 查看 `ashare-base / ashare-collect / ashare-update / ashare-rebuild / ashare-run / ashare-resume`。此前三 ETF 是独立的工程验证，已停用其自动任务，不作为个股策略结果。
 
-最新阶段增加36只历史修复、原价整数股/现金核算、涨跌停、整手、T+1与最低佣金，并独立验证分红送转和每日模拟数据。实际结果、启动门禁与运行命令见 [A2执行验证](docs/A2_EXECUTION_VALIDATION.md)。`ashare-validate`核对历史对照，`ashare-forward-status`查看独立模拟盘扣费收益、回撤和运行失败；该账本与网页个人账户分开。
+A2阶段增加36只历史修复、原价整数股/现金核算、涨跌停、整手、T+1与最低佣金，并独立验证分红送转和每日模拟数据。实际结果、启动门禁与运行命令见 [A2执行验证](docs/A2_EXECUTION_VALIDATION.md)。`ashare-validate`核对历史对照，`ashare-forward-status`查看独立模拟盘扣费收益、回撤和运行失败；该账本与网页个人账户分开。
+
+收益诊断与下一轮改进见 [A3收益、成本与模型诊断](docs/A3_PROFIT_DIAGNOSTICS.md)：完整保留六组候选与成本敏感性结果，2025—2026年属于已看历史复核；2023—2024年执行证据未齐，暂不选择优化赢家。推理精度修复后的独立模拟期已通过启动验收，保持原模型权重和执行策略。
 
 ## 个人工作台
 

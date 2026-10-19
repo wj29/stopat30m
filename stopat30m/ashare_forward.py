@@ -232,6 +232,39 @@ def fit_ashare_forward_candidate(snapshot_path, output_dir, *, train_start="2012
     return load_ashare_forward_candidate(target)
 
 
+def _apply_fitted_feature_processors(features, processor_state):
+    """Apply frozen Qlib statistics with its original dtype and operation order.
+
+    JSON statistics have no numpy dtype. Alpha158 supplies a floating feature
+    matrix, so restore those statistics to that matrix's dtype before each of
+    Qlib's separate in-place subtraction and division operations. Promoting a
+    float32 frame to float64 can change native LightGBM threshold decisions.
+    This function never fits a processor or modifies the caller's frame.
+    """
+    states = processor_state["processors"]
+    if ([state.get("class") for state in states] != ["RobustZScoreNorm", "Fillna"]
+            or list(features.columns) != processor_state["feature_names"]
+            or features.index.has_duplicates):
+        raise ValueError("Inference Alpha158 feature order/index/processor schema differs from the frozen model")
+    values = features.apply(pd.to_numeric, errors="raise").copy()
+    dtype = values.to_numpy().dtype
+    if not np.issubdtype(dtype, np.floating):
+        raise ValueError("Inference Alpha158 features must retain their floating source dtype")
+    if np.isinf(values.to_numpy()).any():
+        raise ValueError("Infinite inference features are invalid source observations")
+    normalizer = states[0]
+    mean = np.asarray(normalizer["mean_train"], dtype=dtype)
+    std = np.asarray(normalizer["std_train"], dtype=dtype)
+    if (mean.shape != (len(features.columns),) or std.shape != mean.shape
+            or not np.isfinite(mean).all() or not np.isfinite(std).all() or (std <= 0).any()
+            or not normalizer.get("clip_outlier") or processor_state.get("fillna_value") != 0
+            or processor_state.get("clip_min") != -3 or processor_state.get("clip_max") != 3):
+        raise ValueError("Frozen inference normalizer is incomplete or differs from the native schema")
+    values -= mean
+    values /= std
+    return values.clip(-3, 3).fillna(0)
+
+
 class FrozenAshareCandidate:
     def __init__(self, path, manifest, protocol, processor, model):
         self.path, self.manifest, self.protocol = Path(path), manifest, protocol
@@ -243,11 +276,7 @@ class FrozenAshareCandidate:
         load_ashare_forward_candidate(self.path)
         if list(features.columns) != self.manifest["feature_names"] or features.index.has_duplicates:
             raise ValueError("Inference Alpha158 feature order/index differs from the frozen model")
-        values = features.apply(pd.to_numeric, errors="raise")
-        if np.isinf(values.to_numpy(dtype=float)).any():
-            raise ValueError("Infinite inference features are invalid source observations")
-        normalizer = self.processor["processors"][0]
-        values = ((values - np.asarray(normalizer["mean_train"])) / np.asarray(normalizer["std_train"])).clip(-3, 3).fillna(0)
+        values = _apply_fitted_feature_processors(features, self.processor)
         scores = self.model.booster.predict(values, num_threads=1)
         if not np.isfinite(scores).all():
             raise ValueError("Forward model returned nonfinite predictions")
