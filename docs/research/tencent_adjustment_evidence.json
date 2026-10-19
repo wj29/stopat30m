@@ -1,0 +1,82 @@
+{
+  "recorded_at": "2026-10-19T08:42:30.989998+00:00",
+  "source": "tencent",
+  "instrument": "SH510300",
+  "source_endpoint": "https://proxy.finance.qq.com/ifzqgtimg/appstock/app/newfqkline/get",
+  "semantics": "affine_cash_accumulation",
+  "return_interpretation": "provider_adjusted_price_returns_not_dividend_reinvestment_total_return",
+  "prices_reconstructed_or_modified": false,
+  "cash_share_ledger_complete": false,
+  "factor_field": "observed_close_ratio_only_not_a_uniform_OHLC_multiplier",
+  "issuer_evidence": [
+    {
+      "url": "https://static.cninfo.com.cn/finalpage/2015-03-31/1200771910.PDF",
+      "issuer": "Huatai-PineBridge Fund Management",
+      "report": "510300 2014 annual report summary",
+      "pages": [
+        4,
+        6
+      ],
+      "split_ratio_2012_05_11": 0.37094933,
+      "accumulated_nav_convention": "(unit_NAV + cumulative_cash_distribution_per_unit) * initial_split_ratio",
+      "cash_distributions": [
+        {
+          "effective_date": "2012-12-18",
+          "CNY_per_unit": 0.033
+        },
+        {
+          "effective_date": "2014-01-21",
+          "CNY_per_unit": 0.048
+        },
+        {
+          "effective_date": "2015-01-20",
+          "CNY_per_unit": 0.035
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "start": "2013-01-01",
+      "end": "2014-01-20",
+      "issuer_cumulative_cash_per_unit": 0.033,
+      "OHLC_values": 1004,
+      "fixed_A": 0.37094933,
+      "fixed_B": 0.01224132789,
+      "maximum_absolute_source_residual": 0.0005485154500000089,
+      "all_within_quantization_bound": true
+    },
+    {
+      "start": "2014-01-21",
+      "end": "2015-01-19",
+      "issuer_cumulative_cash_per_unit": 0.081,
+      "OHLC_values": 972,
+      "fixed_A": 0.37094933,
+      "fixed_B": 0.030046895730000002,
+      "maximum_absolute_source_residual": 0.0005485154500000089,
+      "all_within_quantization_bound": true
+    },
+    {
+      "start": "2015-01-20",
+      "end": "2016-01-19",
+      "issuer_cumulative_cash_per_unit": 0.116,
+      "OHLC_values": 980,
+      "fixed_A": 0.37094933,
+      "fixed_B": 0.043030122280000006,
+      "maximum_absolute_source_residual": 0.000547281319999815,
+      "all_within_quantization_bound": true
+    }
+  ],
+  "quantization": {
+    "raw_serialized_tick": 0.001,
+    "adjusted_serialized_tick": 0.001,
+    "half_tick_error_bound": 0.000685474665,
+    "not_exchange_tick_declaration": true
+  },
+  "limitations": [
+    "Issuer checks cover the specified SH510300 intervals, not a complete event ledger for all three ETFs.",
+    "Positive affine OHLC feasibility validates source alignment, not dividend reinvestment or investable portfolio returns.",
+    "Three-decimal adjusted prices can materially affect short-horizon returns."
+  ],
+  "no_oos_strategy_returns_inspected": true
+}

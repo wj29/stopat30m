@@ -30,6 +30,8 @@ _BAOSTOCK_LOCK = threading.RLock()  # The package's authenticated socket is a si
 _BAOSTOCK_DOCS = "https://www.baostock.com/"
 _EASTMONEY_KLINE = "https://push2his.eastmoney.com/api/qt/stock/kline/get"
 _AKSHARE_ETF_ADAPTER = "https://github.com/akfamily/akshare/blob/main/akshare/fund/fund_etf_em.py"
+_TENCENT_KLINE = "https://proxy.finance.qq.com/ifzqgtimg/appstock/app/newfqkline/get"
+_AKSHARE_TENCENT_ADAPTER = "https://github.com/akfamily/akshare/blob/main/akshare/stock_feature/stock_hist_tx.py"
 LIMITATIONS = [
     "Adjusted prices and observed adjustment factors are research series, not executable market prices.",
     "Cash dividends, share distributions, rights issues and their effective dates are not reconstructed from price ratios.",
@@ -370,6 +372,154 @@ class EastmoneyResearchProvider:
             self._calendar_provider.close()
 
 
+class _TencentHTTPTransport(ResearchHTTPTransport):
+    endpoint, label = _TENCENT_KLINE, "Tencent"
+
+    def decode_response(self, response):
+        text = response.text.strip()
+        if text.startswith("{"):
+            return json.loads(text)
+        # The official public adapter uses _var and returns an assignment,
+        # not executable input. Parse only a JSON object, never eval/JS.
+        match = re.fullmatch(r"(?:var\s+)?[A-Za-z_$][\w$]*\s*=\s*(\{.*\})\s*;?", text, re.S)
+        if match is None:
+            raise ValueError("Invalid Tencent JSONP envelope")
+        return json.loads(match[1])
+
+
+class TencentResearchProvider(EastmoneyResearchProvider):
+    """Explicit Tencent raw/HFQ pairs with overlapping two-year windows.
+
+    Tencent returns up to 640 bars ending at the requested end, potentially
+    before the requested start. Full overlapping rows must match exactly
+    before deduplication; final cropping never invents a missing session.
+    Volume/amount conventions follow AKShare's first-party adapter and are
+    checked against raw OHLC. Calendars/security identities remain BaoStock.
+    """
+    source, version = "tencent", "newfqkline-v1"
+    source_url = _TENCENT_KLINE
+    volume_provenance = {"source_unit": "lots_for_ETF_and_stock_except_STAR_index_shares",
+        "etf_multiplier_to_shares": 100, "index_multiplier_to_shares": 1,
+        "amount_source_unit": "10000_CNY", "amount_multiplier_to_CNY": 10000,
+        "semantics_reference": _AKSHARE_TENCENT_ADAPTER,
+        "raw_ohlc_volume_amount_crosscheck": True}
+    adjustment_provenance = {"endpoint": _TENCENT_KLINE,
+        "modes": {"raw": "day", "hfq": "hfqday", "qfq": "qfqday"},
+        "adapter_reference": _AKSHARE_TENCENT_ADAPTER,
+        "provider_mode_echo_available": True,
+        "window_policy": "two_calendar_years_640_bars_with_exact_overlap_checks",
+        "ohlc_precision": "observed_fixed_decimal_serialization_not_exchange_tick",
+        "known_action_probe": "SH510500 2015-04-15 consolidation adjusted discontinuity removed",
+        "adjustment_transform": "affine_cash_accumulation",
+        "issuer_evidence": "repository:docs/research/tencent_adjustment_evidence.json"}
+    price_semantics = {"adjustment_transform": "affine_cash_accumulation",
+        "adjustment_factor": "observed_close_ratio_only_not_a_uniform_OHLC_multiplier",
+        "return_interpretation": "provider_adjusted_price_returns_not_dividend_reinvestment_total_return",
+        "dividend_reinvestment_verified": False}
+    limitations = [
+        "Tencent HFQ is an affine cumulative-cash adjusted-price series; close ratios are not uniform OHLC multipliers.",
+        "Returns on this provider series are not verified dividend-reinvestment total returns or investable share/cash-account profits.",
+        "Three-decimal adjusted ETF serialization can materially affect short-horizon returns; prices are preserved, not repaired.",
+        "Issuer action evidence checks selected intervals only; a complete three-ETF corporate-action event ledger is not yet reconstructed.",
+    ]
+
+    def __init__(self, session=None, calendar_provider=None, **kwargs):
+        super().__init__(session=session, calendar_provider=calendar_provider, **kwargs)
+        self._transport = _TencentHTTPTransport(self._session, cache_dir=kwargs.get("cache_dir"),
+            clock=kwargs.get("clock"), sleep=kwargs.get("sleep"), random=kwargs.get("random"),
+            min_interval=kwargs.get("min_interval", 2), max_attempts=kwargs.get("max_attempts", 4))
+
+    def _fetch_window(self, inst, end, year, mode):
+        info = self.instrument_info(inst)
+        symbol = inst.lower()
+        params = {"_var": f"kline_day{mode}{year}",
+            "param": f"{symbol},day,{year}-01-01,{end},640,{mode}", "r": "0.8205512681390605"}
+        parsed = None
+
+        def validate(payload):
+            nonlocal parsed
+            if not isinstance(payload, dict) or str(payload.get("code")) != "0":
+                raise ResearchDataError(f"Tencent returned invalid daily data for {inst}.")
+            data = payload.get("data")
+            data = data.get(symbol) if isinstance(data, dict) else None
+            field = f"{mode}day" if mode else "day"
+            rows = data.get(field) if isinstance(data, dict) else None
+            if not isinstance(rows, list) or not rows:
+                raise ResearchDataError(f"Tencent did not return explicit {field} mode for {inst}.")
+            if any(not isinstance(row, list) or not 9 <= len(row) <= 11 for row in rows):
+                raise ResearchDataError(f"Malformed Tencent daily row for {inst}.")
+            prices = [str(value) for row in rows for value in row[1:5]]
+            decimal_counts = {len(value.partition(".")[2]) for value in prices
+                if re.fullmatch(r"[0-9]+\.[0-9]{1,8}", value)}
+            if len(decimal_counts) != 1 or any(not re.fullmatch(r"[0-9]+\.[0-9]{1,8}", value) for value in prices):
+                raise ResearchDataError(f"Tencent OHLC serialization precision is not uniform for {inst}.")
+            resolution = 10.0 ** -next(iter(decimal_counts))
+            frame = pd.DataFrame([{"date": row[0], "open": row[1], "close": row[2], "high": row[3],
+                "low": row[4], "volume": row[5], "amount": row[8], "code": inst,
+                "tradestatus": "", "isST": ""} for row in rows])
+            multiplier = 1 if info["asset_type"] == "index" or inst.startswith("SH688") else 100
+            frame["volume"] = pd.to_numeric(frame["volume"], errors="coerce") * multiplier
+            frame["amount"] = pd.to_numeric(frame["amount"], errors="coerce") * 10000
+            earliest = min(_day(row[0]) for row in rows)
+            frame = _bars(frame, inst, earliest, end, raw=not mode)
+            if not mode and info["asset_type"] != "index":
+                volume, amount = frame["volume"], frame["amount"]
+                vwap = amount / volume.replace(0, np.nan)
+                # Reported amount is rounded to .01万元; lots can carry .01手.
+                tolerance = 50 / volume.replace(0, np.nan) + resolution
+                invalid = (volume > 0) & ((vwap < frame["low"] - tolerance) | (vwap > frame["high"] + tolerance))
+                if invalid.any():
+                    raise ResearchDataError(f"Tencent raw volume/amount unit does not match OHLC for {inst}.")
+            precision = self._info[inst].setdefault("ohlc_resolution_by_mode", {})
+            if field in precision and precision[field] != resolution:
+                raise ResearchDataError(f"Tencent OHLC precision changed across windows for {inst}.")
+            precision[field] = resolution
+            self._info[inst]["factor_semantics"] = "observed_close_ratio_approximate_under_serialized_rounding"
+            self._info[inst].setdefault("response_versions_by_mode", {}).setdefault(field, [])
+            versions = self._info[inst]["response_versions_by_mode"][field]
+            version = str(data.get("version", "unknown"))
+            if version not in versions:
+                versions.append(version)
+            frame.attrs["price_resolution"] = resolution
+            frame.attrs["source_rows"] = {row[0]: json.dumps(row, sort_keys=True, separators=(",", ":")) for row in rows}
+            parsed = frame
+
+        try:
+            self._transport.get(params, timeout=self._timeout, headers={"User-Agent": "Mozilla/5.0"}, validate=validate)
+        except ResearchDownloadError as exc:
+            raise ResearchDataError(str(exc)) from exc
+        return parsed
+
+    def _fetch(self, instrument, start, end, flag):
+        inst, start, end = _instrument(instrument), _day(start), _day(end)
+        mode = "" if self.instrument_info(inst)["asset_type"] == "index" else flag
+        chunks, evidence, resolution = [], {}, None
+        for year in range(int(start[:4]), int(end[:4]) + 1, 2):
+            window_end = min(end, f"{year + 1}-12-31")
+            frame = self._fetch_window(inst, window_end, year, mode)
+            for day, row in frame.attrs["source_rows"].items():
+                if day in evidence and evidence[day] != row:
+                    raise ResearchDataError(f"Tencent overlapping {mode or 'raw'} history changed for {inst} on {day}; refusing mixed vintages.")
+                evidence[day] = row
+            resolution = frame.attrs["price_resolution"]
+            chunks.append(frame)
+        merged = pd.concat(chunks, ignore_index=True).drop_duplicates("date").sort_values("date")
+        merged = merged[merged["date"].between(start, end)].reset_index(drop=True)
+        if merged.empty:
+            raise ResearchDataError(f"Tencent has no requested daily history for {inst}.")
+        merged.attrs["price_resolution"] = resolution
+        merged.attrs["adjustment_transform"] = "affine_cash_accumulation"
+        return merged
+
+    def fetch_raw(self, instrument, start, end):
+        return self._fetch(instrument, start, end, "")
+
+    def fetch_adjusted(self, instrument, start, end, adjustment):
+        if adjustment not in {"hfq", "qfq"}:
+            raise ResearchDataError("Tencent adjustment must be hfq or qfq.")
+        return self._fetch(instrument, start, end, adjustment)
+
+
 def _calendar(frame: pd.DataFrame, start: str, end: str) -> pd.DataFrame:
     frame = frame.rename(columns={"calendar_date": "date"}).copy()
     if not {"date", "is_trading_day"}.issubset(frame.columns):
@@ -425,6 +575,9 @@ def _bars(frame: pd.DataFrame, inst: str, start: str, end: str, *, raw: bool) ->
 
 def _pair(raw: pd.DataFrame, adjusted: pd.DataFrame, inst: str, start: str, end: str) -> pd.DataFrame:
     raw_tick, adj_tick = raw.attrs.get("price_resolution"), adjusted.attrs.get("price_resolution")
+    transform = raw.attrs.get("adjustment_transform")
+    if transform != adjusted.attrs.get("adjustment_transform"):
+        raise ResearchDataError(f"Raw/adjusted transformation declarations differ for {inst}.")
     raw = _bars(raw, inst, start, end, raw=True)
     adjusted = _bars(adjusted, inst, start, end, raw=False)
     if raw["date"].tolist() != adjusted["date"].tolist():
@@ -451,10 +604,26 @@ def _pair(raw: pd.DataFrame, adjusted: pd.DataFrame, inst: str, start: str, end:
         valid = np.isfinite(raw_values).all(axis=1) & np.isfinite(adj_values).all(axis=1)
         if (raw_values[valid] <= raw_tick / 2).any():
             raise ResearchDataError(f"Raw prices are too small relative to declared precision for {inst}.")
-        lower = ((adj_values[valid] - adj_tick / 2) / (raw_values[valid] + raw_tick / 2)).max(axis=1)
-        upper = ((adj_values[valid] + adj_tick / 2) / (raw_values[valid] - raw_tick / 2)).min(axis=1)
-        if (lower > upper + 1e-12).any():
-            raise ResearchDataError(f"Adjusted OHLC does not share a coherent per-day factor within declared precision for {inst}.")
+        if transform == "affine_cash_accumulation":
+            # Feasibility of one positive a and offset b for all four rounded
+            # OHLC values: max_i(y_i-hy-a*(x_i+hx)) <=
+            # min_j(y_j+hy-a*(x_j-hx)). All 16 inequalities are linear in a.
+            # This verifies source alignment without inferring action events or
+            # replacing the provider's prices with a fitted reconstruction.
+            x, y = raw_values[valid], adj_values[valid]
+            coefficients = x[:, None, :] - x[:, :, None] - raw_tick
+            bounds = y[:, None, :] - y[:, :, None] + adj_tick
+            ratios = np.divide(bounds, coefficients, out=np.zeros_like(bounds), where=np.abs(coefficients) > 1e-12)
+            lower = np.maximum(0, np.where(coefficients < -1e-12, ratios, -np.inf).max(axis=(1, 2)))
+            upper = np.where(coefficients > 1e-12, ratios, np.inf).min(axis=(1, 2))
+            impossible_flat = ((np.abs(coefficients) <= 1e-12) & (bounds < -1e-12)).any(axis=(1, 2))
+            if (impossible_flat | (upper <= 0) | (lower > upper + 1e-12)).any():
+                raise ResearchDataError(f"Adjusted OHLC does not share a coherent positive affine transform within source precision for {inst}.")
+        else:
+            lower = ((adj_values[valid] - adj_tick / 2) / (raw_values[valid] + raw_tick / 2)).max(axis=1)
+            upper = ((adj_values[valid] + adj_tick / 2) / (raw_values[valid] - raw_tick / 2)).min(axis=1)
+            if (lower > upper + 1e-12).any():
+                raise ResearchDataError(f"Adjusted OHLC does not share a coherent per-day factor within declared precision for {inst}.")
     else:
         for field in _OHLC:
             valid = result[f"raw_{field}"].notna() & result["adjustment_factor"].notna()
@@ -662,10 +831,11 @@ def _download_research_prices(
             "point_in_time_adjustment_verified": False,
             "price_semantics": {"raw": "unadjusted", "adjusted": adjustment,
                 "adjustment_factor": "same-source adjusted_close / raw_close, not a cash/share corporate-action ledger",
-                "volume_unit": "shares", "amount_unit": "CNY", "no_forward_fill": True},
+                "volume_unit": "shares", "amount_unit": "CNY", "no_forward_fill": True,
+                **getattr(provider, "price_semantics", {})},
             "calendar": {**calendar_meta,
                 "natural_day_count": len(calendar), "session_count": len(sessions)},
-            "instruments": infos, "coverage": coverage, "limitations": LIMITATIONS}
+            "instruments": infos, "coverage": coverage, "limitations": [*LIMITATIONS, *getattr(provider, "limitations", [])]}
         if hasattr(provider, "download_provenance"):
             manifest["download_provenance"] = provider.download_provenance()
         identifier = _sha(_json_bytes(_manifest_identity(manifest)))

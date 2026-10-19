@@ -1,0 +1,5 @@
+# A-share Qlib Alpha158 training/backtest runtime (separate from optional web UI).
+-r requirements-research.txt
+pyqlib==0.9.7
+scikit-learn>=1.6,<2
+pyarrow>=15,<27

@@ -40,7 +40,7 @@ def cli(ctx: click.Context, config: str | None) -> None:
 @cli.command()
 @click.option("--source", default="baostock",
               type=click.Choice(["baostock", "qlib+baostock", "qlib", "akshare", "efinance", "tushare"]),
-              help="Data source: baostock (default, incremental), qlib+baostock (full rebuild), qlib (base only ~2020)")
+              help="Legacy fetcher source; pinned Qlib stock workflow: research ashare-base / ashare-update")
 @click.option("--target-dir", default=None, help="Target directory")
 @click.option("--start-date", default=None, help="Start date YYYY-MM-DD (full download only)")
 @click.option("--end-date", default=None, help="End date YYYY-MM-DD (default today)")
@@ -57,10 +57,8 @@ def download(source: str, target_dir: str | None, start_date: str | None, end_da
              full: bool, single_source: bool, workers: int | None, rebuild_meta: bool) -> None:
     """Download A-share market data.
 
-    Default: incremental update using multiple sources in parallel (BaoStock + AkShare).
-    BaoStock uses 4 parallel sub-processes by default (no rate limit).
-    Use --workers N to control parallelism. Use --single-source for single source only.
-    Use --full to do a complete rebuild from Qlib official base + BaoStock.
+    Legacy fetcher workflow. For a source-pinned Qlib stock base, audited
+    increments and retraining use the research ashare-* commands.
     """
     if rebuild_meta:
         from pathlib import Path
@@ -88,12 +86,15 @@ def download(source: str, target_dir: str | None, start_date: str | None, end_da
         source = "qlib+baostock"
 
     from stopat30m.data.provider import download_cn_data
-    download_cn_data(
-        source=source, target_dir=target_dir,
-        start_date=start_date, end_date=end_date,
-        parallel=not single_source,
-        workers=workers,
-    )
+    try:
+        download_cn_data(
+            source=source, target_dir=target_dir,
+            start_date=start_date, end_date=end_date,
+            parallel=not single_source,
+            workers=workers,
+        )
+    except (ValueError, OSError, RuntimeError) as exc:
+        raise click.ClickException(str(exc)) from exc
 
 
 @cli.command("check-data")

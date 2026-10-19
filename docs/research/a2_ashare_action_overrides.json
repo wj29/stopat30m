@@ -1,0 +1,385 @@
+{
+  "schema_version": 1,
+  "policy": "separately_evidenced_actual_entitlements_and_exchange_reference_terms",
+  "original_supplier_responses_unchanged": true,
+  "patches": [
+    {
+      "instrument": "SH600519",
+      "ex_date": "2025-06-26",
+      "operation": "annotate",
+      "values": {
+        "reference_cash_per_share": "27.600",
+        "reference_bonus_ratio": "0"
+      },
+      "evidence": {
+        "path": "../../output/research/ashare/collections/action_announcements_20261019/1223934491.pdf",
+        "sha256": "8ff3e6e370c75cece700e5474337c8ecf1adb87b01a1a696bae02fd25982af3b",
+        "url": "https://static.cninfo.com.cn/finalpage/2025-06-20/1223934491.PDF",
+        "kind": "issuer_original_pdf_bytes",
+        "text_extraction": "pypdf; monetary terms manually checked against full original notice text"
+      }
+    },
+    {
+      "instrument": "SH600690",
+      "ex_date": "2026-08-21",
+      "operation": "annotate",
+      "values": {
+        "reference_cash_per_share": "0.87373",
+        "reference_bonus_ratio": "0"
+      },
+      "evidence": {
+        "path": "../../output/research/ashare/collections/action_announcements_20261019/1225474603.pdf",
+        "sha256": "188668660eb58dde985f8d99401f721b41c372ccaebf0137cdb5d20d249f8d06",
+        "url": "https://static.cninfo.com.cn/finalpage/2026-08-15/1225474603.PDF",
+        "kind": "issuer_original_pdf_bytes",
+        "text_extraction": "pypdf; monetary terms manually checked against full original notice text"
+      }
+    },
+    {
+      "instrument": "SH601021",
+      "ex_date": "2026-08-03",
+      "operation": "annotate",
+      "values": {
+        "reference_cash_per_share": "0.51",
+        "reference_bonus_ratio": "0"
+      },
+      "evidence": {
+        "path": "../../output/research/ashare/collections/action_announcements_20261019/1225443167.pdf",
+        "sha256": "e37e8a599aea91f3b3ec65f044861a369ed05996fb50d23be4d9a2b7f4997060",
+        "url": "https://static.cninfo.com.cn/finalpage/2026-07-28/1225443167.PDF",
+        "kind": "issuer_original_pdf_bytes",
+        "text_extraction": "pypdf; monetary terms manually checked against full original notice text"
+      }
+    },
+    {
+      "instrument": "SH601318",
+      "ex_date": "2025-06-30",
+      "operation": "annotate",
+      "values": {
+        "reference_cash_per_share": "1.6046",
+        "reference_bonus_ratio": "0"
+      },
+      "evidence": {
+        "path": "../../output/research/ashare/collections/action_announcements_20261019/1223934698.pdf",
+        "sha256": "48a1053e6c280b2728ac68383bd7efb202d2a561af4e9a55fe6671db8e034120",
+        "url": "https://static.cninfo.com.cn/finalpage/2025-06-20/1223934698.PDF",
+        "kind": "issuer_original_pdf_bytes",
+        "text_extraction": "pypdf; monetary terms manually checked against full original notice text"
+      }
+    },
+    {
+      "instrument": "SH601799",
+      "ex_date": "2026-05-18",
+      "operation": "annotate",
+      "values": {
+        "reference_cash_per_share": "1.7811",
+        "reference_bonus_ratio": "0"
+      },
+      "evidence": {
+        "path": "../../output/research/ashare/collections/action_announcements_20261019/1225281789.pdf",
+        "sha256": "aa022951e1bed6d2bad18c39b3b08e2e9fbb3eb33d0a208bc7bc13cd7a3b3c93",
+        "url": "https://static.cninfo.com.cn/finalpage/2026-05-08/1225281789.PDF",
+        "kind": "issuer_original_pdf_bytes",
+        "text_extraction": "pypdf; monetary terms manually checked against full original notice text"
+      }
+    },
+    {
+      "instrument": "SH603259",
+      "ex_date": "2025-05-21",
+      "operation": "replace",
+      "values": {
+        "reference_cash_per_share": "1.33017",
+        "reference_bonus_ratio": "0",
+        "cash_per_share": "1.33169",
+        "known_at": "2025-05-15T23:59:59+08:00"
+      },
+      "evidence": {
+        "path": "../../output/research/ashare/collections/action_announcements_20261019/1223543249.pdf",
+        "sha256": "903021b449b18291b6b4604495141085c7fc98336161ed556b73d0a22b6dd895",
+        "url": "https://static.cninfo.com.cn/finalpage/2025-05-15/1223543249.PDF",
+        "kind": "issuer_original_pdf_bytes",
+        "text_extraction": "pypdf; monetary terms manually checked against full original notice text"
+      }
+    },
+    {
+      "instrument": "SH605499",
+      "ex_date": "2026-09-24",
+      "operation": "annotate",
+      "values": {
+        "reference_cash_per_share": "2.97",
+        "reference_bonus_ratio": "0"
+      },
+      "evidence": {
+        "path": "../../output/research/ashare/collections/action_announcements_20261019/1225570790.pdf",
+        "sha256": "61655fb526b0beb6778342302fcaa033cd62736d771fc0aadd6d18685d1f0450",
+        "url": "https://static.cninfo.com.cn/finalpage/2026-09-18/1225570790.PDF",
+        "kind": "issuer_original_pdf_bytes",
+        "text_extraction": "pypdf; monetary terms manually checked against full original notice text"
+      }
+    },
+    {
+      "instrument": "SH688169",
+      "ex_date": "2025-06-24",
+      "operation": "annotate",
+      "values": {
+        "reference_cash_per_share": "1.06915",
+        "reference_bonus_ratio": "0.39982"
+      },
+      "evidence": {
+        "path": "../../output/research/ashare/collections/action_announcements_20261019/1223887251.pdf",
+        "sha256": "e2ee06bd2c70d308e61f670e046b40c73fc71f494f8f6debf1655defa7a32799",
+        "url": "https://static.cninfo.com.cn/finalpage/2025-06-17/1223887251.PDF",
+        "kind": "issuer_original_pdf_bytes",
+        "text_extraction": "pypdf; monetary terms manually checked against full original notice text"
+      }
+    },
+    {
+      "instrument": "SZ000333",
+      "ex_date": "2025-06-12",
+      "operation": "annotate",
+      "values": {
+        "reference_cash_per_share": "3.4788428",
+        "reference_bonus_ratio": "0"
+      },
+      "evidence": {
+        "path": "../../output/research/ashare/collections/action_announcements_20261019/1223787314.pdf",
+        "sha256": "d9bb47f27deb4b2eb3fce504509d826c2fa6df3f17664feab24b5e0e2ddfbe3c",
+        "url": "https://static.cninfo.com.cn/finalpage/2025-06-06/1223787314.PDF",
+        "kind": "issuer_original_pdf_bytes",
+        "text_extraction": "pypdf; monetary terms manually checked against full original notice text"
+      }
+    },
+    {
+      "instrument": "SZ000333",
+      "ex_date": "2026-06-29",
+      "operation": "annotate",
+      "values": {
+        "reference_cash_per_share": "3.7221885",
+        "reference_bonus_ratio": "0"
+      },
+      "evidence": {
+        "path": "../../output/research/ashare/collections/action_announcements_20261019/1225381921.pdf",
+        "sha256": "afcd0c38996bea94bea13cf2a9cc571bc46017ec3ec04c811c4a54e0c5bc5557",
+        "url": "https://static.cninfo.com.cn/finalpage/2026-06-23/1225381921.PDF",
+        "kind": "issuer_original_pdf_bytes",
+        "text_extraction": "pypdf; monetary terms manually checked against full original notice text"
+      }
+    },
+    {
+      "instrument": "SZ000661",
+      "ex_date": "2025-07-04",
+      "operation": "annotate",
+      "values": {
+        "reference_cash_per_share": "2.5603368",
+        "reference_bonus_ratio": "0"
+      },
+      "evidence": {
+        "path": "../../output/research/ashare/collections/action_announcements_20261019/1223997760.pdf",
+        "sha256": "7d5f72c028f6f561365370fbc0224e2a7063be60aea0367ea74563f3e6644848",
+        "url": "https://static.cninfo.com.cn/finalpage/2025-06-27/1223997760.PDF",
+        "kind": "issuer_original_pdf_bytes",
+        "text_extraction": "pypdf; monetary terms manually checked against full original notice text"
+      }
+    },
+    {
+      "instrument": "SZ002352",
+      "ex_date": "2026-09-17",
+      "operation": "annotate",
+      "values": {
+        "reference_cash_per_share": "0.4736483",
+        "reference_bonus_ratio": "0"
+      },
+      "evidence": {
+        "path": "../../output/research/ashare/collections/action_announcements_20261019/1225554263.pdf",
+        "sha256": "83a537b0ac61776a4e37e368e6f0efe7710016df1b0861d2ecde634dc091962c",
+        "url": "https://static.cninfo.com.cn/finalpage/2026-09-09/1225554263.PDF",
+        "kind": "issuer_original_pdf_bytes",
+        "text_extraction": "pypdf; monetary terms manually checked against full original notice text"
+      }
+    },
+    {
+      "instrument": "SZ300750",
+      "ex_date": "2026-04-22",
+      "operation": "annotate",
+      "values": {
+        "reference_cash_per_share": "6.9065252",
+        "reference_bonus_ratio": "0"
+      },
+      "evidence": {
+        "path": "../../output/research/ashare/collections/action_announcements_20261019/1225107879.pdf",
+        "sha256": "3fc437d1dd558cb4455616960a9866905567ee0fda414a0d45d56236c8fbb6e2",
+        "url": "https://static.cninfo.com.cn/finalpage/2026-04-15/1225107879.PDF",
+        "kind": "issuer_original_pdf_bytes",
+        "text_extraction": "pypdf; monetary terms manually checked against full original notice text"
+      }
+    },
+    {
+      "instrument": "SZ002594",
+      "ex_date": "2025-07-29",
+      "operation": "annotate",
+      "values": {
+        "cash_dividend_tax_rate": "0.2402617010568696527428283845",
+        "taxable_stock_face_value_per_record_share": "0.8"
+      },
+      "evidence": {
+        "path": "../../output/research/ashare/corporate_actions/byd2025/byd_2025_047.web_facts.json",
+        "sha256": "f3b4928c25c262508afbfd6b62bcb2c8bbf77eb01dfdefa841dbede2dcda5ce0",
+        "url": "https://static.cninfo.com.cn/finalpage/2025-08-30/1224626653.PDF",
+        "kind": "issuer_implementation_notice_local_facts_extract_not_pdf_bytes"
+      }
+    },
+    {
+      "instrument": "SH600219",
+      "ex_date": "2025-12-12",
+      "operation": "add",
+      "values": {
+        "record_date": "2025-12-11",
+        "ex_date": "2025-12-12",
+        "pay_date": "2025-12-12",
+        "listing_date": null,
+        "cash_per_share": "0.2584",
+        "stock_dividend_ratio": "0",
+        "capital_reserve_ratio": "0",
+        "bonus_ratio": "0",
+        "known_at": "2025-12-05T23:59:59+08:00",
+        "reference_cash_per_share": "0.2559",
+        "reference_bonus_ratio": "0"
+      },
+      "evidence": {
+        "path": "../../output/research/ashare/corporate_actions/special_dividends_2025_2026/1224850617.pdf",
+        "sha256": "764f68fe0e89f57688c8b1fe2cd2d4b83b989cb57500da38da799a4619c47788",
+        "url": "https://static.cninfo.com.cn/finalpage/2025-12-05/1224850617.PDF"
+      }
+    },
+    {
+      "instrument": "SH600930",
+      "ex_date": "2026-02-11",
+      "operation": "add",
+      "values": {
+        "record_date": "2026-02-10",
+        "ex_date": "2026-02-11",
+        "pay_date": "2026-02-11",
+        "listing_date": null,
+        "cash_per_share": "0.03",
+        "stock_dividend_ratio": "0",
+        "capital_reserve_ratio": "0",
+        "bonus_ratio": "0",
+        "known_at": "2026-02-04T23:59:59+08:00"
+      },
+      "evidence": {
+        "path": "../../output/research/ashare/corporate_actions/special_dividends_2025_2026/1224964356.pdf",
+        "sha256": "6e1471723bc71cc25ee1614273097d52ccef5dbd6a8dafef1543420670442e66",
+        "url": "https://static.cninfo.com.cn/finalpage/2026-02-04/1224964356.PDF"
+      }
+    },
+    {
+      "instrument": "SH603288",
+      "ex_date": "2026-02-06",
+      "operation": "add",
+      "values": {
+        "record_date": "2026-02-05",
+        "ex_date": "2026-02-06",
+        "pay_date": "2026-02-06",
+        "listing_date": null,
+        "cash_per_share": "0.30",
+        "stock_dividend_ratio": "0",
+        "capital_reserve_ratio": "0",
+        "bonus_ratio": "0",
+        "known_at": "2026-01-31T23:59:59+08:00",
+        "reference_cash_per_share": "0.30",
+        "reference_bonus_ratio": "0"
+      },
+      "evidence": {
+        "path": "../../output/research/ashare/corporate_actions/special_dividends_2025_2026/1224960015.pdf",
+        "sha256": "c9d192d0d4283aa90f8882d935a8fb34961be8dd4c80ea2b885f07fcc1b21378",
+        "url": "https://static.cninfo.com.cn/finalpage/2026-01-31/1224960015.PDF"
+      }
+    },
+    {
+      "instrument": "SZ000538",
+      "ex_date": "2025-09-24",
+      "operation": "add",
+      "values": {
+        "record_date": "2025-09-23",
+        "ex_date": "2025-09-24",
+        "pay_date": "2025-09-24",
+        "listing_date": null,
+        "cash_per_share": "1.019",
+        "stock_dividend_ratio": "0",
+        "capital_reserve_ratio": "0",
+        "bonus_ratio": "0",
+        "known_at": "2025-09-17T23:59:59+08:00"
+      },
+      "evidence": {
+        "path": "../../output/research/ashare/corporate_actions/special_dividends_2025_2026/1224663922.pdf",
+        "sha256": "8658b2d0a01f6d51d64a03bbaae9a28515594e9572bbb773275284e80b6b3eec",
+        "url": "https://static.cninfo.com.cn/finalpage/2025-09-17/1224663922.PDF"
+      }
+    },
+    {
+      "instrument": "SZ000538",
+      "ex_date": "2026-09-24",
+      "operation": "add",
+      "values": {
+        "record_date": "2026-09-23",
+        "ex_date": "2026-09-24",
+        "pay_date": "2026-09-24",
+        "listing_date": null,
+        "cash_per_share": "1.038",
+        "stock_dividend_ratio": "0",
+        "capital_reserve_ratio": "0",
+        "bonus_ratio": "0",
+        "known_at": "2026-09-17T23:59:59+08:00"
+      },
+      "evidence": {
+        "path": "../../output/research/ashare/corporate_actions/special_dividends_2025_2026/1225567703.pdf",
+        "sha256": "d034bf38ad28754aef99ec38e0591935d860387002d3c61c892c0b8f579ef2d2",
+        "url": "https://static.cninfo.com.cn/finalpage/2026-09-17/1225567703.PDF"
+      }
+    },
+    {
+      "instrument": "SZ002001",
+      "ex_date": "2025-01-22",
+      "operation": "add",
+      "values": {
+        "record_date": "2025-01-21",
+        "ex_date": "2025-01-22",
+        "pay_date": "2025-01-22",
+        "listing_date": null,
+        "cash_per_share": "0.20",
+        "stock_dividend_ratio": "0",
+        "capital_reserve_ratio": "0",
+        "bonus_ratio": "0",
+        "known_at": "2025-01-15T23:59:59+08:00"
+      },
+      "evidence": {
+        "path": "../../output/research/ashare/corporate_actions/special_dividends_2025_2026/1222332765.pdf",
+        "sha256": "91dd6ddb6b44bac75b92ba09232fde9063e4392be7a1a55c198ea1b210e5c3a9",
+        "url": "https://static.cninfo.com.cn/finalpage/2025-01-15/1222332765.PDF"
+      }
+    },
+    {
+      "instrument": "SZ300750",
+      "ex_date": "2025-01-24",
+      "operation": "add",
+      "values": {
+        "record_date": "2025-01-23",
+        "ex_date": "2025-01-24",
+        "pay_date": "2025-01-24",
+        "listing_date": null,
+        "cash_per_share": "1.23",
+        "stock_dividend_ratio": "0",
+        "capital_reserve_ratio": "0",
+        "bonus_ratio": "0",
+        "known_at": "2025-01-17T23:59:59+08:00",
+        "reference_cash_per_share": "1.2255331",
+        "reference_bonus_ratio": "0"
+      },
+      "evidence": {
+        "path": "../../output/research/ashare/corporate_actions/special_dividends_2025_2026/1222366609.pdf",
+        "sha256": "78549e6908050e9fde1e5f9a07220032b64ad617dc222157413eeda6838a2301",
+        "url": "https://static.cninfo.com.cn/finalpage/2025-01-17/1222366609.PDF"
+      }
+    }
+  ]
+}

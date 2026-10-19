@@ -1,0 +1,863 @@
+{
+  "schema_version": 1,
+  "status": "candidate_only_not_an_economic_ledger",
+  "requested_window": {
+    "start_date": "2013-01-01",
+    "end_date": "2026-10-19"
+  },
+  "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+  "discovery_manifest": "output/research/corporate_actions/discovery_manifest.json",
+  "discovery_manifest_sha256": "1b3802b72ca61df758844c8477f0df0b6de3466851395955757b6def5248285d",
+  "adapter_reference": "https://github.com/akfamily/akshare/blob/main/akshare/fund/fund_em.py",
+  "issuer_verified_complete": false,
+  "used_to_change_prices_or_returns": false,
+  "ready_for_economic_ledger": false,
+  "limitations": [
+    "All rows are vendor F10 candidates; parsed source bytes and fields are verified, issuer announcements and historical completeness are not.",
+    "No-record placeholders are not zero-event proofs. Unlisted years and absent records remain coverage unknown.",
+    "Split ratios are displayed with limited precision; verify exact issuer ratio, direction, effective date and share/price basis before use.",
+    "Cash amounts are per record-date unit, not an inception/2013 unit after cumulative conversions; no automatic cohort conversion is performed.",
+    "Vendor conversion dates are not silently equated to exchange ex-dates; missing record/payment/announcement fields remain null.",
+    "Fetched-at is observation time, never a historical announcement/known-at time; these candidates cannot supply PIT features.",
+    "No raw cash/share ledger, reinvested total return, correction to existing research, or return-based source choice was performed."
+  ],
+  "instruments": [
+    {
+      "instrument": "SH510300",
+      "source_url": "https://fundf10.eastmoney.com/fhsp_510300.html",
+      "source_sha256": "696d24565067120226d1a989f89ef40a08467927e5f141ecb8cb9b2a76761fc5",
+      "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+      "source_bytes_verified": true,
+      "status": "candidate_only",
+      "issuer_verified_complete": false,
+      "history_coverage_status": "unknown_not_proven_by_vendor_page",
+      "table_audit": {
+        "cash_distribution": {
+          "raw_rows": 14,
+          "placeholder_rows": 0,
+          "candidate_events": 14,
+          "page_statement": "vendor_records_parsed",
+          "issuer_verified_complete": false
+        },
+        "split_conversion": {
+          "raw_rows": 1,
+          "placeholder_rows": 0,
+          "candidate_events": 1,
+          "page_statement": "vendor_records_parsed",
+          "issuer_verified_complete": false
+        }
+      },
+      "events": [
+        {
+          "instrument": "SH510300",
+          "action_type": "split_conversion",
+          "status": "candidate",
+          "ex_date": null,
+          "effective_date": "2012-05-11",
+          "record_date": null,
+          "payment_date": null,
+          "cash_per_original_unit": null,
+          "split_ratio": "0.3709",
+          "announcement_date": null,
+          "announcement_url": null,
+          "source_url": "https://fundf10.eastmoney.com/fhsp_510300.html",
+          "source_sha256": "696d24565067120226d1a989f89ef40a08467927e5f141ecb8cb9b2a76761fc5",
+          "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+          "source_row_index": 0,
+          "raw_fields": {
+            "年份": "2012年",
+            "拆分折算日": "2012-05-11",
+            "拆分类型": "份额折算",
+            "拆分折算比例": "1:0.3709"
+          },
+          "issuer_verified": false,
+          "ready_for_economic_ledger": false,
+          "split_ratio_basis": "vendor display ratio, candidate new units per prior unit; exact issuer ratio and effective/ex date unverified",
+          "split_ratio_exact": false,
+          "unknown_fields": [
+            "ex_date",
+            "record_date",
+            "payment_date",
+            "announcement_date",
+            "announcement_url"
+          ],
+          "event_id": "cc5fd143597af2cb18383200",
+          "within_requested_window": false
+        },
+        {
+          "instrument": "SH510300",
+          "action_type": "cash_distribution",
+          "status": "candidate",
+          "ex_date": "2012-12-18",
+          "effective_date": null,
+          "record_date": "2012-12-17",
+          "payment_date": "2012-12-24",
+          "cash_per_original_unit": "0.0330",
+          "split_ratio": null,
+          "announcement_date": null,
+          "announcement_url": null,
+          "source_url": "https://fundf10.eastmoney.com/fhsp_510300.html",
+          "source_sha256": "696d24565067120226d1a989f89ef40a08467927e5f141ecb8cb9b2a76761fc5",
+          "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+          "source_row_index": 13,
+          "raw_fields": {
+            "年份": "2012年",
+            "权益登记日": "2012-12-17",
+            "除息日": "2012-12-18",
+            "每10份分红": "每10份派现金0.3300元",
+            "分红发放日": "2012-12-24"
+          },
+          "issuer_verified": false,
+          "ready_for_economic_ledger": false,
+          "cash_unit_basis": "one fund unit entitled at record_date, before this event; not an inception/2013-original cohort unit",
+          "unknown_fields": [
+            "announcement_date",
+            "announcement_url"
+          ],
+          "event_id": "7f2a40538c730e065e600dbc",
+          "within_requested_window": false
+        },
+        {
+          "instrument": "SH510300",
+          "action_type": "cash_distribution",
+          "status": "candidate",
+          "ex_date": "2014-01-21",
+          "effective_date": null,
+          "record_date": "2014-01-20",
+          "payment_date": "2014-01-27",
+          "cash_per_original_unit": "0.0480",
+          "split_ratio": null,
+          "announcement_date": null,
+          "announcement_url": null,
+          "source_url": "https://fundf10.eastmoney.com/fhsp_510300.html",
+          "source_sha256": "696d24565067120226d1a989f89ef40a08467927e5f141ecb8cb9b2a76761fc5",
+          "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+          "source_row_index": 12,
+          "raw_fields": {
+            "年份": "2014年",
+            "权益登记日": "2014-01-20",
+            "除息日": "2014-01-21",
+            "每10份分红": "每10份派现金0.4800元",
+            "分红发放日": "2014-01-27"
+          },
+          "issuer_verified": false,
+          "ready_for_economic_ledger": false,
+          "cash_unit_basis": "one fund unit entitled at record_date, before this event; not an inception/2013-original cohort unit",
+          "unknown_fields": [
+            "announcement_date",
+            "announcement_url"
+          ],
+          "event_id": "04f8970e2ab9d7eddb8d7011",
+          "within_requested_window": true
+        },
+        {
+          "instrument": "SH510300",
+          "action_type": "cash_distribution",
+          "status": "candidate",
+          "ex_date": "2015-01-20",
+          "effective_date": null,
+          "record_date": "2015-01-19",
+          "payment_date": "2015-01-23",
+          "cash_per_original_unit": "0.0350",
+          "split_ratio": null,
+          "announcement_date": null,
+          "announcement_url": null,
+          "source_url": "https://fundf10.eastmoney.com/fhsp_510300.html",
+          "source_sha256": "696d24565067120226d1a989f89ef40a08467927e5f141ecb8cb9b2a76761fc5",
+          "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+          "source_row_index": 11,
+          "raw_fields": {
+            "年份": "2015年",
+            "权益登记日": "2015-01-19",
+            "除息日": "2015-01-20",
+            "每10份分红": "每10份派现金0.3500元",
+            "分红发放日": "2015-01-23"
+          },
+          "issuer_verified": false,
+          "ready_for_economic_ledger": false,
+          "cash_unit_basis": "one fund unit entitled at record_date, before this event; not an inception/2013-original cohort unit",
+          "unknown_fields": [
+            "announcement_date",
+            "announcement_url"
+          ],
+          "event_id": "81e1954b4dfe1135e37b643f",
+          "within_requested_window": true
+        },
+        {
+          "instrument": "SH510300",
+          "action_type": "cash_distribution",
+          "status": "candidate",
+          "ex_date": "2016-01-20",
+          "effective_date": null,
+          "record_date": "2016-01-19",
+          "payment_date": "2016-01-25",
+          "cash_per_original_unit": "0.0510",
+          "split_ratio": null,
+          "announcement_date": null,
+          "announcement_url": null,
+          "source_url": "https://fundf10.eastmoney.com/fhsp_510300.html",
+          "source_sha256": "696d24565067120226d1a989f89ef40a08467927e5f141ecb8cb9b2a76761fc5",
+          "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+          "source_row_index": 10,
+          "raw_fields": {
+            "年份": "2016年",
+            "权益登记日": "2016-01-19",
+            "除息日": "2016-01-20",
+            "每10份分红": "每10份派现金0.5100元",
+            "分红发放日": "2016-01-25"
+          },
+          "issuer_verified": false,
+          "ready_for_economic_ledger": false,
+          "cash_unit_basis": "one fund unit entitled at record_date, before this event; not an inception/2013-original cohort unit",
+          "unknown_fields": [
+            "announcement_date",
+            "announcement_url"
+          ],
+          "event_id": "a7e36bf477250b289e7caced",
+          "within_requested_window": true
+        },
+        {
+          "instrument": "SH510300",
+          "action_type": "cash_distribution",
+          "status": "candidate",
+          "ex_date": "2017-01-23",
+          "effective_date": null,
+          "record_date": "2017-01-20",
+          "payment_date": "2017-01-26",
+          "cash_per_original_unit": "0.0550",
+          "split_ratio": null,
+          "announcement_date": null,
+          "announcement_url": null,
+          "source_url": "https://fundf10.eastmoney.com/fhsp_510300.html",
+          "source_sha256": "696d24565067120226d1a989f89ef40a08467927e5f141ecb8cb9b2a76761fc5",
+          "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+          "source_row_index": 9,
+          "raw_fields": {
+            "年份": "2017年",
+            "权益登记日": "2017-01-20",
+            "除息日": "2017-01-23",
+            "每10份分红": "每10份派现金0.5500元",
+            "分红发放日": "2017-01-26"
+          },
+          "issuer_verified": false,
+          "ready_for_economic_ledger": false,
+          "cash_unit_basis": "one fund unit entitled at record_date, before this event; not an inception/2013-original cohort unit",
+          "unknown_fields": [
+            "announcement_date",
+            "announcement_url"
+          ],
+          "event_id": "b64500130c42a9eb1d1116cd",
+          "within_requested_window": true
+        },
+        {
+          "instrument": "SH510300",
+          "action_type": "cash_distribution",
+          "status": "candidate",
+          "ex_date": "2018-01-23",
+          "effective_date": null,
+          "record_date": "2018-01-22",
+          "payment_date": "2018-01-26",
+          "cash_per_original_unit": "0.0460",
+          "split_ratio": null,
+          "announcement_date": null,
+          "announcement_url": null,
+          "source_url": "https://fundf10.eastmoney.com/fhsp_510300.html",
+          "source_sha256": "696d24565067120226d1a989f89ef40a08467927e5f141ecb8cb9b2a76761fc5",
+          "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+          "source_row_index": 8,
+          "raw_fields": {
+            "年份": "2018年",
+            "权益登记日": "2018-01-22",
+            "除息日": "2018-01-23",
+            "每10份分红": "每10份派现金0.4600元",
+            "分红发放日": "2018-01-26"
+          },
+          "issuer_verified": false,
+          "ready_for_economic_ledger": false,
+          "cash_unit_basis": "one fund unit entitled at record_date, before this event; not an inception/2013-original cohort unit",
+          "unknown_fields": [
+            "announcement_date",
+            "announcement_url"
+          ],
+          "event_id": "eabb822d12a57cf82e275079",
+          "within_requested_window": true
+        },
+        {
+          "instrument": "SH510300",
+          "action_type": "cash_distribution",
+          "status": "candidate",
+          "ex_date": "2019-01-16",
+          "effective_date": null,
+          "record_date": "2019-01-15",
+          "payment_date": "2019-01-21",
+          "cash_per_original_unit": "0.0590",
+          "split_ratio": null,
+          "announcement_date": null,
+          "announcement_url": null,
+          "source_url": "https://fundf10.eastmoney.com/fhsp_510300.html",
+          "source_sha256": "696d24565067120226d1a989f89ef40a08467927e5f141ecb8cb9b2a76761fc5",
+          "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+          "source_row_index": 7,
+          "raw_fields": {
+            "年份": "2019年",
+            "权益登记日": "2019-01-15",
+            "除息日": "2019-01-16",
+            "每10份分红": "每10份派现金0.5900元",
+            "分红发放日": "2019-01-21"
+          },
+          "issuer_verified": false,
+          "ready_for_economic_ledger": false,
+          "cash_unit_basis": "one fund unit entitled at record_date, before this event; not an inception/2013-original cohort unit",
+          "unknown_fields": [
+            "announcement_date",
+            "announcement_url"
+          ],
+          "event_id": "1c89ab7384cc3d3d4c48e341",
+          "within_requested_window": true
+        },
+        {
+          "instrument": "SH510300",
+          "action_type": "cash_distribution",
+          "status": "candidate",
+          "ex_date": "2019-12-11",
+          "effective_date": null,
+          "record_date": "2019-12-10",
+          "payment_date": "2019-12-16",
+          "cash_per_original_unit": "0.0620",
+          "split_ratio": null,
+          "announcement_date": null,
+          "announcement_url": null,
+          "source_url": "https://fundf10.eastmoney.com/fhsp_510300.html",
+          "source_sha256": "696d24565067120226d1a989f89ef40a08467927e5f141ecb8cb9b2a76761fc5",
+          "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+          "source_row_index": 6,
+          "raw_fields": {
+            "年份": "2019年",
+            "权益登记日": "2019-12-10",
+            "除息日": "2019-12-11",
+            "每10份分红": "每10份派现金0.6200元",
+            "分红发放日": "2019-12-16"
+          },
+          "issuer_verified": false,
+          "ready_for_economic_ledger": false,
+          "cash_unit_basis": "one fund unit entitled at record_date, before this event; not an inception/2013-original cohort unit",
+          "unknown_fields": [
+            "announcement_date",
+            "announcement_url"
+          ],
+          "event_id": "4636c63d16914de7e139a4ab",
+          "within_requested_window": true
+        },
+        {
+          "instrument": "SH510300",
+          "action_type": "cash_distribution",
+          "status": "candidate",
+          "ex_date": "2021-01-18",
+          "effective_date": null,
+          "record_date": "2021-01-15",
+          "payment_date": "2021-01-21",
+          "cash_per_original_unit": "0.0720",
+          "split_ratio": null,
+          "announcement_date": null,
+          "announcement_url": null,
+          "source_url": "https://fundf10.eastmoney.com/fhsp_510300.html",
+          "source_sha256": "696d24565067120226d1a989f89ef40a08467927e5f141ecb8cb9b2a76761fc5",
+          "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+          "source_row_index": 5,
+          "raw_fields": {
+            "年份": "2021年",
+            "权益登记日": "2021-01-15",
+            "除息日": "2021-01-18",
+            "每10份分红": "每10份派现金0.7200元",
+            "分红发放日": "2021-01-21"
+          },
+          "issuer_verified": false,
+          "ready_for_economic_ledger": false,
+          "cash_unit_basis": "one fund unit entitled at record_date, before this event; not an inception/2013-original cohort unit",
+          "unknown_fields": [
+            "announcement_date",
+            "announcement_url"
+          ],
+          "event_id": "56c5f1b9af98decaef871180",
+          "within_requested_window": true
+        },
+        {
+          "instrument": "SH510300",
+          "action_type": "cash_distribution",
+          "status": "candidate",
+          "ex_date": "2022-01-19",
+          "effective_date": null,
+          "record_date": "2022-01-18",
+          "payment_date": "2022-01-24",
+          "cash_per_original_unit": "0.0750",
+          "split_ratio": null,
+          "announcement_date": null,
+          "announcement_url": null,
+          "source_url": "https://fundf10.eastmoney.com/fhsp_510300.html",
+          "source_sha256": "696d24565067120226d1a989f89ef40a08467927e5f141ecb8cb9b2a76761fc5",
+          "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+          "source_row_index": 4,
+          "raw_fields": {
+            "年份": "2022年",
+            "权益登记日": "2022-01-18",
+            "除息日": "2022-01-19",
+            "每10份分红": "每10份派现金0.7500元",
+            "分红发放日": "2022-01-24"
+          },
+          "issuer_verified": false,
+          "ready_for_economic_ledger": false,
+          "cash_unit_basis": "one fund unit entitled at record_date, before this event; not an inception/2013-original cohort unit",
+          "unknown_fields": [
+            "announcement_date",
+            "announcement_url"
+          ],
+          "event_id": "85ea67c5c1d8c695c0688c04",
+          "within_requested_window": true
+        },
+        {
+          "instrument": "SH510300",
+          "action_type": "cash_distribution",
+          "status": "candidate",
+          "ex_date": "2023-01-16",
+          "effective_date": null,
+          "record_date": "2023-01-13",
+          "payment_date": "2023-01-19",
+          "cash_per_original_unit": "0.0640",
+          "split_ratio": null,
+          "announcement_date": null,
+          "announcement_url": null,
+          "source_url": "https://fundf10.eastmoney.com/fhsp_510300.html",
+          "source_sha256": "696d24565067120226d1a989f89ef40a08467927e5f141ecb8cb9b2a76761fc5",
+          "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+          "source_row_index": 3,
+          "raw_fields": {
+            "年份": "2023年",
+            "权益登记日": "2023-01-13",
+            "除息日": "2023-01-16",
+            "每10份分红": "每10份派现金0.6400元",
+            "分红发放日": "2023-01-19"
+          },
+          "issuer_verified": false,
+          "ready_for_economic_ledger": false,
+          "cash_unit_basis": "one fund unit entitled at record_date, before this event; not an inception/2013-original cohort unit",
+          "unknown_fields": [
+            "announcement_date",
+            "announcement_url"
+          ],
+          "event_id": "b8cf3a5972551773245d9328",
+          "within_requested_window": true
+        },
+        {
+          "instrument": "SH510300",
+          "action_type": "cash_distribution",
+          "status": "candidate",
+          "ex_date": "2024-01-18",
+          "effective_date": null,
+          "record_date": "2024-01-17",
+          "payment_date": "2024-01-23",
+          "cash_per_original_unit": "0.0690",
+          "split_ratio": null,
+          "announcement_date": null,
+          "announcement_url": null,
+          "source_url": "https://fundf10.eastmoney.com/fhsp_510300.html",
+          "source_sha256": "696d24565067120226d1a989f89ef40a08467927e5f141ecb8cb9b2a76761fc5",
+          "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+          "source_row_index": 2,
+          "raw_fields": {
+            "年份": "2024年",
+            "权益登记日": "2024-01-17",
+            "除息日": "2024-01-18",
+            "每10份分红": "每10份派现金0.6900元",
+            "分红发放日": "2024-01-23"
+          },
+          "issuer_verified": false,
+          "ready_for_economic_ledger": false,
+          "cash_unit_basis": "one fund unit entitled at record_date, before this event; not an inception/2013-original cohort unit",
+          "unknown_fields": [
+            "announcement_date",
+            "announcement_url"
+          ],
+          "event_id": "a8523cf8bf980c9eb9d8f844",
+          "within_requested_window": true
+        },
+        {
+          "instrument": "SH510300",
+          "action_type": "cash_distribution",
+          "status": "candidate",
+          "ex_date": "2025-06-18",
+          "effective_date": null,
+          "record_date": "2025-06-17",
+          "payment_date": "2025-06-27",
+          "cash_per_original_unit": "0.0880",
+          "split_ratio": null,
+          "announcement_date": null,
+          "announcement_url": null,
+          "source_url": "https://fundf10.eastmoney.com/fhsp_510300.html",
+          "source_sha256": "696d24565067120226d1a989f89ef40a08467927e5f141ecb8cb9b2a76761fc5",
+          "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+          "source_row_index": 1,
+          "raw_fields": {
+            "年份": "2025年",
+            "权益登记日": "2025-06-17",
+            "除息日": "2025-06-18",
+            "每10份分红": "每10份派现金0.8800元",
+            "分红发放日": "2025-06-27"
+          },
+          "issuer_verified": false,
+          "ready_for_economic_ledger": false,
+          "cash_unit_basis": "one fund unit entitled at record_date, before this event; not an inception/2013-original cohort unit",
+          "unknown_fields": [
+            "announcement_date",
+            "announcement_url"
+          ],
+          "event_id": "79c007fd708c21e675fd4301",
+          "within_requested_window": true
+        },
+        {
+          "instrument": "SH510300",
+          "action_type": "cash_distribution",
+          "status": "candidate",
+          "ex_date": "2026-01-19",
+          "effective_date": null,
+          "record_date": "2026-01-16",
+          "payment_date": "2026-01-27",
+          "cash_per_original_unit": "0.1230",
+          "split_ratio": null,
+          "announcement_date": null,
+          "announcement_url": null,
+          "source_url": "https://fundf10.eastmoney.com/fhsp_510300.html",
+          "source_sha256": "696d24565067120226d1a989f89ef40a08467927e5f141ecb8cb9b2a76761fc5",
+          "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+          "source_row_index": 0,
+          "raw_fields": {
+            "年份": "2026年",
+            "权益登记日": "2026-01-16",
+            "除息日": "2026-01-19",
+            "每10份分红": "每10份派现金1.2300元",
+            "分红发放日": "2026-01-27"
+          },
+          "issuer_verified": false,
+          "ready_for_economic_ledger": false,
+          "cash_unit_basis": "one fund unit entitled at record_date, before this event; not an inception/2013-original cohort unit",
+          "unknown_fields": [
+            "announcement_date",
+            "announcement_url"
+          ],
+          "event_id": "340d36ca183a80c229ee74b1",
+          "within_requested_window": true
+        }
+      ],
+      "candidate_counts_in_window": {
+        "cash_distribution": 13,
+        "split_conversion": 0
+      },
+      "evidence_file": "output/research/corporate_actions/SH510300.html"
+    },
+    {
+      "instrument": "SH510500",
+      "source_url": "https://fundf10.eastmoney.com/fhsp_510500.html",
+      "source_sha256": "01bac5453fdb7ebd8fa75da379378cf11cb6ec8079a555e288238b4bb461a7b2",
+      "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+      "source_bytes_verified": true,
+      "status": "candidate_only",
+      "issuer_verified_complete": false,
+      "history_coverage_status": "unknown_not_proven_by_vendor_page",
+      "table_audit": {
+        "cash_distribution": {
+          "raw_rows": 4,
+          "placeholder_rows": 0,
+          "candidate_events": 4,
+          "page_statement": "vendor_records_parsed",
+          "issuer_verified_complete": false
+        },
+        "split_conversion": {
+          "raw_rows": 2,
+          "placeholder_rows": 0,
+          "candidate_events": 2,
+          "page_statement": "vendor_records_parsed",
+          "issuer_verified_complete": false
+        }
+      },
+      "events": [
+        {
+          "instrument": "SH510500",
+          "action_type": "split_conversion",
+          "status": "candidate",
+          "ex_date": null,
+          "effective_date": "2015-04-14",
+          "record_date": null,
+          "payment_date": null,
+          "cash_per_original_unit": null,
+          "split_ratio": "0.2803",
+          "announcement_date": null,
+          "announcement_url": null,
+          "source_url": "https://fundf10.eastmoney.com/fhsp_510500.html",
+          "source_sha256": "01bac5453fdb7ebd8fa75da379378cf11cb6ec8079a555e288238b4bb461a7b2",
+          "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+          "source_row_index": 1,
+          "raw_fields": {
+            "年份": "2015年",
+            "拆分折算日": "2015-04-14",
+            "拆分类型": "份额折算",
+            "拆分折算比例": "1:0.2803"
+          },
+          "issuer_verified": false,
+          "ready_for_economic_ledger": false,
+          "split_ratio_basis": "vendor display ratio, candidate new units per prior unit; exact issuer ratio and effective/ex date unverified",
+          "split_ratio_exact": false,
+          "unknown_fields": [
+            "ex_date",
+            "record_date",
+            "payment_date",
+            "announcement_date",
+            "announcement_url"
+          ],
+          "event_id": "03bb89c0700f8ffa7ab40627",
+          "within_requested_window": true
+        },
+        {
+          "instrument": "SH510500",
+          "action_type": "split_conversion",
+          "status": "candidate",
+          "ex_date": null,
+          "effective_date": "2022-08-26",
+          "record_date": null,
+          "payment_date": null,
+          "cash_per_original_unit": null,
+          "split_ratio": "1.1454",
+          "announcement_date": null,
+          "announcement_url": null,
+          "source_url": "https://fundf10.eastmoney.com/fhsp_510500.html",
+          "source_sha256": "01bac5453fdb7ebd8fa75da379378cf11cb6ec8079a555e288238b4bb461a7b2",
+          "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+          "source_row_index": 0,
+          "raw_fields": {
+            "年份": "2022年",
+            "拆分折算日": "2022-08-26",
+            "拆分类型": "份额分拆",
+            "拆分折算比例": "1:1.1454"
+          },
+          "issuer_verified": false,
+          "ready_for_economic_ledger": false,
+          "split_ratio_basis": "vendor display ratio, candidate new units per prior unit; exact issuer ratio and effective/ex date unverified",
+          "split_ratio_exact": false,
+          "unknown_fields": [
+            "ex_date",
+            "record_date",
+            "payment_date",
+            "announcement_date",
+            "announcement_url"
+          ],
+          "event_id": "08d2a10c432a306597f890ab",
+          "within_requested_window": true
+        },
+        {
+          "instrument": "SH510500",
+          "action_type": "cash_distribution",
+          "status": "candidate",
+          "ex_date": "2024-05-17",
+          "effective_date": null,
+          "record_date": "2024-05-16",
+          "payment_date": "2024-05-22",
+          "cash_per_original_unit": "0.0870",
+          "split_ratio": null,
+          "announcement_date": null,
+          "announcement_url": null,
+          "source_url": "https://fundf10.eastmoney.com/fhsp_510500.html",
+          "source_sha256": "01bac5453fdb7ebd8fa75da379378cf11cb6ec8079a555e288238b4bb461a7b2",
+          "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+          "source_row_index": 3,
+          "raw_fields": {
+            "年份": "2024年",
+            "权益登记日": "2024-05-16",
+            "除息日": "2024-05-17",
+            "每10份分红": "每10份派现金0.8700元",
+            "分红发放日": "2024-05-22"
+          },
+          "issuer_verified": false,
+          "ready_for_economic_ledger": false,
+          "cash_unit_basis": "one fund unit entitled at record_date, before this event; not an inception/2013-original cohort unit",
+          "unknown_fields": [
+            "announcement_date",
+            "announcement_url"
+          ],
+          "event_id": "d52b5038a0d809f7e05cb537",
+          "within_requested_window": true
+        },
+        {
+          "instrument": "SH510500",
+          "action_type": "cash_distribution",
+          "status": "candidate",
+          "ex_date": "2025-01-16",
+          "effective_date": null,
+          "record_date": "2025-01-15",
+          "payment_date": "2025-01-21",
+          "cash_per_original_unit": "0.0910",
+          "split_ratio": null,
+          "announcement_date": null,
+          "announcement_url": null,
+          "source_url": "https://fundf10.eastmoney.com/fhsp_510500.html",
+          "source_sha256": "01bac5453fdb7ebd8fa75da379378cf11cb6ec8079a555e288238b4bb461a7b2",
+          "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+          "source_row_index": 2,
+          "raw_fields": {
+            "年份": "2025年",
+            "权益登记日": "2025-01-15",
+            "除息日": "2025-01-16",
+            "每10份分红": "每10份派现金0.9100元",
+            "分红发放日": "2025-01-21"
+          },
+          "issuer_verified": false,
+          "ready_for_economic_ledger": false,
+          "cash_unit_basis": "one fund unit entitled at record_date, before this event; not an inception/2013-original cohort unit",
+          "unknown_fields": [
+            "announcement_date",
+            "announcement_url"
+          ],
+          "event_id": "e6e3b9a62a80322dbf50ee7c",
+          "within_requested_window": true
+        },
+        {
+          "instrument": "SH510500",
+          "action_type": "cash_distribution",
+          "status": "candidate",
+          "ex_date": "2026-01-16",
+          "effective_date": null,
+          "record_date": "2026-01-15",
+          "payment_date": "2026-01-21",
+          "cash_per_original_unit": "0.0620",
+          "split_ratio": null,
+          "announcement_date": null,
+          "announcement_url": null,
+          "source_url": "https://fundf10.eastmoney.com/fhsp_510500.html",
+          "source_sha256": "01bac5453fdb7ebd8fa75da379378cf11cb6ec8079a555e288238b4bb461a7b2",
+          "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+          "source_row_index": 1,
+          "raw_fields": {
+            "年份": "2026年",
+            "权益登记日": "2026-01-15",
+            "除息日": "2026-01-16",
+            "每10份分红": "每10份派现金0.6200元",
+            "分红发放日": "2026-01-21"
+          },
+          "issuer_verified": false,
+          "ready_for_economic_ledger": false,
+          "cash_unit_basis": "one fund unit entitled at record_date, before this event; not an inception/2013-original cohort unit",
+          "unknown_fields": [
+            "announcement_date",
+            "announcement_url"
+          ],
+          "event_id": "1a048c62e541f98bb9792a6d",
+          "within_requested_window": true
+        },
+        {
+          "instrument": "SH510500",
+          "action_type": "cash_distribution",
+          "status": "candidate",
+          "ex_date": "2026-07-15",
+          "effective_date": null,
+          "record_date": "2026-07-14",
+          "payment_date": "2026-07-20",
+          "cash_per_original_unit": "0.1490",
+          "split_ratio": null,
+          "announcement_date": null,
+          "announcement_url": null,
+          "source_url": "https://fundf10.eastmoney.com/fhsp_510500.html",
+          "source_sha256": "01bac5453fdb7ebd8fa75da379378cf11cb6ec8079a555e288238b4bb461a7b2",
+          "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+          "source_row_index": 0,
+          "raw_fields": {
+            "年份": "2026年",
+            "权益登记日": "2026-07-14",
+            "除息日": "2026-07-15",
+            "每10份分红": "每10份派现金1.4900元",
+            "分红发放日": "2026-07-20"
+          },
+          "issuer_verified": false,
+          "ready_for_economic_ledger": false,
+          "cash_unit_basis": "one fund unit entitled at record_date, before this event; not an inception/2013-original cohort unit",
+          "unknown_fields": [
+            "announcement_date",
+            "announcement_url"
+          ],
+          "event_id": "d5911c992f7fc3b192713939",
+          "within_requested_window": true
+        }
+      ],
+      "candidate_counts_in_window": {
+        "cash_distribution": 4,
+        "split_conversion": 2
+      },
+      "evidence_file": "output/research/corporate_actions/SH510500.html"
+    },
+    {
+      "instrument": "SZ159915",
+      "source_url": "https://fundf10.eastmoney.com/fhsp_159915.html",
+      "source_sha256": "ea9836d5262433d8daa400687a9af8700250bcaedbfdcbfb291b7292aa28edf7",
+      "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+      "source_bytes_verified": true,
+      "status": "candidate_only",
+      "issuer_verified_complete": false,
+      "history_coverage_status": "unknown_not_proven_by_vendor_page",
+      "table_audit": {
+        "cash_distribution": {
+          "raw_rows": 1,
+          "placeholder_rows": 1,
+          "candidate_events": 0,
+          "page_statement": "vendor_reports_no_records_completeness_unverified",
+          "issuer_verified_complete": false
+        },
+        "split_conversion": {
+          "raw_rows": 1,
+          "placeholder_rows": 0,
+          "candidate_events": 1,
+          "page_statement": "vendor_records_parsed",
+          "issuer_verified_complete": false
+        }
+      },
+      "events": [
+        {
+          "instrument": "SZ159915",
+          "action_type": "split_conversion",
+          "status": "candidate",
+          "ex_date": null,
+          "effective_date": "2011-11-30",
+          "record_date": null,
+          "payment_date": null,
+          "cash_per_original_unit": null,
+          "split_ratio": "1.1456",
+          "announcement_date": null,
+          "announcement_url": null,
+          "source_url": "https://fundf10.eastmoney.com/fhsp_159915.html",
+          "source_sha256": "ea9836d5262433d8daa400687a9af8700250bcaedbfdcbfb291b7292aa28edf7",
+          "source_fetched_at": "2026-10-19T08:46:43.254384+00:00",
+          "source_row_index": 0,
+          "raw_fields": {
+            "年份": "2011年",
+            "拆分折算日": "2011-11-30",
+            "拆分类型": "份额折算",
+            "拆分折算比例": "1:1.1456"
+          },
+          "issuer_verified": false,
+          "ready_for_economic_ledger": false,
+          "split_ratio_basis": "vendor display ratio, candidate new units per prior unit; exact issuer ratio and effective/ex date unverified",
+          "split_ratio_exact": false,
+          "unknown_fields": [
+            "ex_date",
+            "record_date",
+            "payment_date",
+            "announcement_date",
+            "announcement_url"
+          ],
+          "event_id": "fe491e23c68157b91bce1e8b",
+          "within_requested_window": false
+        }
+      ],
+      "candidate_counts_in_window": {
+        "cash_distribution": 0,
+        "split_conversion": 0
+      },
+      "evidence_file": "output/research/corporate_actions/SZ159915.html"
+    }
+  ]
+}

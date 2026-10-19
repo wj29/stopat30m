@@ -1,0 +1,94 @@
+{
+  "code_license": {
+    "market_data_redistribution_rights_separately_verified": false,
+    "name": "Apache-2.0",
+    "source_url": "https://github.com/chenditc/investment_data/blob/main/LICENSE"
+  },
+  "evidence_files": {
+    "community_license.response": {
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "size_bytes": 11357
+    },
+    "community_manifest.response": {
+      "sha256": "c28bf624fba9e98206338d3b4358086f606b95c5ea292aa3c233e838c39b4544",
+      "size_bytes": 511
+    },
+    "community_readme.response": {
+      "sha256": "5b10f073d7c0fdd725bdba7aec8b768b231a4de06233cc27ae1548a226aa4c68",
+      "size_bytes": 9593
+    },
+    "community_validator.response": {
+      "sha256": "6e6bf6f227e2aed1a3bf545a6844db78a146b0e3bdfafd39cb2f16779e2567da",
+      "size_bytes": 9389
+    },
+    "official_loader.response": {
+      "sha256": "53abbe19beebb29da47806a574d31f393cc963e0acdc5c7e41efac092f8f044c",
+      "size_bytes": 8446
+    },
+    "official_readme.response": {
+      "sha256": "e9f7cc8eeb60e3fe3784ec496e350ecb584157c3240cda0651c20acb26fd9037",
+      "size_bytes": 44277
+    },
+    "pinned_docs_final_a_stock_eod_price.md": {
+      "sha256": "aba07d7a6211858ec903216401deaeaa6d2fafd039bdc487d72bbb2cb0612c4e",
+      "size_bytes": 3962
+    },
+    "pinned_dump_qlib_bin.sh": {
+      "sha256": "e66d3392d42f94d0e85efe81687ff65a369b01778a7e36f2928695eac9d023c6",
+      "size_bytes": 15480
+    },
+    "pinned_official_yahoo_collector.py": {
+      "sha256": "6b356884c76e170fde48e3ac58a4952a62d47705bcb2b7a344acd8f3798d7905",
+      "size_bytes": 37667
+    },
+    "pinned_qlib_dump_all_to_qlib_source.py": {
+      "sha256": "ab4a8776381d44edf0d6e9d264902ac29ef0fe1bbfe044c870c63a92e93f0c16",
+      "size_bytes": 2424
+    },
+    "pinned_qlib_dump_index_weight.py": {
+      "sha256": "905db468f4d55230f2000bf6a61bfbbd2df3902590d949eab0c9f72afcc85d2b",
+      "size_bytes": 4107
+    },
+    "pinned_qlib_normalize.py": {
+      "sha256": "07fab1801bafb9a15931c0fc7f0c803b4c5b61d4d90d5d2512ca34206b7d3eac",
+      "size_bytes": 4593
+    },
+    "release_assets.response": {
+      "sha256": "7de480d9ac6145c49fce3af6a47d32390bd3a0fa407c61079a9d539a4d96b990",
+      "size_bytes": 12551
+    }
+  },
+  "kind": "community",
+  "membership_caveat": "Source intervals derive from observed ts_index_weight constituent sets, not verified announcement/knowledge dates.",
+  "metadata_saved_at": "2026-10-19T09:33:18.580472+00:00",
+  "normalization_source": {
+    "adjclose_retained": true,
+    "amount": "source amount preserved without normalization",
+    "incremental_caveat": "Same-source normalization and raw units require overlapping per-security verification; do not append arbitrary provider prices.",
+    "investment_data_commit": "b8c129b4d9b838f050eac8b1135111b3b79fc894",
+    "price_formula": "normalized_OHLC_and_vwap = source_raw_price * stored_factor",
+    "qlib_commit": "b87a2c294d364a33fb739359886acffe8ec907d1",
+    "volume_formula": "normalized_volume = source_volume / stored_factor",
+    "volume_is_raw_shares": false,
+    "volume_unit_independently_crosschecked": false
+  },
+  "official_data_disabled_statement_observed": true,
+  "official_recommendation": "https://github.com/microsoft/qlib/blob/main/README.md",
+  "release_manifest": {
+    "archive_sha256": "sha256:a11eaba954f2d5658c017fa800eea85bb6277f8ffc3d7b0449f791a44e43e7dd",
+    "archive_size_bytes": 568280701,
+    "dolt_commit": "1fu8qtl8vb2sk9tc7rhrtajr6b4e053p",
+    "future_end_date": "2026-12-31",
+    "future_start_date": "2026-10-19",
+    "image_digest": "sha256:499bf932b7b967b6e5a06d120577a3fbed9d4fcf851dc0f6a1564d052e129f4e",
+    "investment_data_commit": "b8c129b4d9b838f050eac8b1135111b3b79fc894",
+    "qlib_commit": "b87a2c294d364a33fb739359886acffe8ec907d1",
+    "release_tag": "2026-10-18",
+    "target_trade_date": "2026-10-16"
+  },
+  "release_manifest_sha256": "c28bf624fba9e98206338d3b4358086f606b95c5ea292aa3c233e838c39b4544",
+  "release_manifest_url": "https://github.com/chenditc/investment_data/releases/download/2026-10-18/qlib_bin.manifest.json",
+  "release_tag": "2026-10-18",
+  "repository": "chenditc/investment_data",
+  "url": "https://github.com/chenditc/investment_data/releases/download/2026-10-18/qlib_bin.tar.gz"
+}

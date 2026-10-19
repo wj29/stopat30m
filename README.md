@@ -4,7 +4,9 @@
 
 当前正在按个人研究与交易工作台改进，具体问题、优先级、收益评估口径和实施状态见 [改进方案](docs/IMPROVEMENT_PLAN.md)。策略收益需要独立验证，20% 年化仅是研究目标。
 
-第二阶段的双价格数据、真实交易日历、历史股票池审计和固定规则样本外入口见 [研究工作流](docs/RESEARCH_WORKFLOW.md)。`python main.py research --help` 查看命令，研究下载默认东方财富，带低频串行请求、有限退避、冷却与同日断点缓存。已锁定的 ETF 实验遇到供应商复权数据异常时会停止，不能把代码与离线测试通过当成真实样本外收益已验证。
+主研究方向为 **A 股个股**：Qlib 格式历史基座、逐股票增量接缝审计、官方 Alpha158 与固定 LightGBM 的时间分离对照，见 [研究工作流](docs/RESEARCH_WORKFLOW.md#当前主线a-股个股与-qlib-历史基座)。`python main.py research --help` 查看 `ashare-base / ashare-collect / ashare-update / ashare-rebuild / ashare-run / ashare-resume`。此前三 ETF 是独立的工程验证，已停用其自动任务，不作为个股策略结果。
+
+最新阶段增加36只历史修复、原价整数股/现金核算、涨跌停、整手、T+1与最低佣金，并独立验证分红送转和每日模拟数据。实际结果、启动门禁与运行命令见 [A2执行验证](docs/A2_EXECUTION_VALIDATION.md)。`ashare-validate`核对历史对照，`ashare-forward-status`查看独立模拟盘扣费收益、回撤和运行失败；该账本与网页个人账户分开。
 
 ## 个人工作台
 
@@ -14,7 +16,7 @@
 
 点击「保存当日估值」可记录当时的账户资产，保留行情来源、时间和账本版本；持仓报价不完整时拒绝保存完整估值。该观察估值不是官方每日收盘净值，也不是剔除资金流影响的时间加权收益率（TWR）。券商 CSV 只用于只读核对，不会自动导入或覆盖现金、持仓与成交。
 
-「系统设置」包含系统配置、历史研究数据、量化模型维护和账户安全。系统配置可保存研究下载偏好、新闻搜索、传统回测默认值及新模拟引擎的风险比例；下载区域展示东方财富价格、BaoStock 日历、锁定资产池、区间、复权方式、覆盖与任务状态。原 Qlib 更新保留在量化模型维护中，不能把它完成当成新的双价格研究快照已准备好。
+「系统设置」包含系统配置、历史研究数据、量化模型维护和账户安全。系统配置可保存研究下载偏好、新闻搜索、传统回测默认值及新模拟引擎的风险比例；原下载区域仍是固定 ETF 研究入口。旧 Qlib 直接拼接更新已停用，个股研究使用下方新的 `ashare-*` 命令；本轮没有扩展页面。
 
 侧栏「模型配置」（`/model-settings`）独立管理 AI 服务。下拉选择 OpenAI / 兼容服务、Claude、DeepSeek、Gemini、Ollama 或 AIHubMix，只显示对应字段，并标明已配置、未配置与当前启用状态。「仅保存连接配置」保存该服务商的密钥和地址，保持当前使用的服务商与模型；「保存并使用」才切换服务商和模型。切换服务商保留其他家的凭据，密钥不回显、留空保留，环境变量管理的字段只读。
 
@@ -45,7 +47,7 @@ API 密钥和行情 Token 应放在忽略的本地配置或环境变量里，不
 
 大盘复盘的进度连接与普通接口使用同一登录凭据。若会话过期，重新登录后可查看已在后台运行的任务，不必重复触发。页面显示的 AI 上游鉴权失败属于模型服务配置问题，应到「模型配置」核对对应密钥与服务地址。
 
-当前离线全套回归为 **478 tests passed、20 subtests passed**，前端 ESLint 和生产构建通过。隔离浏览器已验首次设置、登录、配置保存及研究下载默认值生效、开户、观察估值、只读核对、备份创建校验、复盘认证进度与完成状态，以及模型列表检查；另确认仅保存 Claude 连接后，当前 OpenAI 的启用状态、模型和密钥保持不变。真实全历史下载与最终样本外研究仍未完成，离线夹具和页面验收不构成策略收益证据。
+此前网页验收覆盖首次设置、登录、配置保存及研究下载默认值生效、开户、观察估值、只读核对、备份创建校验、复盘认证进度与模型列表检查。当前个股研究已经实际下载并审计 Qlib 历史包，完成官方 Alpha158/LightGBM 训练；新的数据、模型和结果显式保存在 `output/research/ashare/`，尚未接入原 ETF 网页结果列表。网页验收和离线测试均不构成策略收益证据，最新研究状态见 [改进方案](docs/IMPROVEMENT_PLAN.md)。
 
 核心回归使用离线合成数据，可独立于真实行情和模型运行：
 
@@ -177,23 +179,28 @@ Qlib 内置经典技术因子：MA、RSI、价格动量、成交量动量、波�
 pip install -r requirements.txt
 ```
 
-### 2. 下载数据
+### 2. 获取并核验个股历史基座
 
 ```bash
-# AKShare 免费模型数据（实际日期以覆盖检查为准）
-py main.py download --source akshare
-
-# 指定日期范围（更快）
-py main.py download --source akshare --start-date 2015-01-01
-
-# Tushare Pro 付费数据（需要 token）
-py main.py download --source tushare
-
-# Qlib 公开数据（数据截止 2020-09）
-py main.py download --source qlib
+.venv/bin/python -m pip install -r requirements-qlib.txt
+.venv/bin/python main.py research ashare-base
 ```
 
-### 3. 训练模型
+固定来源和整包 SHA 在 `docs/research/a1_qlib_source.json`；目前使用 Qlib 官方推荐的社区格式数据，不能称为微软官方行情包，也不假设每只股票都覆盖到日历末日。成功后命令打印不可变数据目录和清单。旧 `download --source qlib/qlib+baostock` 直接下载/混拼入口已停用。增量采集与逐字段桥接命令见研究工作流；不通过校验就不能推进数据版本。
+
+### 3. 官方 Alpha158 个股训练与样本外对照
+
+```bash
+.venv/bin/python main.py research ashare-run \
+  --snapshot <ashare-base输出的快照目录> \
+  --spec docs/research/a1_ashare_experiment.json \
+  --corporate-actions docs/research/a1_ashare_corporate_actions_v2.json \
+  --output-dir <新的实验目录>
+```
+
+新实验使用包内声明的沪深300历史成员区间，训练2012—2022、验证2023—2024、回测2025至2026-10-16。使用下一交易日开盘的5日标签，按6个真实交易日清除跨边界样本；全部参数、数据版本和费用先固定。模型、动量与等权承担同一费用，结果保存在独立目录；包内历史区间尚不等于公告时点已全面核验的 PIT 数据。公司行为文件引用本机 `output` 中的官方公告提取证据，复制项目时需保留这些证据；缺失时拒绝运行，不能把未下载的原 PDF 当作已校验。命令与核验方式见研究工作流。
+
+原扩展因子与多模型链路仍保留，属于另一实验配置，不能与本轮结果混称：
 
 ```bash
 # 默认 LightGBM + 全部因子

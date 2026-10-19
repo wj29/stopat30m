@@ -15,7 +15,7 @@ import math
 from pathlib import Path
 import re
 import sys
-from typing import Any
+from typing import Any, Callable, Mapping
 
 import numpy as np
 import pandas as pd
@@ -229,7 +229,7 @@ def _members(universe: Any, day: pd.Timestamp, known_on: pd.Timestamp) -> list[s
 
 def _target_weights(strategy: str, execution: pd.Timestamp, location: int, calendar: pd.DatetimeIndex,
                     close: pd.DataFrame, universe: Any, config: ResearchConfig,
-                    statuses: dict, signals: list[dict]) -> dict[str, float]:
+                    statuses: dict, signals: list[dict], target_callback: Callable | None = None) -> dict[str, float]:
     signal_day = calendar[location - 1]
     known = set(_members(universe, signal_day, signal_day))
     effective = set(_members(universe, execution, signal_day))
@@ -239,6 +239,21 @@ def _target_weights(strategy: str, execution: pd.Timestamp, location: int, calen
     if any(instrument not in close.columns for instrument in members):
         raise ValueError(f"Universe contains instruments absent from the price artifact on {execution.date()}")
     usable = [instrument for instrument in members if not _suspended(statuses.get((execution, instrument)))]
+    if target_callback is not None:
+        weights, rows = target_callback(signal_day, execution, usable)
+        if not isinstance(weights, dict) or any(
+            instrument not in usable or not isinstance(weight, (float, int))
+            or not math.isfinite(weight) or weight < 0
+            for instrument, weight in weights.items()
+        ):
+            raise ValueError("External strategy returned invalid or ineligible weights")
+        if len(weights) > config.top_k or sum(weights.values()) > 1 - config.cash_reserve_pct + 1e-10:
+            raise ValueError("External strategy exceeds the locked portfolio constraints")
+        for row in rows:
+            if not isinstance(row, dict) or row.get("instrument") not in members:
+                raise ValueError("External strategy returned an invalid signal record")
+            signals.append({**row, "date": execution, "signal_date": signal_day})
+        return weights
     if strategy == "buy_hold":
         if config.buy_hold_instrument not in usable:
             raise ValueError("Buy-and-hold reference must be an eligible member of the locked universe")
@@ -333,27 +348,43 @@ def _rebalance(cash: float, units: dict[str, float], day: pd.Timestamp, signal_d
 
 def _simulate(days: pd.DatetimeIndex, opens: pd.DataFrame, close: pd.DataFrame,
               calendar: pd.DatetimeIndex, universe: Any, config: ResearchConfig,
-              strategy: str, statuses: dict) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+              strategy: str, statuses: dict, *, target_callback: Callable | None = None,
+              known_halts: Mapping | None = None
+              ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     cash, previous_nav = 1.0, 1.0
     units: dict[str, float] = {}
     records, positions, trades, signals = [], [], [], []
     locations = calendar.get_indexer(days)
+    halts, pending_rebalance = known_halts or {}, False
+
+    def mark(frame, day, instrument):
+        if (day, instrument) not in halts:
+            return _valid_price(frame, day, instrument)
+        previous = close.loc[close.index < day, instrument].dropna()
+        if previous.empty:
+            raise ValueError("Verified suspension has no preceding valid valuation quote")
+        return float(previous.iloc[-1])
+
     for sequence, (day, location) in enumerate(zip(days, locations)):
         if location < config.lookback_sessions + 1:
             raise ValueError("Insufficient historical warmup before the first signal")
         previous_day = calendar[location - 1]
         # A held exposure must have both close-to-open and open-to-close marks.
         for instrument in units:
-            _valid_price(close, previous_day, instrument)
-        pre_trade_nav = cash + sum(quantity * _valid_price(opens, day, instrument) for instrument, quantity in units.items())
+            mark(close, previous_day, instrument)
+        pre_trade_nav = cash + sum(quantity * mark(opens, day, instrument) for instrument, quantity in units.items())
         overnight_return = pre_trade_nav / previous_nav - 1
         ledger = {"pre_trade_nav": pre_trade_nav, "buy_notional": 0.0, "sell_notional": 0.0,
                   "fee_cost": 0.0, "slippage_cost": 0.0, "turnover": 0.0, "gross_traded_weight": 0.0}
-        rebalance = sequence == 0 or (strategy != "buy_hold" and sequence % config.rebalance_sessions == 0)
+        rebalance = pending_rebalance or sequence == 0 or (strategy != "buy_hold" and sequence % config.rebalance_sessions == 0)
+        deferred = rebalance and any((day, instrument) in halts for instrument in units)
+        if deferred:
+            pending_rebalance, rebalance = True, False
         if rebalance:
-            weights = _target_weights(strategy, day, location, calendar, close, universe, config, statuses, signals)
+            weights = _target_weights(strategy, day, location, calendar, close, universe, config, statuses, signals, target_callback)
             cash, units, ledger = _rebalance(cash, units, day, previous_day, opens, weights, config, statuses, trades)
-        nav = cash + sum(quantity * _valid_price(close, day, instrument) for instrument, quantity in units.items())
+            pending_rebalance = False
+        nav = cash + sum(quantity * mark(close, day, instrument) for instrument, quantity in units.items())
         if not math.isfinite(nav) or nav <= 0:
             raise ValueError(f"Invalid research NAV on {day.date()}")
         post_cost_nav = pre_trade_nav - ledger["fee_cost"] - ledger["slippage_cost"]
@@ -362,8 +393,11 @@ def _simulate(days: pd.DatetimeIndex, opens: pd.DataFrame, close: pd.DataFrame,
                         "gross_return_before_cost": (1 + overnight_return) * (nav / post_cost_nav) - 1,
                         "overnight_return": overnight_return, "intraday_return": nav / post_cost_nav - 1,
                         "cash": cash, "rebalance": rebalance, "positions_count": len(units), **ledger})
+        if halts:
+            records[-1]["rebalance_deferred_for_verified_halt"] = bool(deferred)
+            records[-1]["carried_valuation_instruments"] = ",".join(instrument for instrument in sorted(units) if (day, instrument) in halts)
         for instrument, quantity in sorted(units.items()):
-            value = quantity * _valid_price(close, day, instrument)
+            value = quantity * mark(close, day, instrument)
             positions.append({"date": day, "instrument": instrument, "virtual_units": quantity,
                               "market_value": value, "weight": value / nav})
         previous_nav = nav
@@ -437,7 +471,9 @@ def _validate_source(artifact: Any, universe_payload: dict, config: ResearchConf
     return json.loads(_canonical(manifest))
 
 
-def run_walk_forward(artifact: Any, universe: Any, protocol_path: str | Path, output_dir: str | Path) -> ResearchResult:
+def run_walk_forward(artifact: Any, universe: Any, protocol_path: str | Path, output_dir: str | Path,
+                     *, additional_strategies: Mapping[str, Callable] | None = None,
+                     comparison_metadata: dict | None = None, known_halts: Mapping | None = None) -> ResearchResult:
     """Evaluate three locked baselines; input objects are never mutated or filled.
 
     ``output_dir`` is a new, exact result directory, not a shared output root.
@@ -446,6 +482,11 @@ def run_walk_forward(artifact: Any, universe: Any, protocol_path: str | Path, ou
     """
     protocol = load_protocol(protocol_path)
     config = ResearchConfig(**protocol["config"])
+    extra = dict(additional_strategies or {})
+    if any(not re.fullmatch(r"[a-z][a-z0-9_]*", name) or name in STRATEGIES or not callable(callback)
+           for name, callback in extra.items()):
+        raise ValueError("Additional strategies require unique safe names and callable targets")
+    comparison = json.loads(_canonical(comparison_metadata or {}))
     universe_payload = _universe_payload(universe)
     if _digest(universe_payload) != protocol["universe_sha256"]:
         raise ValueError("Universe differs from the pool locked before the research run")
@@ -463,9 +504,20 @@ def run_walk_forward(artifact: Any, universe: Any, protocol_path: str | Path, ou
     if not source_manifest.get("request", {}).get("end_date") and calendar[-1].date() < date.fromisoformat(config.oos_end):
         raise ValueError("Calendar does not cover the declared OOS period")
     statuses = _status_map(artifact)
+    halts = dict(known_halts or {})
+    halt_records = []
+    for (day, instrument), evidence in sorted(halts.items()):
+        if day not in calendar or instrument not in close.columns or not isinstance(evidence, dict):
+            raise ValueError("Invalid verified suspension identity")
+        if evidence.get("not_tradeable") is not True or not str(evidence.get("source_url", "")).startswith("https://"):
+            raise ValueError("Verified suspensions require explicit source-backed nontradeability")
+        if pd.notna(close.at[day, instrument]) or pd.notna(opens.at[day, instrument]):
+            raise ValueError("Declared full-day suspension conflicts with observed OHLC")
+        statuses[(day, instrument)] = "0"
+        halt_records.append({**evidence, "date": day.date().isoformat(), "instrument": instrument})
     splits = {"train": (config.train_start, config.train_end), "validation": (config.validation_start, config.validation_end), "final_oos": (config.oos_start, config.oos_end)}
     all_returns, all_positions, all_trades, all_signals, fold_rows = [], [], [], [], []
-    report = {"policy_version": POLICY_VERSION, "model_fit": False, "parameter_search": False,
+    report = {"policy_version": POLICY_VERSION, "model_fit": bool(extra), "parameter_search": False,
               "protocol_sha256": protocol["protocol_sha256"], "locked_at": protocol["locked_at"],
               "historical_oos_is_retrospective": protocol["historical_oos_is_retrospective"],
               "execution_mode": "adjusted_fractional_exposure_research", "execution_ready": False,
@@ -473,14 +525,23 @@ def run_walk_forward(artifact: Any, universe: Any, protocol_path: str | Path, ou
               "benchmark": {"instrument": config.benchmark, "price_index_not_total_return": True, "costs_applied": False,
                             "first_day": "first OOS/development session open to close, then close to close"},
               "universe_audit": audit, "limitations": list(dict.fromkeys(LIMITATIONS + list(audit.get("limitations", [])) + list(source_manifest.get("limitations", [])))), "splits": {}}
+    if extra:
+        report["comparison"] = comparison
+        report["limitations"][0] = "固定动量基线与独立冻结的模型作同成本对照；模型配置和训练范围见 comparison，不按验证段或最终段收益选参数。"
+        report["training_metrics_are_in_sample"] = True
+    if halts:
+        report["verified_halts"] = halt_records
+        report["valuation_policy"] = "Only issuer-verified full-day halts carry the last valid close for valuation; no OHLC/volume is filled or traded; held halts defer rebalance. All other missing prices fail."
+        report["limitations"].append(report["valuation_policy"])
     for split, (start, end) in splits.items():
         days = calendar[(calendar >= start) & (calendar <= end)]
         if days.empty:
             raise ValueError(f"Research split {split} contains no exchange sessions")
         bench = _benchmark(days, opens, close, config.benchmark)
         split_report = {}
-        for strategy in STRATEGIES:
-            result, positions, trades, signals = _simulate(days, opens, close, calendar, universe, config, strategy, statuses)
+        for strategy in (*STRATEGIES, *extra):
+            result, positions, trades, signals = _simulate(days, opens, close, calendar, universe, config, strategy, statuses,
+                                                         target_callback=extra.get(strategy), known_halts=halts)
             result["benchmark_return"] = bench
             result["benchmark_nav"] = (1 + bench).cumprod()
             result["split"] = split
@@ -515,9 +576,15 @@ def run_walk_forward(artifact: Any, universe: Any, protocol_path: str | Path, ou
         "data/research_calendar.py", "data/research_prices.py",
     ) if (package / name).is_file()}
     code_checksum = code_checksums["backtest/walk_forward.py"]
+    if extra:
+        model_source = package / "backtest/model_comparison.py"
+        if model_source.is_file():
+            code_checksums["backtest/model_comparison.py"] = hashlib.sha256(model_source.read_bytes()).hexdigest()
     environment = {"python": sys.version.split()[0], "pandas": pd.__version__, "numpy": np.__version__}
     fingerprint = _digest({"inputs": input_checksums, "source_manifest": source_manifest,
-                           "protocol": protocol["protocol_sha256"], "code": code_checksums, "environment": environment})
+                           "protocol": protocol["protocol_sha256"], "code": code_checksums, "environment": environment,
+                           **({"verified_halts": halt_records} if halts else {}),
+                           **({"comparison": comparison} if extra else {})})
     report["deterministic_fingerprint"] = fingerprint
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=False)

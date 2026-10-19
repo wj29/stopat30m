@@ -1,12 +1,12 @@
 """Data download and management for Qlib.
 
 Supported sources:
-  - qlib:          Qlib public dataset (free, complete to ~2020-09)
-  - baostock:      BaoStock (free, no rate limit, full/incremental)
+  - qlib:          Legacy loader; use research ashare-base for a pinned archive
+  - baostock:      BaoStock (public daily data)
   - efinance:      Efinance (free, east-money backend, stable API)
   - akshare:       AKShare (free, latest daily data, no auth)
   - tushare:       Tushare Pro (paid, needs token, higher quality)
-  - qlib+baostock: Recommended — Qlib base + BaoStock incremental to today
+  - qlib+baostock: Legacy direct concatenation disabled; use audited ashare-update
 """
 
 from __future__ import annotations
@@ -47,8 +47,8 @@ def download_cn_data(
     is True (default), multiple data sources are used concurrently.
 
     Args:
-        source: Primary data source. 'baostock' (default), 'qlib+baostock'
-                (full rebuild), 'qlib' (base only), 'akshare', 'tushare'.
+        source: Legacy fetcher source: 'baostock' (default), 'akshare',
+                'efinance' or 'tushare'. Qlib archives use research ashare-base.
         target_dir: Override target directory.
         start_date: Start date (full download only, ignored for incremental).
         end_date: End date (default today).
@@ -59,21 +59,25 @@ def download_cn_data(
     if source not in VALID_SOURCES:
         raise ValueError(f"Unknown source '{source}'. Choose from: {VALID_SOURCES}")
 
+    if source in {"qlib", "qlib+baostock"}:
+        raise ValueError(
+            "旧 Qlib 下载/直接拼接入口已停用。请使用 python main.py research ashare-base "
+            "取得锁定且核验的历史包，再用 research ashare-collect / ashare-update 做逐股票接缝验证。"
+            "官方旧包目前暂停提供，不能假设其完整截止日期，也不能直接拼接另一来源的复权价。"
+        )
+
     target = target_dir or str(get_data_dir())
     target_path = Path(target).expanduser()
+    if (target_path.parent / "manifest.json").is_file() or (target_path / "incremental_manifest.json").is_file():
+        raise ValueError("研究数据版本不可原地更新；请用 research ashare-update 发布新版本。")
     target_path.mkdir(parents=True, exist_ok=True)
 
-    if source == "qlib":
-        _download_qlib_public(target_path)
-    elif source == "qlib+baostock":
-        _download_qlib_then_append(target_path, end_date, parallel=parallel, workers=workers)
+    cal_path = target_path / "calendars" / "day.txt"
+    if cal_path.exists():
+        _append_from_fetcher(source, target_path, end_date, parallel=parallel, workers=workers)
     else:
-        cal_path = target_path / "calendars" / "day.txt"
-        if cal_path.exists():
-            _append_from_fetcher(source, target_path, end_date, parallel=parallel, workers=workers)
-        else:
-            logger.info("No existing data found. Running full download...")
-            _download_from_fetcher(source, target_path, start_date, end_date)
+        logger.info("No existing data found. Running full download...")
+        _download_from_fetcher(source, target_path, start_date, end_date)
 
 
 def _create_fetcher(source: str, workers: int | None = None):
@@ -102,63 +106,16 @@ def _create_fetcher(source: str, workers: int | None = None):
 
 
 def _download_qlib_public(target_path: Path) -> None:
-    """Download from Qlib's public dataset (data to ~2020-09)."""
-    from qlib.cli.data import GetData
-
-    logger.info(f"Downloading Qlib public CN data to {target_path} ...")
-    try:
-        GetData().qlib_data(
-            target_dir=str(target_path),
-            region="cn",
-            exists_skip=False,
-        )
-        logger.info("Qlib public data download complete.")
-    except Exception as exc:
-        logger.error(f"Failed to download Qlib public data: {exc}")
-        raise
+    """Retired compatibility name; no unpinned download or extraction is allowed."""
+    raise ValueError("Use research ashare-base with a pinned source specification and archive checksum")
 
 
 def _download_qlib_then_append(
     target_path: Path, end_date: str | None, parallel: bool = True,
     workers: int | None = None,
 ) -> None:
-    """Recommended download: Qlib complete base + BaoStock incremental to today.
-
-    Step 1: Download Qlib public snapshot (~2020-09, complete and verified).
-    Step 2: Build data_meta.json (per-stock metadata + trusted watermark).
-    Step 3: Append from BaoStock for dates after the Qlib snapshot to today.
-    """
-    from stopat30m.data.fetcher import (
-        META_FILENAME, build_meta_from_scan, fetch_stock_listing_info,
-    )
-
-    cal_path = target_path / "calendars" / "day.txt"
-    if cal_path.exists():
-        cal_dates = [d.strip() for d in cal_path.read_text().strip().split("\n") if d.strip()]
-        logger.info(f"Existing data found: {cal_dates[0]} ~ {cal_dates[-1]} ({len(cal_dates)} days)")
-        logger.info("Skipping Qlib base download.")
-    else:
-        logger.info("Step 1/3: Downloading Qlib official base data...")
-        _download_qlib_public(target_path)
-        logger.info("Step 1/3: Qlib base download complete.")
-
-    meta_path = target_path / META_FILENAME
-    if not meta_path.exists():
-        logger.info("Step 2/3: Building data_meta.json...")
-        fetcher = _create_fetcher("baostock")
-        stock_info = fetch_stock_listing_info(fetcher)
-        meta = build_meta_from_scan(target_path, stock_info=stock_info)
-        meta.save(meta_path)
-        logger.info(
-            f"Step 2/3: Meta created — {len(meta.stocks)} stocks, "
-            f"trusted_until={meta.trusted_until}"
-        )
-    else:
-        logger.info("Step 2/3: data_meta.json already exists, skipping.")
-
-    logger.info("Step 3/3: Appending latest data from BaoStock...")
-    _append_from_fetcher("baostock", target_path, end_date, parallel=parallel, workers=workers)
-    logger.info("All done. Data is now complete and up to date.")
+    """Retired compatibility name; use audited immutable per-stock versions."""
+    raise ValueError("Use research ashare-base / ashare-collect / ashare-update; direct source concatenation is disabled")
 
 
 def _download_from_fetcher(

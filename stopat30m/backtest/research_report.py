@@ -31,10 +31,11 @@ def render_research_curve(run_dir: str | Path, output: str | Path) -> Path:
     config = manifest["config"]
     names = {
         "momentum": "Momentum, net costs",
+        "lightgbm": "Frozen LightGBM, net costs",
         "equal_weight": "Equal weight, net costs",
         "buy_hold": f"{config['buy_hold_instrument']} buy & hold, net costs",
     }
-    colors = {"momentum": "#2858a5", "equal_weight": "#9a6730", "buy_hold": "#58806b"}
+    colors = {"momentum": "#2858a5", "lightgbm": "#9d3a67", "equal_weight": "#9a6730", "buy_hold": "#58806b"}
     fig, axes = plt.subplots(2, 1, figsize=(10.5, 7), sharex=True, gridspec_kw={"height_ratios": [2, 1]})
     for strategy, label in names.items():
         series = frame.loc[frame["strategy"].eq(strategy)].sort_values("date")
@@ -60,8 +61,11 @@ def render_research_curve(run_dir: str | Path, output: str | Path) -> Path:
     for ax in axes:
         ax.grid(axis="y", color="#e7e7e7", linewidth=0.6)
         ax.spines[["right", "top"]].set_visible(False)
-    fig.text(0.08, 0.015, f"Source: {provider} | Adjusted fractional exposure research | Rules locked in 2026; no live-performance claim", fontsize=8, color="#555555")
-    fig.tight_layout(rect=(0, 0.035, 1, 0.96))
+    footer = f"Source: {provider} | Adjusted fractional exposure research | No live-performance claim"
+    if manifest["source_manifest"].get("price_semantics", {}).get("adjustment_transform") == "affine_cash_accumulation":
+        footer += "\nCash-accumulation HFQ proxy: NOT investable total return; corporate-action cash/units need separate verification."
+    fig.text(0.08, 0.012, footer, fontsize=8, color="#555555", va="bottom")
+    fig.tight_layout(rect=(0, 0.065, 1, 0.96))
     target.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(target, dpi=160)
     plt.close(fig)

@@ -7,8 +7,10 @@ Produces ~400+ total features for ML model training.
 from __future__ import annotations
 
 from datetime import datetime
+import re
 from typing import Any
 
+import pandas as pd
 from loguru import logger
 
 from stopat30m.config import get
@@ -130,6 +132,57 @@ def build_label_config() -> tuple[list[str], list[str]]:
     return [label_expr], [label_name]
 
 
+def label_lookahead_sessions(expressions: list[str]) -> int:
+    """Derive a conservative future horizon for simple Qlib Ref labels.
+
+    Unknown/nested Ref syntax must declare a horizon explicitly rather than
+    silently disabling the split purge. Positive Ref arguments only use history.
+    """
+    horizon = 0
+    for expression in expressions:
+        refs = re.findall(r"\bRef\s*\([^()]+,\s*([-+]?\d+)\s*\)", expression)
+        if len(refs) != len(re.findall(r"\bRef\s*\(", expression)):
+            raise ValueError("Custom label Ref syntax requires an explicit label_horizon_sessions")
+        horizon = max(horizon, *(-int(value) for value in refs), 0)
+    return horizon
+
+
+def purge_label_segments(segments, calendar, horizon: int, *, names=("train", "valid")):
+    """Shorten learning splits by real sessions so future labels stay inside.
+
+    Test/inference dates are preserved by default: unknown recent labels must
+    not suppress current predictions. Evaluation must discard unmatured labels.
+    ``names`` may include test when constructing an explicit labelled experiment.
+    """
+    if isinstance(horizon, bool) or not isinstance(horizon, int) or horizon < 0:
+        raise ValueError("Label horizon must be a nonnegative integer")
+    days = pd.DatetimeIndex(calendar)
+    if days.empty or days.has_duplicates or days.hasnans or days.tz is not None or not days.is_monotonic_increasing:
+        raise ValueError("Split purge requires a sorted, unique real exchange calendar")
+    result, audit = {}, {}
+    ordered = []
+    for name, bounds in segments.items():
+        if len(bounds) != 2:
+            raise ValueError("Each dataset segment needs explicit start/end boundaries")
+        start, end = (pd.Timestamp(value) for value in bounds)
+        if pd.isna(start) or pd.isna(end) or start.tz is not None or end.tz is not None or start > end:
+            raise ValueError("Invalid dataset segment date boundaries")
+        ordered.append((start, end, name))
+        effective = end
+        if name in names and horizon:
+            within = days[(days >= start) & (days <= end)]
+            if len(within) <= horizon:
+                raise ValueError(f"Segment {name} has insufficient real sessions after label purge")
+            effective = within[-horizon - 1]
+        result[name] = (start.strftime("%Y-%m-%d"), effective.strftime("%Y-%m-%d"))
+        audit[name] = {"requested_start": start.strftime("%Y-%m-%d"), "requested_end": end.strftime("%Y-%m-%d"),
+                       "effective_end": effective.strftime("%Y-%m-%d"), "purged_label_sessions": horizon if name in names else 0}
+    for left, right in zip(sorted(ordered), sorted(ordered)[1:]):
+        if left[1] >= right[0]:
+            raise ValueError("Train/validation/test date segments must not overlap")
+    return result, audit
+
+
 class AlphaExtendedHandler:
     """
     DataHandler combining Alpha158 + extended factors.
@@ -147,6 +200,7 @@ class AlphaExtendedHandler:
         fit_end_time: str | None = None,
         infer_processors: list | None = None,
         learn_processors: list | None = None,
+        label_horizon_sessions: int | None = None,
     ):
         data_cfg = get("data") or {}
         self.instruments = instruments or data_cfg.get("universe", "csi300")
@@ -158,6 +212,18 @@ class AlphaExtendedHandler:
 
         self._feature_exprs, self._feature_names = build_feature_config(groups)
         self._label_exprs, self._label_names = build_label_config()
+        if label_horizon_sessions is None:
+            self.label_horizon_sessions = label_lookahead_sessions(self._label_exprs)
+        else:
+            if isinstance(label_horizon_sessions, bool) or not isinstance(label_horizon_sessions, int) or label_horizon_sessions < 0:
+                raise ValueError("Label horizon must be a nonnegative integer")
+            try:
+                required_horizon = label_lookahead_sessions(self._label_exprs)
+            except ValueError:
+                required_horizon = 0  # Explicit declaration covers custom syntax.
+            if label_horizon_sessions < required_horizon:
+                raise ValueError("Explicit label horizon cannot understate future Ref dependencies")
+            self.label_horizon_sessions = label_horizon_sessions
 
         self._infer_processors = infer_processors
         self._learn_processors = learn_processors
@@ -170,8 +236,8 @@ class AlphaExtendedHandler:
         """Create a qlib DataHandlerLP instance."""
         from qlib.data.dataset.handler import DataHandlerLP
 
-        infer_processors = self._infer_processors or self._default_infer_processors()
-        learn_processors = self._learn_processors or self._default_learn_processors()
+        infer_processors = self._default_infer_processors() if self._infer_processors is None else self._infer_processors
+        learn_processors = self._default_learn_processors() if self._learn_processors is None else self._learn_processors
 
         data_handler_config = {
             "start_time": self.start_time,
@@ -241,6 +307,12 @@ class AlphaExtendedHandler:
                 "test": (cfg.get("test_start", "2025-07-01"), cfg.get("test_end") or _today()),
             }
 
+        from qlib.data import D
+        calendar = D.calendar(start_time=self.start_time, end_time=self.end_time, freq="day")
+        segments, split_audit = purge_label_segments(segments, calendar, self.label_horizon_sessions)
+        if "train" in segments:
+            self.fit_start_time, self.fit_end_time = segments["train"]
+
         import warnings
 
         with warnings.catch_warnings():
@@ -252,6 +324,7 @@ class AlphaExtendedHandler:
                 on_step(f"{self.num_features} features computed")
 
             dataset = DatasetH(handler=handler, segments=segments)
+            dataset.stopat30m_split_audit = split_audit
 
         if on_step:
             on_step(f"{len(segments)} segments built")

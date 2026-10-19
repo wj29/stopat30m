@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-19T08:45:45.944643+00:00",
+  "scope": "explicit issuer-verified full-day suspensions explaining missing Tencent bars in the locked three-ETF 2013-2025 research sample",
+  "events": [
+    {
+      "instrument": "SH510500",
+      "date": "2015-04-13",
+      "source_url": "https://epaper.stcn.com/paper/zqsb/page/1/2015-04/08/B073/20150408B073_pdf.pdf",
+      "known_at": "2015-04-08",
+      "reason": "Issuer-announced full-day suspension for entitlement registration and ETF share consolidation; trading resumes 2015-04-15.",
+      "not_tradeable": true
+    },
+    {
+      "instrument": "SH510500",
+      "date": "2015-04-14",
+      "source_url": "https://epaper.stcn.com/paper/zqsb/page/1/2015-04/08/B073/20150408B073_pdf.pdf",
+      "known_at": "2015-04-08",
+      "reason": "Issuer-announced full-day suspension for entitlement registration and ETF share consolidation; trading resumes 2015-04-15.",
+      "not_tradeable": true
+    },
+    {
+      "instrument": "SZ159915",
+      "date": "2021-02-08",
+      "source_url": "https://pdf.dfcfw.com/pdf/H2_AN202102081459963456_1.pdf",
+      "known_at": "2021-02-08",
+      "reason": "Issuer-announced suspension from market open for fund unit-holder meeting vote counting, pending effectiveness announcement; not a share-consolidation event.",
+      "not_tradeable": true
+    }
+  ],
+  "notes": [
+    {
+      "instrument": "SZ159915",
+      "date": "2021-02-09",
+      "source_urls": [
+        "https://pdf.dfcfw.com/pdf/H2_AN202102081459963456_1.pdf",
+        "https://pdf.dfcfw.com/pdf/H2_AN202203301555874269_1.pdf"
+      ],
+      "note": "The suspension notice specifies resumption at 10:30 on the effectiveness-announcement date. The issuer 2021 annual report records the decision/effectiveness announcement on 2021-02-09. A daily open bar on that date is not evidence of a tradable 09:30 opening auction.",
+      "not_tradeable_at_0930": true,
+      "verified_resumption_time": "10:30:00+08:00",
+      "price_or_volume_imputed": false
+    }
+  ],
+  "known_at_precision": "Date-only values are publication dates verified by the documents; no intraday publication time or pre-open availability is asserted.",
+  "input_snapshot_id": "fd7fcd7c461865577926a1a1b8ac329545b4aa8f230a4b7cfe3efd8b0b77ecfa",
+  "ordinary_missing_prices_may_be_filled": false,
+  "prices_or_volumes_added": false,
+  "issuer_documents": [
+    {
+      "source_url": "https://epaper.stcn.com/paper/zqsb/page/1/2015-04/08/B073/20150408B073_pdf.pdf",
+      "publisher": "Nanfang Fund Management via Securities Times official disclosure page",
+      "published_date": "2015-04-08"
+    },
+    {
+      "source_url": "https://pdf.dfcfw.com/pdf/H2_AN202102081459963456_1.pdf",
+      "publisher": "E Fund Management formal suspension announcement, archived PDF copy",
+      "published_date": "2021-02-08",
+      "publication_date_crosscheck": "Issuer 2021 annual report, disclosure table page 80"
+    }
+  ]
+}

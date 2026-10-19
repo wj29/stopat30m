@@ -1,4 +1,4 @@
-# Standalone historical-research workflow; Qlib/model training is not required.
+# Standalone historical research and frozen LightGBM comparison; Qlib is optional.
 baostock>=0.9.4,<0.10
 pandas>=2.2,<3
 numpy>=2.0,<2.5
@@ -7,3 +7,4 @@ pyyaml>=6,<7
 loguru>=0.7,<1
 requests>=2.31,<3
 matplotlib>=3.8,<4
+lightgbm>=4.6,<5

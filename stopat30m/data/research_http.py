@@ -16,7 +16,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 _HTTP_LOCK = threading.RLock()
-_LAST_REQUEST: dict[tuple[str, int], float] = {}
+_LAST_REQUEST: dict[tuple[str, int], tuple[object, float]] = {}
 _RETRYABLE = {408, 429, *range(500, 600)}
 _ENDPOINT = "https://push2his.eastmoney.com/api/qt/stock/kline/get"
 
@@ -52,6 +52,11 @@ class ResearchHTTPTransport:
     The injected clock returns epoch seconds; injected sleep advances it in
     tests. A public response is cached only after its caller validates schema.
     """
+    endpoint = _ENDPOINT
+    label = "Eastmoney"
+
+    def decode_response(self, response):
+        return response.json()
 
     def __init__(self, session, *, cache_dir=None, clock=None, sleep=None, random=None,
                  min_interval: float = 2, max_attempts: int = 4, max_wait: float = 60):
@@ -152,7 +157,7 @@ class ResearchHTTPTransport:
             _atomic(self._active_path, {**active, "status": "complete", "artifact_id": artifact_id})
 
     def _segment(self, params):
-        identity = {"endpoint": _ENDPOINT, "params": params, "generation": self.generation}
+        identity = {"endpoint": self.endpoint, "params": params, "generation": self.generation}
         if self.cache_dir is None or self.generation is None:
             return identity, None
         return identity, self.cache_dir / "generations" / self.generation / "responses" / f"{_hash(identity)}.json"
@@ -204,7 +209,7 @@ class ResearchHTTPTransport:
         if path is not None and path.exists():
             try:
                 block = json.loads(path.read_bytes())
-                if block["endpoint"] != _ENDPOINT:
+                if block["endpoint"] != self.endpoint:
                     raise ResearchDownloadError("Rate-limit state has a different endpoint identity.")
                 deadline = float(block["blocked_until"])
                 if not math.isfinite(deadline):
@@ -217,7 +222,7 @@ class ResearchHTTPTransport:
                 resume = datetime.fromtimestamp(self._blocked_until, timezone.utc).isoformat()
             except (OverflowError, ValueError, OSError):
                 resume = f"epoch_seconds:{self._blocked_until}"
-            raise ResearchDownloadError(f"Eastmoney rate limit: blocked_until={resume}; resume later. "
+            raise ResearchDownloadError(f"{self.label} rate limit: blocked_until={resume}; resume later. "
                 "Disable refresh for same-day resume; a crossed Shanghai date requires explicit refresh.")
 
     def _defer(self, seconds: float) -> None:
@@ -228,7 +233,7 @@ class ResearchHTTPTransport:
         self._blocked_until = self.clock() + seconds
         path = self._block_path()
         if path is not None:
-            _atomic(path, {"endpoint": _ENDPOINT, "blocked_until": self._blocked_until})
+            _atomic(path, {"endpoint": self.endpoint, "blocked_until": self._blocked_until})
 
     def _retry_after(self, response) -> float:
         value = str(getattr(response, "headers", {}).get("Retry-After", "")).strip()
@@ -259,7 +264,7 @@ class ResearchHTTPTransport:
         try:
             state = json.loads(path.read_bytes())
             stamp = float(state["issued_at"])
-            if state["endpoint"] != _ENDPOINT or not math.isfinite(stamp):
+            if state["endpoint"] != self.endpoint or not math.isfinite(stamp):
                 raise ValueError("request timer identity or time invalid")
             return stamp
         except (OSError, KeyError, TypeError, ValueError) as exc:
@@ -275,8 +280,9 @@ class ResearchHTTPTransport:
         with _HTTP_LOCK:
             self._check_blocked()
             for attempt in range(self.max_attempts):
-                rate_key = (_ENDPOINT, id(self.clock))
-                previous = _LAST_REQUEST.get(rate_key, self._last_request)
+                rate_key = (self.endpoint, id(self.clock))
+                record = _LAST_REQUEST.get(rate_key)
+                previous = record[1] if record is not None and record[0] is self.clock else self._last_request
                 persisted = self._last_persisted_request()
                 if persisted is not None:
                     previous = persisted if previous is None else max(previous, persisted)
@@ -284,21 +290,24 @@ class ResearchHTTPTransport:
                     self._wait(max(0, previous + self.min_interval - self.clock()))
                 self._check_generation_date()
                 now = self.clock()
-                _LAST_REQUEST[rate_key] = self._last_request = now
+                # Keep the callable alive: an integer id alone can be reused
+                # after an injected clock is collected, mixing unrelated eras.
+                _LAST_REQUEST[rate_key] = (self.clock, now)
+                self._last_request = now
                 if self.cache_dir is not None:
-                    _atomic(self.cache_dir / "last_request.json", {"endpoint": _ENDPOINT, "issued_at": now})
+                    _atomic(self.cache_dir / "last_request.json", {"endpoint": self.endpoint, "issued_at": now})
                 response = None
                 try:
-                    response = self.session.get(_ENDPOINT, params=params, timeout=timeout, headers=headers, allow_redirects=False)
+                    response = self.session.get(self.endpoint, params=params, timeout=timeout, headers=headers, allow_redirects=False)
                 except Exception as exc:
                     # Restrict retries to actual transport failures. Programming
                     # errors and arbitrary fake-client exceptions must surface.
                     import requests
                     if not isinstance(exc, (requests.exceptions.ConnectionError, requests.exceptions.Timeout,
                                             ConnectionError, TimeoutError)):
-                        raise ResearchDownloadError(f"Eastmoney request failed: {type(exc).__name__}") from exc
+                        raise ResearchDownloadError(f"{self.label} request failed: {type(exc).__name__}") from exc
                     if attempt + 1 == self.max_attempts:
-                        raise ResearchDownloadError(f"Eastmoney connection retries exhausted ({self.max_attempts} attempts).") from exc
+                        raise ResearchDownloadError(f"{self.label} connection retries exhausted ({self.max_attempts} attempts).") from exc
                     self._wait(min(2 ** attempt * 2, 30) + self.random())
                     continue
                 status = int(response.status_code)
@@ -313,15 +322,15 @@ class ResearchHTTPTransport:
                         # restarting the process cannot bypass Retry-After.
                         if retry_after:
                             self._defer(retry_after)
-                        raise ResearchDownloadError(f"Eastmoney HTTP {status}: retries exhausted ({self.max_attempts} attempts).")
+                        raise ResearchDownloadError(f"{self.label} HTTP {status}: retries exhausted ({self.max_attempts} attempts).")
                     self._wait(max(retry_after, min(2 ** attempt * 2, 30) + self.random()))
                     continue
                 if not 200 <= status < 300:
-                    raise ResearchDownloadError(f"Eastmoney HTTP {status}: non-retryable response.")
+                    raise ResearchDownloadError(f"{self.label} HTTP {status}: non-retryable response.")
                 try:
-                    payload = response.json()
+                    payload = self.decode_response(response)
                 except (TypeError, ValueError) as exc:
-                    raise ResearchDownloadError("Eastmoney returned invalid JSON/HTML; response was not cached or retried.") from exc
+                    raise ResearchDownloadError(f"{self.label} returned invalid JSON/HTML; response was not cached or retried.") from exc
                 validate(payload)
                 wrapper = {"schema_version": 1, "request": identity, "payload": payload,
                     "payload_sha256": _hash(payload),

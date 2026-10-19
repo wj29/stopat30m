@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "status": "verified_public_facts_with_local_web_extract_evidence",
+  "created_at": "2026-10-19T10:07:03.939171+00:00",
+  "timezone": "Asia/Shanghai",
+  "evidence": [
+    {
+      "id": "haitong_suspension_20250205",
+      "path": "../../output/research/ashare/corporate_actions/haitong_merger_2025/haitong_suspension_20250205.web_facts.json",
+      "sha256": "9b55cf03966025624344e2420d97d79e6a42e8b42db0fbaf39673adcf6b06234",
+      "url": "https://www.hkexnews.hk/listedco/listconews/sehk/2025/0205/2025020502093_c.pdf",
+      "evidence_kind": "official_pdf_text_extract_via_web",
+      "original_pdf_sha256": null,
+      "original_pdf_saved": false,
+      "sha256_scope": "local_web_facts_extract_bytes_only",
+      "announcement_date": "2025-02-05",
+      "pdf_pages_1_based": [
+        7
+      ]
+    },
+    {
+      "id": "haitong_exchange_20250228",
+      "path": "../../output/research/ashare/corporate_actions/haitong_merger_2025/haitong_exchange_20250228.web_facts.json",
+      "sha256": "ea4f26b80d0db06ddb8e05738778134a4bdef9cfe2073010e8b1036bddabe1ce",
+      "url": "https://www.hkexnews.hk/listedco/listconews/sehk/2025/0228/2025022801559_c.pdf",
+      "evidence_kind": "official_pdf_text_extract_via_web",
+      "original_pdf_sha256": null,
+      "original_pdf_saved": false,
+      "sha256_scope": "local_web_facts_extract_bytes_only",
+      "announcement_date": "2025-02-28",
+      "pdf_pages_1_based": [
+        2,
+        3,
+        5
+      ]
+    },
+    {
+      "id": "joint_schedule_20250228",
+      "path": "../../output/research/ashare/corporate_actions/haitong_merger_2025/joint_schedule_20250228.web_facts.json",
+      "sha256": "9ab3e4898b6871def723de34eadc95a638475b0a54dd6ad7c4700ed9108d8deb",
+      "url": "https://www.hkexnews.hk/listedco/listconews/sehk/2025/0228/2025022801548_c.pdf",
+      "evidence_kind": "official_pdf_text_extract_via_web",
+      "original_pdf_sha256": null,
+      "original_pdf_saved": false,
+      "sha256_scope": "local_web_facts_extract_bytes_only",
+      "announcement_date": "2025-02-28",
+      "pdf_pages_1_based": [
+        2,
+        3
+      ]
+    },
+    {
+      "id": "guotai_A_completion_listing_20250313",
+      "path": "../../output/research/ashare/corporate_actions/haitong_merger_2025/guotai_A_completion_listing_20250313.web_facts.json",
+      "sha256": "abea5d6e556a2b2e440f20669308f7221c10251e30db238614d8f7e6f7d3bba2",
+      "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2025/0313/2025031301549_c.pdf",
+      "evidence_kind": "official_pdf_text_extract_via_web",
+      "original_pdf_sha256": null,
+      "original_pdf_saved": false,
+      "sha256_scope": "local_web_facts_extract_bytes_only",
+      "announcement_date": "2025-03-14",
+      "pdf_pages_1_based": [
+        4,
+        5
+      ],
+      "announcement_date_basis": "PDF正文日期，非URL目录日期"
+    }
+  ],
+  "actions": [
+    {
+      "id": "haitong_A_into_guotai_A_2025",
+      "type": "share_exchange",
+      "from_instrument": "SH600837",
+      "to_instrument": "SH601211",
+      "ratio": 0.62,
+      "ratio_basis": "new_raw_A_shares_per_old_raw_A_share",
+      "ratio_known_at": "2025-02-28T23:59:59+08:00",
+      "ratio_evidence_ids": [
+        "haitong_exchange_20250228"
+      ],
+      "record_date": "2025-03-03",
+      "record_date_cutoff": "market_close",
+      "record_date_known_at": "2025-02-28T23:59:59+08:00",
+      "suspension": {
+        "effective_date": "2025-02-06",
+        "known_at": "2025-02-05T23:59:59+08:00",
+        "effective_time": "market_open",
+        "end_condition": "termination_of_listing",
+        "evidence_ids": [
+          "haitong_suspension_20250205"
+        ]
+      },
+      "delisting": {
+        "effective_date": "2025-03-04",
+        "known_at": "2025-02-28T23:59:59+08:00",
+        "evidence_ids": [
+          "haitong_exchange_20250228"
+        ]
+      },
+      "scheduled": {
+        "known_at": "2025-02-28T23:59:59+08:00",
+        "exchange_record_date": "2025-03-03",
+        "A_exchange_completion": "2025-03-13",
+        "tradable_from": "2025-03-17",
+        "is_indicative": true,
+        "execution_permission": false,
+        "evidence_ids": [
+          "joint_schedule_20250228"
+        ]
+      },
+      "confirmation": {
+        "known_at": "2025-03-14T23:59:59+08:00",
+        "registration_completed_date": "2025-03-13",
+        "tradable_from": "2025-03-17",
+        "evidence_ids": [
+          "guotai_A_completion_listing_20250313"
+        ]
+      },
+      "fractional_research_policy": "研究以raw股0.62比例换股；不声称复现中登整数余股随机分配。Qlib虚拟份额必须先以源因子恢复raw股数，再以目标证券因子归一化。",
+      "valuation_and_execution_limitations": [
+        "海通自2025-02-06不再交易，不得用停牌前陈旧价格伪造可成交。",
+        "登记日2025-03-03仅确定权利归属，不代表新增601211股份当日可交易。",
+        "换入新增股份在已确认的2025-03-17前不可卖出；601211既有股票的可交易报价不能解除该限制。",
+        "预计日期不能作为换股完成或可交易的确认；每项known_at按来源公告日期保守取上海日末。"
+      ]
+    }
+  ],
+  "limitations": [
+    "仅本次海通A股吸收合并事件，不能视为全市场或两只股票的完整公司行为账本。",
+    "原PDF未成功本机下载；sha256只核验本地web事实提取文件，original_pdf_sha256均为null。",
+    "web工具已读取官方PDF对应页面；公告日内精确发布时间未知，known_at保守设为该日23:59:59+08:00。",
+    "不自动行使仅对特定异议股东开放的现金选择权，不把其价格当普通持股可卖价格。",
+    "本资料不更改原训练数据、模型、参数或预测。"
+  ],
+  "corrected_at": "2026-10-19T10:07:46.891402+00:00",
+  "correction_note": "确认公告日按正文3月14日，不从URL目录3月13日推断；中登登记事实仍为3月13日。"
+}

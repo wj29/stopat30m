@@ -1,0 +1,225 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-10-19T10:13:46.391649+00:00",
+  "scope": "A-share individual stocks, package historical CSI300 intervals; not ETF rotation or full-market PIT claims",
+  "base": {
+    "release_tag": "2026-10-18",
+    "source_kind": "community_qlib_format",
+    "archive_size_bytes": 568280701,
+    "archive_sha256": "a11eaba954f2d5658c017fa800eea85bb6277f8ffc3d7b0449f791a44e43e7dd",
+    "history_calendar_start": "2000-01-04",
+    "history_calendar_end": "2026-10-16",
+    "security_directories": 6169,
+    "snapshot_manifest_sha256": "b432d2a2594de42d0f06fc6f523e496143d9ca75480fa250a9ca234f8a22a02a",
+    "source_spec": {
+      "path": "docs/research/a1_qlib_source.json",
+      "sha256": "4e1ebc231fadce42cce5dbbbe24ab7fe8b269f95fe00bbdaf698a30abe293caa"
+    }
+  },
+  "current_300_increment": {
+    "raw_hfq_responses": 600,
+    "strict_seam_passes": 264,
+    "strict_seam_failures": 36,
+    "passed_with_finite_prices_2026_10_19": 263,
+    "passed_without_latest_complete_quote": [
+      "SH601059"
+    ],
+    "partial_snapshot_id": "7c3242c666cac60a41eec9721e35c854e7a942f3b51c1d15822b7818bc40abf7",
+    "partial_snapshot_manifest_sha256": "70f73ad61472469747618094316ac66f1238a17b857f0766cb9db9617a8d8ab1",
+    "not_a_full_market_refresh": true,
+    "rebuild_status": {
+      "path": "output/research/ashare/updates/rebuild_36_20261019_summary.json",
+      "sha256": "524382f4f78ee60de90760818aba3937a66c36938f436d22ba962cc54344c7d5"
+    },
+    "whole_security_rebuild_published": false,
+    "blockers": [
+      "SH688223 first IPO row HFQ adjustflag=3 reproduced independently",
+      "SH601727 raw paginated response truncated: 4000 vs 4338 HFQ rows; SDK silent-terminal-page failure now detected"
+    ]
+  },
+  "model": {
+    "training_rows": 774968,
+    "feature_count": 158,
+    "historical_member_instruments": 760,
+    "spec": {
+      "path": "docs/research/a1_ashare_experiment.json",
+      "sha256": "b6adfeaab1e319e4725dba29789de510fcf06475977a44aef9f024f24c1a5af9"
+    },
+    "original_model": {
+      "path": "output/research/ashare/experiments/a1_20261019/model/model.txt",
+      "sha256": "4e6ce26ed81d02bf7556f1adf62c8edf654a2eff60c22257087bceca1b4dd86c"
+    },
+    "original_predictions": {
+      "path": "output/research/ashare/experiments/a1_20261019/predictions.csv",
+      "sha256": "fe6e4828293bb83b742bbad083ec77fdaa25e3eb6e21178241815b6276bad441"
+    },
+    "split_audit": {
+      "test": {
+        "effective_end": "2026-10-08",
+        "purged_label_sessions": 6,
+        "requested_end": "2026-10-16",
+        "requested_start": "2025-01-01"
+      },
+      "train": {
+        "effective_end": "2022-12-22",
+        "purged_label_sessions": 6,
+        "requested_end": "2022-12-31",
+        "requested_start": "2012-01-01"
+      },
+      "valid": {
+        "effective_end": "2024-12-23",
+        "purged_label_sessions": 6,
+        "requested_end": "2024-12-31",
+        "requested_start": "2023-01-01"
+      }
+    },
+    "prediction_diagnostics": {
+      "test": {
+        "ICIR": 0.1897,
+        "IC_mean": 0.035992,
+        "IC_std": 0.189715,
+        "RankICIR": 0.3414,
+        "RankIC_mean": 0.059346,
+        "RankIC_std": 0.173834
+      },
+      "train": {
+        "ICIR": 0.9344,
+        "IC_mean": 0.136776,
+        "IC_std": 0.146377,
+        "RankICIR": 1.0204,
+        "RankIC_mean": 0.150951,
+        "RankIC_std": 0.147931
+      },
+      "valid": {
+        "ICIR": 0.3437,
+        "IC_mean": 0.056124,
+        "IC_std": 0.163289,
+        "RankICIR": 0.4767,
+        "RankIC_mean": 0.077287,
+        "RankIC_std": 0.162136
+      }
+    },
+    "parameter_search": false,
+    "oos_early_stopping": false
+  },
+  "historical_oos": {
+    "start": "2025-01-02",
+    "end": "2026-10-16",
+    "exchange_sessions": 431,
+    "comparison_complete": true,
+    "status": "completed_fractional_research",
+    "metrics": {
+      "equal_weight": {
+        "annual_return": 0.0524,
+        "annual_volatility": 0.1546,
+        "benchmark_available": false,
+        "calmar": 0.3896,
+        "fees_in_initial_nav_units": 0.0030831393190008122,
+        "max_drawdown": -0.1345,
+        "max_stale_sessions": 27,
+        "observation_days": 431,
+        "one_way_turnover_sum": 2.6869601312466087,
+        "pending_order_days": 139,
+        "profit_loss_ratio": 0.974,
+        "quote_carry_assumption_applied": true,
+        "sharpe": 0.2171,
+        "slippage_in_initial_nav_units": 0.0011900253670818915,
+        "sortino": 0.2869,
+        "stale_valuation_days": 165,
+        "total_return": 0.091311,
+        "verified_share_exchanges": 2,
+        "win_rate": 0.5244
+      },
+      "lightgbm": {
+        "annual_return": 0.1579,
+        "annual_volatility": 0.1842,
+        "benchmark_available": false,
+        "calmar": 1.114,
+        "fees_in_initial_nav_units": 0.07372721031852571,
+        "max_drawdown": -0.1417,
+        "max_stale_sessions": 0,
+        "observation_days": 431,
+        "one_way_turnover_sum": 55.34793216313255,
+        "pending_order_days": 0,
+        "profit_loss_ratio": 1.0264,
+        "quote_carry_assumption_applied": false,
+        "sharpe": 0.7274,
+        "slippage_in_initial_nav_units": 0.026411491301114573,
+        "sortino": 1.0505,
+        "stale_valuation_days": 0,
+        "total_return": 0.2849,
+        "verified_share_exchanges": 0,
+        "win_rate": 0.536
+      },
+      "momentum": {
+        "annual_return": 0.1303,
+        "annual_volatility": 0.3881,
+        "benchmark_available": false,
+        "calmar": 0.3148,
+        "fees_in_initial_nav_units": 0.03322376514410607,
+        "max_drawdown": -0.414,
+        "max_stale_sessions": 9,
+        "observation_days": 431,
+        "one_way_turnover_sum": 24.464847480665373,
+        "pending_order_days": 11,
+        "profit_loss_ratio": 1.0298,
+        "quote_carry_assumption_applied": true,
+        "sharpe": 0.4332,
+        "slippage_in_initial_nav_units": 0.011950882672197141,
+        "sortino": 0.6241,
+        "stale_valuation_days": 15,
+        "total_return": 0.233092,
+        "verified_share_exchanges": 0,
+        "win_rate": 0.5151
+      }
+    },
+    "report": {
+      "path": "output/research/ashare/experiments/a1_20261019_verified_exchanges_v2_comparison/report.json",
+      "sha256": "942690cf5794bbee2a1f2d8cc255696561a5478888d50f43296d5bb8278a1691"
+    },
+    "manifest": {
+      "path": "output/research/ashare/experiments/a1_20261019_verified_exchanges_v2_comparison/manifest.json",
+      "sha256": "a0612ce3995b9c896d6ff8babe59678aecbe77dc71a36075de8e80121dbd4eda"
+    },
+    "manifest_content_hash": "1839925bd917531c133d26f70723a211bb0cce9e7a04f3522480804f1a4d25ff",
+    "reused_original_model_and_predictions": true,
+    "fee_assumption_total_bps": {
+      "buy": 5.1,
+      "sell": 10.1
+    },
+    "corporate_actions": {
+      "path": "docs/research/a1_ashare_corporate_actions_v2.json",
+      "sha256": "60282f8236f8fb36ed4c065206487e11770b9140315e89dfd8f0ec5d6269ee39"
+    },
+    "corporate_action_evidence_kind": "local structured facts extracted from official web PDF/HTML; no original PDF byte hashes",
+    "complete_corporate_action_coverage": false,
+    "membership_status": "package_declared_membership_not_full_PIT",
+    "execution_ready": false
+  },
+  "automation": {
+    "old_etf_job_stopped_and_unregistered": true,
+    "ashare_daily_job_enabled": false
+  },
+  "validation": {
+    "full_backend_tests_passed": 758,
+    "subtests_passed": 20,
+    "pip_check": "no broken requirements"
+  },
+  "interpretation": "Positive historical fractional-research result, below 20% CAGR target; not proven executable or future-profitable. Equal weight uses stale marks on 165/431 sessions; LightGBM on 0.",
+  "next_priorities": [
+    "Resolve rejected source histories without relabeling modes or mixing vintages",
+    "Verify PIT constituent changes and complete corporate actions",
+    "Validate integer shares, board-specific limits, minimum commission and tradable fills",
+    "Only then refit a distinct latest candidate on mature labels and start a new forward period; no reuse of this test as fresh OOS"
+  ],
+  "plots": {
+    "png": {
+      "path": "output/research/ashare/analysis/a1_20261019/oos_nav_drawdown.png",
+      "sha256": "1cb635eb0c69f60929445a84d3b75620e418199961c23630f88dc66f21b99344"
+    },
+    "pdf": {
+      "path": "output/research/ashare/analysis/a1_20261019/oos_nav_drawdown.pdf",
+      "sha256": "4dbefdc94d2aef04063a927df675673af9e193c9318cdf39eb349d46eb8d66f7"
+    }
+  }
+}

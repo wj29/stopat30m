@@ -188,6 +188,60 @@ def test_same_inputs_reproduce_all_report_and_csv_hashes_without_overwrite(tmp_p
         run_walk_forward(artifact, universe, protocol, a.path)
 
 
+def test_external_model_uses_identical_cost_accounting_and_previous_session(tmp_path):
+    artifact, universe, config = sample(flat=True)
+    protocol = tmp_path / "model-base.json"
+    lock_protocol(config, protocol, universe=universe)
+    calls = []
+
+    def target(signal_day, execution_day, members):
+        assert artifact.calendar[artifact.calendar.get_loc(execution_day) - 1] == signal_day
+        calls.append((signal_day, execution_day))
+        return {A: 1.0}, [{"instrument": A, "score": 0.1, "selected": True}]
+
+    result = run_walk_forward(artifact, universe, protocol, tmp_path / "comparison",
+        additional_strategies={"lightgbm": target}, comparison_metadata={"training_end": config.train_end})
+    model = final(result, "lightgbm")
+    reference = final(result, "buy_hold")
+    assert model.nav.tolist() == pytest.approx(reference.nav.tolist())
+    assert model.fee_cost.sum() == pytest.approx(reference.fee_cost.sum())
+    assert calls and result.report["training_metrics_are_in_sample"] is True
+    assert result.report["model_fit"] is True
+    assert result.report["comparison"]["training_end"] == config.train_end
+
+
+@pytest.mark.parametrize("weights", [{INDEX: 1.0}, {A: -0.1}, {A: float('nan')}, {A: 1.1}, {A: .5, B: .5}])
+def test_external_model_cannot_bypass_locked_universe_or_exposure_limits(tmp_path, weights):
+    artifact, universe, config = sample()
+    protocol = tmp_path / "base.json"
+    lock_protocol(config, protocol, universe=universe)
+    with pytest.raises(ValueError, match="External strategy"):
+        run_walk_forward(artifact, universe, protocol, tmp_path / "invalid",
+            additional_strategies={"lightgbm": lambda *args: (weights, [])})
+    assert not (tmp_path / "invalid").exists()
+
+
+def test_only_explicit_verified_halt_carries_valuation_and_defers_trade_without_filling_prices(tmp_path):
+    artifact, universe, config = sample()
+    day = artifact.calendar[artifact.calendar.get_loc(pd.Timestamp(config.oos_start)) + 2]
+    artifact.adjusted_open.loc[day, A] = np.nan
+    artifact.adjusted_close.loc[day, A] = np.nan
+    protocol = tmp_path / "halt-base.json"
+    lock_protocol(config, protocol, universe=universe)
+    evidence = {(day, A): {"not_tradeable": True, "source_url": "https://issuer.example/suspension",
+                           "known_at": "2019-01-01"}}
+    result = run_walk_forward(artifact, universe, protocol, tmp_path / "halt-run", known_halts=evidence)
+    rows = final(result)
+    held = rows.loc[rows.date.eq(day)].iloc[0]
+    assert held.carried_valuation_instruments == A
+    assert held.rebalance_deferred_for_verified_halt
+    assert held.fee_cost == 0 and held.slippage_cost == 0
+    trades = pd.read_csv(result.path / "trades.csv", parse_dates=["date"])
+    assert not ((trades.date == day) & (trades.instrument == A)).any()
+    assert pd.isna(artifact.adjusted_open.loc[day, A]) and pd.isna(artifact.adjusted_close.loc[day, A])
+    assert result.report["verified_halts"][0]["source_url"] == evidence[(day, A)]["source_url"]
+
+
 def test_snapshot_membership_is_rejected_and_data_source_binding_is_checked(tmp_path):
     artifact, universe, config = sample()
     snapshot = SimpleNamespace(as_dict=lambda: {**universe.as_dict(), "kind": "snapshot"})

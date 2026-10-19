@@ -2,9 +2,112 @@
 
 本轮补齐可审计的历史数据输入、股票池约束和固定规则样本外研究入口。数据校验不通过就停止，不用未复权价格代替复权价格，也不以工作日猜测交易所开市。研究结果与个人账户账本独立。
 
+## 当前主线：A 股个股与 Qlib 历史基座
+
+三只ETF是前一轮工程验证，其自动任务已停止，原数据、模型和失败记录保留。以下`ashare-*`为独立的个股研究链。最新36只数据修复、原价整数股回测及每日模拟启动状态见 [A2执行验证](A2_EXECUTION_VALIDATION.md)；本文件保留A1及更早阶段的历史记录，没有接入真实券商。
+
+Microsoft Qlib 的官方 README 当前提示官方数据暂时停用，并推荐社区包。本项目固定使用 **chenditc/investment_data 的 2026-10-18 发布版**，不是把社区数据称为 Microsoft 官方数据。来源、上游提交、归档大小及 SHA-256 已固定在 [基座声明](research/a1_qlib_source.json)。已实际下载的 568,280,701 字节归档 SHA-256 为 `a11eaba954f2d5658c017fa800eea85bb6277f8ffc3d7b0449f791a44e43e7dd`。
+
+基座包含 6,169 个证券目录、2000-01-04 至 2026-10-16 的历史交易日历。目录还包括指数、北交所等符号，不能直接称为 6,169 只可交易 A 股。未来日历到 12 月不表示行情也已到 12 月；每只证券的有限价格截止日另行审计。
+
+第一轮个股实验使用包内**历史沪深300成分区间**：2012 年起的实验涉及 760 只历史成员，避免用今天的 300 只回填历史。但这份成分文件是供应商事后整理的观测区间，缺少完整公告时点，且退市/换股退出日存在滞后，仍不能认定为完整 PIT。最新 300 成员查询仅用于选择增量下载目标，不替代历史成分。
+
+### 可复用命令
+
+```bash
+.venv/bin/python -m pip install -r requirements-qlib.txt
+.venv/bin/python main.py research ashare-base
+```
+
+`ashare-base` 输出不可变的 `Snapshot manifest` 路径。后续 `--snapshot` 或 `--base-snapshot` 使用该文件的父目录；每次更新生成新版本，原包不原地覆盖。
+
+```bash
+# 以下是本次实际采集区间；以后更新使用新的日期和输出目录
+.venv/bin/python main.py research ashare-collect \
+  --start-date 2026-08-03 --end-date 2026-10-19 --index-date 2026-10-16 \
+  --output-dir output/research/ashare/collections/csi300_20261019
+
+.venv/bin/python main.py research ashare-update \
+  --base-snapshot <Snapshot目录> \
+  --collection output/research/ashare/collections/csi300_20261019 \
+  --calendar output/research/calendar/sina_2026.json \
+  --base-volume-multiplier 100 \
+  --output-dir output/research/ashare/updates/new_version
+
+.venv/bin/python main.py research ashare-run \
+  --snapshot <Snapshot目录> \
+  --spec docs/research/a1_ashare_experiment.json \
+  --corporate-actions docs/research/a1_ashare_corporate_actions_v2.json \
+  --output-dir output/research/ashare/experiments/new_experiment
+```
+
+`--calendar` 必须是完整自然日标志的真实来源日历，`sina_2026.json` 是本机已有的采集产物，不是仓库自带文件。新环境需先采集并核验日历；不能用周一至周五代替。`--base-volume-multiplier 100` 来自本包上游源码与真实重叠数据核对，不能照搬到别的 Qlib 包。
+
+增量当前显式使用 **BaoStock 个股未复权/HFQ**。原先 ETF 的复权问题不表示 BaoStock 个股也不可用；本次已实际取得 300 只证券的双价格响应。请求串行限速，保留原始响应、采集时间、批次与校验和；没有静默切源。东方财富仍保留为已有的独立下载入口。
+
+### 接缝失败怎样处理
+
+raw 价格、HFQ、成交股数、人民币成交额、VWAP、交易日历及至少 20 日重叠必须一致。已完成的 300 只审计中，**264 只通过、36 只未通过**。这 36 只原价和股数可还原，但原包归一化复权值存在量化差异，不能直接拼接尾部。严格容差保持不变。
+
+`ashare-update --allow-partial` 只发表严格通过部分，记录每只拒绝原因，失败证券维持原数据；“通过接缝”不等于“当天有可用行情”。完整目标若有失败，可用同一来源重新取失败证券**整个历史**，由 `ashare-rebuild` 在新版本中整段替换，明确标为 `whole_security_source_rebuild`，不冒充接缝通过：
+
+```bash
+.venv/bin/python main.py research ashare-rebuild \
+  --base-snapshot <部分更新后的Snapshot目录> \
+  --collection <失败证券完整历史采集目录> \
+  --calendar output/research/calendar/sina_2026.json \
+  --failure-audit output/research/ashare/updates/baostock_20261019/bridge_audit_all.json \
+  --output-dir output/research/ashare/updates/new_rebuild_version
+```
+
+失败名单必须与原审计完全相同，完整历史不能比父版更短。重建会重新生成这几只证券的全部七个研究字段，删除其不匹配的旧来源附加字段，保留其他证券和历史指数区间。数据版本变化后应生成新模型/结果目录；旧业绩仍绑定旧快照，不能换入新数据后保留原业绩标签。
+
+**本次重建尚未发表：**SH688223 的 HFQ 响应在 IPO 首日混入未复权标记，独立新批次复取仍复现；SH601727 原价长响应止于第 4,000 行，而 HFQ 还有后续 338 行。原 36 只批次及显式 35 只子集均保留失败证据，不称为完成。已修复 BaoStock SDK 翻页失败却保持 `error_code=0` 的误成功边界，加载器也拒绝 raw/HFQ 日期不齐。当前可用的更新仍只有严格通过的 264 只，其中 263 只有 10 月 19 日完整有限行情；SH601059 保留其更早的有限价格水位。
+
+### 训练与结果口径
+
+固定实验见 [A1 声明](research/a1_ashare_experiment.json)：2012—2022 训练、2023—2024 验证、2025-01-01 至 2026-10-16 历史样本外。官方 Alpha158、固定 LightGBM 100 轮；下一开盘至第五个持有交易日后的开盘标签，跨分段的未来六个交易日清除。预处理只拟合训练期，保存原生模型及标准化状态，不利用 OOS 选参数或早停。
+
+模型已实际拟合 **774,968 条训练样本、158 个特征**。策略为 LightGBM 前20、60日正动量前20和历史成员等权，每五个交易日调仓，使用同一成交与成本核算。股票假设费用含佣金、过户费、卖出印花税及滑点，合计买入 5.1bp、卖出 10.1bp；不是 ETF 的双边 5bp。最低佣金、整手、涨跌停/一字板、冲击成本尚未完整建模，因此保留 `execution_ready=false`。
+
+复权研究单位不是账户真实股数。停牌没有可执行价格；源数据允许缺失 OHLC/VWAP 时保留前向填充的 factor，不能因此假装有行情。海通证券吸收合并已经补入[独立事件声明](research/a1_ashare_corporate_actions.json)：2/5 公告次日起停牌，2/28 公告 3/4 退市及每股换 0.62 股，3/14 公告确认新股 3/17 可流通。3/13 是登记证明取得日，不能根据 URL 的目录日期误当公告已知时间。未确认可交易前只保留标明陈旧的权益估值，3/17 才按真实原股数比率转换，不计为交易或伪造成交。
+
+继续运行发现中国重工也因真实吸收合并停止交易，因此另建 [v2 事件声明](research/a1_ashare_corporate_actions_v2.json)，原海通文件及失败尝试保留。中国重工最终换股比例为每股换 0.1339 股中国船舶；8/13 起停止交易、9/5 退市，9/12 正式公告确认 9/16 新股可流通。使用最终除息调整比例，不沿用旧草案的 0.1335。[中国船舶正式公告](https://static.cninfo.com.cn/finalpage/2025-09-12/1224653312.PDF)、[上交所退市公告](https://www.sse.com.cn/disclosure/announcement/listing/stock/c/c_20250829_10790128.shtml)
+
+两事件共引用七份本地官方 PDF/HTML **web 文本提取/结构事实记录**，原 PDF 下载没有完成，`original_pdf_sha256=null`。本地 SHA 只绑定提取记录，不代表原 PDF 字节已保存或独立核验；原始官方 URL、页码和保守公告可知时点均保留。换到新机器需连同 `output/research/ashare/corporate_actions/` 证据迁移，缺失或改变均拒绝运行。海通三类关键事实分别来自 [2/5 停牌公告](https://www.hkexnews.hk/listedco/listconews/sehk/2025/0205/2025020502093_c.pdf)、[2/28 换股公告](https://www.hkexnews.hk/listedco/listconews/sehk/2025/0228/2025022801559_c.pdf)、[3/14 新增股份公告](https://www1.hkexnews.hk/listedco/listconews/sehk/2025/0313/2025031301549_c.pdf)。
+
+原训练和预测文件保留；核算修正后的重算使用独立目录，不重新拟合、改参数或改 OOS 起点：
+
+```bash
+.venv/bin/python main.py research ashare-resume \
+  --experiment-dir output/research/ashare/experiments/a1_20261019 \
+  --corporate-actions docs/research/a1_ashare_corporate_actions_v2.json \
+  --output-dir <新的比较结果目录>
+```
+
+`--experiment-dir` 必须指向包含原模型和 `predictions.csv` 的训练目录。
+
+### 本次实源验收与剩余工作
+
+最终比较目录为 `output/research/ashare/experiments/a1_20261019_verified_exchanges_v2_comparison/`。在相同原模型、原预测和基座上，完整跑完 **2025-01-02 至 2026-10-16，共 431 个交易日**：
+
+- **LightGBM：**累计净收益 28.49%，年化 15.79%，最大回撤 -14.17%，夏普 0.7274。
+- **60日固定动量：**累计净收益 23.31%，年化 13.03%，最大回撤 -41.40%。
+- **历史成员等权：**累计净收益 9.13%，年化 5.24%，最大回撤 -13.45%。这是包内成员等权组合，不是沪深300官方指数收益。
+
+结果支持继续研究 LightGBM，但**尚未达到 20% 年化目标，也不证明实盘可实现**。LightGBM 本轮没有持仓陈旧估值日；动量有 15 日、等权有 165 日，等权还包含两次换股权益转换，最长陈旧估值 27 个交易日。这些陈旧权益值未必是公允可变现价格，不能把平滑后的基准回撤作为精确实盘风险。公司行为声明并不代表完整分红、送转、现金与股数事件已覆盖。
+
+训练输入与最终 OOS 保持时间分离。这个用于历史评估的模型训练到 2022 年；不能先用 2025—2026 年重训，再把同一时期称为新的样本外。供后续日常使用的候选模型应另立版本，用最新数据中的成熟标签拟合，再从实际冻结日期开始记录前瞻结果。
+
+本机结果图位于 `output/research/ashare/analysis/a1_20261019/oos_nav_drawdown.png`，PDF 同目录。模型、预测、逐日净值、信号、持仓、成交、换股记录和输入/输出哈希均保留；可复核摘要见 [A1 结果记录](research/a1_20261019_summary.json)。
+
+下一步顺序：先解决 36 只拒绝数据的源质量与完整历史，再核验 PIT 调样和完整公司行为；补齐整数股、涨跌停可成交性、最低佣金及容量敏感性后，才启动独立的最新候选和每日前瞻盘。当前没有启用个股自动任务，不能把上述历史收益当作已运行的每日模拟盘成绩。
+
+完整后端回归 **758 tests passed、20 subtests passed**，依赖一致性与差异格式检查通过。另用实际 BaoStock SDK 复现并防住满页翻页失败仍返回成功的边界；原版路径保护、同日恢复/选池日期身份、坏数据拒绝与官方 Qlib 原生训练均有回归覆盖。本轮未改前端。
+
 ## 安装与运行
 
-建议使用 Python 3.12。这个研究入口只需要轻量依赖，不要求先安装 Qlib、训练模型或连接券商。
+建议使用 Python 3.12。以下是保留的固定 ETF 规则研究入口，轻量依赖不包含上面的 Qlib 个股训练组件。
 
 ```bash
 python3.12 -m venv .venv
@@ -148,7 +251,66 @@ python main.py research universe-audit \
 
 真实小区间双价格、指数及交易日历联调已成功。完整 BaoStock ETF 数据因复权标识异常被校验拒绝。早期东方财富连接探测实际发生过 `RemoteDisconnected`，没有收到 HTTP 状态码或观察到 429，不能据此判定限流或全站不可用；另有早期完整替代下载因自动审批容量错误/超时未执行。这些是历史尝试记录，本阶段本机验收监听已获准并完成上述浏览器检查，不能再由历史记录推断当前审批状态。
 
-真实全历史下载与最终历史样本外仍未完成；当前没有可发布的最终样本外收益，不能判定策略已达到或未达到 20% 年化。继续时可从网页主动下载，或执行上面的显式东方财富 `prepare` 命令；成功后保留快照，再运行锁定研究，无需改策略、改池或删除旧协议。
+以上验收记录对应此前阶段。2026-10-19 已完成腾讯三 ETF 历史价格研究及一次前瞻候选重训，现行状态见下一节；腾讯价格研究不能替代公司行为现金账本，仍没有达到 20% 可投资年化收益的证据。
+
+## 2026-10-19：统一增量数据、固定模型对照和前瞻记录
+
+### 数据只有一条主链
+
+Qlib 是研究框架及数据格式；它的公开历史包可以作为历史基座，但不是自动更新、口径统一的行情服务。本机配置中的 `~/.qlib/qlib_data/cn_data` 实际不存在，因此本轮没有使用或续接 Qlib 历史包，也没有同时下载两套全 A 股十几年数据。
+
+本轮范围明确为 SH510300、SH510500、SZ159915 三只 ETF。腾讯历史原价与 HFQ 数据先形成不可变基座，再与近期整批响应组成有版本的主数据集。当前主版覆盖 2013-01-01 至 **2026-10-16**；2025-09-15 至 2025-12-31 的重叠部分，每只 72 日、10 个价格/量额字段，共 2,160 个数值精确一致。每只追加 188 行 2026 年数据。10 月 19 日创业板 ETF 的 raw 已更新、HFQ 尚未更新，整个主版共同截止到 10 月 16 日，不夹带其他证券的更新日期。
+
+`research_catalog.py` 保存父快照、原请求、采集 generation、每个响应原下载时间、文件和内容 SHA，以及逐证券与全池完整水位。原始响应和父版本保留。后续只抓近期窗口（每日 400 个自然日，用于重叠和特征预热），逐字段检查重叠后追加新日期；同日重复发布幂等。发现历史价格修订、量额口径变化、单边缺价或区间内缺口时停止推进，要求显式重建相关证券，不能直接把不同尺度的价格拼上去。
+
+不同采集批次经重叠核对后组成的数据，仍明确标记 `atomic_supplier_vintage_verified=false`，不宣称供应商始终没有修订，也不宣称是历史当时可见的数据版本。旧 Qlib 全量/增量链路暂未接入这条主链；它的跨源复权尺度、水位和标签跨边界风险需要另行修正，不能用旧目录长度或全局日历末日代替本轮完整水位。
+
+### 历史评估模型与最新候选模型分别保存
+
+历史对照的特征、参数与策略规则在拟合前固定：13 个因果日线特征、LightGBM 100 轮、7 叶、深度 3、学习率 0.03、单线程及固定种子；20 个交易日预测周期，下一交易日开盘进入，按同一费用核算。模型只用 2014—2018 年训练；标签退出日不得超过训练末日。2019—2020 年与 2021—2025 年分别列示，不用于调参、早停或挑选模型。
+
+真实历史对照和每边 5/10/20bp 成本情形已全部运行，使用同一份模型与预测。主结果目录为 `output/research/experiments/m3_tencent_20261019_audited/`，审计修复后复用同一模型重算，全部指标与原结果一致。2021—2025 年的腾讯价格敞口研究，每边 5bp 时动量年化 -6.81%、最大回撤 -59.21%；LightGBM 年化 3.99%、最大回撤 -41.15%。每边 20bp 时 LightGBM 年化降至 1.34%。不能从这组结果认定存在可投资盈利优势。
+
+**HFQ 口径限制：腾讯的累计现金分红仿射序列不是分红再投资总回报，会影响百分比收益和标的排序。上述数值仅用于供应商价格研究，不能冒充实际现金/份额收益。** 发行人报告与核对证据见 `docs/research/tencent_adjustment_evidence.json`。历史全日停牌另有发行人材料核实，原 OHLC 缺口保持不变；仅对明确核实的停牌延续估值、顺延调仓，不能假设当日开盘可成交。
+
+另已离线核对三份 F10 原页面的校验和，提取 [公司行为候选清单](research/corporate_action_candidates.json)：2013 年以来 19 条候选事件，另保留 3 条更早记录。它们尚未获得发行人完整性与精确折算比例核验；“暂无分红信息”保持覆盖未知，不能当零分红证明。所有事件均为 `candidate`，不能自动入账或用来改写上述收益。
+
+根据更新数据另行训练的候选位于 `output/research/models/forward_20261016/`。它复用同一特征、参数和费用，训练 9,093 行；训练信号从 2014-01-02 至 2026-09-09，最后标签退出日为 2026-10-16。最近 20 个预测周期没有答案的样本不参与拟合。此版本主动使用了原验证/测试时期，因此标记 `forward_only_no_historical_oos`，没有新的历史样本外成绩；原历史模型与结果保留。
+
+模型加载器需要的未来验证/测试日期槽只作兼容，明确 `planned_future_not_observed`；没有生成未来价格或收益。日更不会改写活动模型。下一次重训需要新目录和新前瞻期间，保证每个信号能追溯当时实际使用的模型。
+
+```bash
+# 更新主数据：只离线消费指定的原始近期响应，不再次下载全历史
+.venv/bin/python main.py research catalog-update \
+  --parent-snapshot <上一主数据快照> --recent-cache-dir <data/http/tencent目录> \
+  --generation <该次请求的generation> --calendar <已核验日历JSON> \
+  --output-dir output/research/catalog/etf_master
+
+# 使用最新完整主版重新拟合：参数来自已冻结协议，不自动调参
+.venv/bin/python main.py research forward-train \
+  --snapshot <最新主数据快照> \
+  --reference-model-protocol docs/research/m3_etf_lightgbm_protocol.json \
+  --output-dir <新的模型目录>
+```
+
+### 每天持续记录
+
+新候选的独立前瞻目录为 `output/research/forward/latest_20261019/`，动量和 LightGBM 各以 100,000 元研究资金开始，记录信号、扣费净值和回撤。它不使用真实账户库或券商接口。首个收盘信号实际冻结后，才可能记录下一完整交易日的研究收益；历史回测结果不进入这段净值。当前首次下载因今日双价格不齐被拒绝，尚无前瞻信号和业绩。
+
+这轮曾注册专属 macOS LaunchAgent：工作日 16:15、16:45、17:15 运行。转向 A 股个股后已停止并移除该注册，任务定义备份在原 runner 目录，不再继续 ETF 自动采集。保留的命令先查交易日历及已完成记录，每日最多三次下载；它们仍可用于单独的 ETF 研究。当前没有启用个股自动任务，阿里云也未部署。
+
+```bash
+.venv/bin/python main.py research paper-status \
+  --paper-dir output/research/forward/latest_20261019
+.venv/bin/python main.py research paper-daily \
+  --paper-dir output/research/forward/latest_20261019
+```
+
+每日先验证完整近期数据及每个原始响应确在当日 15:05 以后取得，不能用盘后封装时间替代盘中取数时间；再与主数据重叠核对、发布新版本，再结算上一已冻结信号、冻结下一交易日信号。中途只完成结算时，恢复使用该结算原有快照，不改采集批次；已完成记录不会重复扣费。漏掉已经承诺记录的交易日会留下缺口并停止该期间，不能事后回填信号冒充前瞻。
+
+前瞻记录仍是**收盘后完整日线的分数敞口观测**，不证明早盘下单、整数份额成交或实际现金分红收益。完整公司行为事件、原价加现金/份额账本、可成交性和数据到达时刻，仍是升级为可投资模拟盘前的必要工作。
+
+本轮最终完整后端回归 **634 tests passed、20 subtests passed**；依赖一致性和差异空白检查通过。新增覆盖原始响应时点、协议绑定、增量修订/共同水位、训练成熟标签与复现、逐成本核算、重复写入与结算中断恢复。科学绘图已实际导出并检查，图内注明非可投资总回报。所有合成测试数据只用于校验程序，不是收益证据。
 
 ## 来源
 

@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "phase": "A2",
+  "scope": "A-share historical CSI300; raw CNY integer shares; 100000 CNY per strategy",
+  "comparison_path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/experiments/a2_20261019_integer_validation_v2",
+  "manifest_sha256": "4f02864aa102f9decf91729b58ad765b2b5c24c553c8c3eb1ce7df2eb92c630e",
+  "period": [
+    "2025-01-02",
+    "2026-10-16"
+  ],
+  "activation_passed": true,
+  "return_target_annual_20pct_met": false,
+  "metrics": {
+    "equal_weight": {
+      "annual_return": 0.0009,
+      "annual_volatility": 0.0055,
+      "benchmark_available": false,
+      "calmar": 0.1289,
+      "commission_cny": "60.00",
+      "final_equity_cny": "100152.92",
+      "incomplete_valuation_days": 0,
+      "max_drawdown": -0.0069,
+      "observation_days": 431,
+      "profit_loss_ratio": 0.9282,
+      "rejected_order_count": 25411,
+      "sharpe": -5.2541,
+      "slippage_cny": "13.00",
+      "sortino": -5.7402,
+      "stamp_tax_cny": "0.00",
+      "total_return": 0.001529,
+      "trade_count": 12,
+      "transfer_fee_cny": "0.00",
+      "win_rate": 0.5151,
+      "mean_non_cash_equity_fraction": 0.023005251260008446,
+      "final_cash_cny": "96408.92",
+      "total_transaction_fees_cny": "60.00"
+    },
+    "lightgbm": {
+      "annual_return": 0.0363,
+      "annual_volatility": 0.1087,
+      "benchmark_available": false,
+      "calmar": 0.3119,
+      "commission_cny": "8910.00",
+      "final_equity_cny": "106281.25",
+      "incomplete_valuation_days": 0,
+      "max_drawdown": -0.1163,
+      "observation_days": 431,
+      "profit_loss_ratio": 1.0198,
+      "rejected_order_count": 831,
+      "sharpe": 0.1102,
+      "slippage_cny": "9063.14",
+      "sortino": 0.1498,
+      "stamp_tax_cny": "1986.95",
+      "total_return": 0.062813,
+      "trade_count": 1782,
+      "transfer_fee_cny": "80.15",
+      "win_rate": 0.5104,
+      "mean_non_cash_equity_fraction": 0.7039843247339053,
+      "final_cash_cny": "54620.25",
+      "total_transaction_fees_cny": "10977.10"
+    },
+    "momentum": {
+      "annual_return": 0.0775,
+      "annual_volatility": 0.18,
+      "benchmark_available": false,
+      "calmar": 0.3382,
+      "commission_cny": "2955.00",
+      "final_equity_cny": "113616.80",
+      "incomplete_valuation_days": 0,
+      "max_drawdown": -0.2292,
+      "observation_days": 431,
+      "profit_loss_ratio": 1.0078,
+      "rejected_order_count": 1415,
+      "sharpe": 0.3404,
+      "slippage_cny": "1946.56",
+      "sortino": 0.4842,
+      "stamp_tax_cny": "637.71",
+      "total_return": 0.136168,
+      "trade_count": 591,
+      "transfer_fee_cny": "26.28",
+      "win_rate": 0.5197,
+      "mean_non_cash_equity_fraction": 0.5166809702544989,
+      "final_cash_cny": "21160.8",
+      "total_transaction_fees_cny": "3618.99"
+    }
+  },
+  "rules": "docs/research/a2_execution_rules.json",
+  "spec": "docs/research/a2_ashare_execution_spec.json",
+  "action_overrides": "docs/research/a2_ashare_action_overrides.json",
+  "failures_preserved": [
+    "a2_20261019_integer_validation"
+  ],
+  "economic_parameters_changed_after_results": false,
+  "independent_cash_share_nav_reconciliation": "passed",
+  "source_repairs_count": 36,
+  "latest_source_pool_count": 300,
+  "latest_source_date": "2026-10-19",
+  "limitations": [
+    "Reconstructed source constituents and daily ST metadata are not a full announcement-time PIT database.",
+    "Daily opening bars cannot prove auction queue position, market impact, intraday halts or actual broker fills.",
+    "Cash dividend tax uses a fixed conservative 20% reserve, not exact holding-period personal tax.",
+    "Corporate-action fractional allocation remains a non-spendable claim; conservative NAV excludes uncertain tails.",
+    "The 100,000 CNY paper balance does not establish the user's board-access permissions or suitability."
+  ],
+  "forward": {
+    "status": "registered_and_initial_close_completed",
+    "historical_oos_claim": false,
+    "candidate_path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/models/forward_20261019",
+    "candidate_manifest_sha256": "e891338f89e3f3ef3e602111617fa8084e3219cf255dddcf80e7cf97cb2e6660",
+    "model_sha256": "98bb0def3f432450c91f36333b92f84f7e9a5a192a03f25b91c84c4608089702",
+    "training_rows": 1049136,
+    "data_cutoff": "2026-10-19",
+    "train_signal_end": "2026-10-09",
+    "frozen_at": "2026-10-19T11:06:15.267648+00:00",
+    "paper_path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/forward/latest_20261019",
+    "first_possible_execution": "2026-10-20",
+    "signal_sha256": "3754808906b9dc266302ed9f3518f7b2fe5d4a8716c86aac3359aaea525ecfbf",
+    "eligible_stocks": 300,
+    "targets_per_strategy": {
+      "model": 20,
+      "momentum": 20
+    },
+    "accounts": {
+      "model": {
+        "initial_cash_cny": "100000.00",
+        "trade_count": 0,
+        "net_pnl_cny": "0.00",
+        "performance_status": "no_fills"
+      },
+      "momentum": {
+        "initial_cash_cny": "100000.00",
+        "trade_count": 0,
+        "net_pnl_cny": "0.00",
+        "performance_status": "no_fills"
+      }
+    },
+    "schedule": {
+      "registered": true,
+      "label": "com.stopat30m.asharepaper.9bea963b9a32",
+      "domain": "gui/502",
+      "target": "/Users/wujiang/Library/LaunchAgents/com.stopat30m.asharepaper.9bea963b9a32.plist",
+      "plist_sha256": "9537ff88e2357b8dab4bb87c58dd50e80921de49c97e633be14627573489ce34",
+      "registered_at": "2026-10-19T11:08:58.880359+00:00",
+      "broker_orders": false,
+      "initial_run_exit_code": 0,
+      "initial_run_replayed_without_network": true,
+      "last_status": [
+        "state = not running",
+        "runs = 1",
+        "last exit code = 0",
+        "state = active",
+        "state = active"
+      ]
+    },
+    "source_connectivity_probe": "Tencent original response received; after-hours quote correctly rejected as stale, no execution permitted",
+    "live_orders": 0
+  },
+  "equal_weight_caveat": "At 100000 CNY and roughly 300 targets, most per-name budgets cannot purchase a board-valid lot. Mean non-cash exposure 2.30%; this is a cash-constrained target equal-weight control, not a fully invested CSI300 index or market benchmark.",
+  "verification": {
+    "pytest_passed": 910,
+    "subtests_passed": 20,
+    "pip_check": "passed",
+    "git_diff_check": "passed",
+    "native_initial_exit_code": 0,
+    "completed_close_replay_state_unchanged": true
+  }
+}

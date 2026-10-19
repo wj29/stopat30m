@@ -1,0 +1,42 @@
+{
+  "name": "Qlib Alpha158 A-share stock comparison, fixed before fit",
+  "universe": "csi300",
+  "membership_status": "package_declared_membership_not_full_PIT",
+  "config": {
+    "train_start": "2012-01-01",
+    "train_end": "2022-12-31",
+    "valid_start": "2023-01-01",
+    "valid_end": "2024-12-31",
+    "oos_start": "2025-01-01",
+    "oos_end": "2026-10-16",
+    "top_k": 20,
+    "rebalance_sessions": 5,
+    "buy_fee_bps": 3.1,
+    "sell_fee_bps": 8.1,
+    "slippage_bps": 2.0
+  },
+  "selection_policy": "One unchanged LightGBM specification, official Qlib Alpha158; no OOS tuning or early stopping",
+  "scope": "A-share individual stocks in package historical CSI300 intervals, not ETF rotation or all-market coverage claims",
+  "latest_price_update_does_not_extend_historical_index_intervals": true,
+  "cost_components_bps": {
+    "commission_assumption_each_side": 3.0,
+    "transfer_fee_each_side": 0.1,
+    "stamp_tax_sell_only": 5.0,
+    "slippage_assumption_each_side": 2.0
+  },
+  "cost_sources": [
+    {
+      "url": "https://one.sse.com.cn/onething/gptz/",
+      "supports": "Stamp tax 0.5 permille seller only; transfer fee 0.01 permille both sides; regulatory charges are included in brokerage commission."
+    },
+    {
+      "url": "https://fgk.chinatax.gov.cn/zcfgk/c102416/c5211343/content.html",
+      "supports": "Stamp duty halved from 2023-08-28; OOS is 2025 onward."
+    }
+  ],
+  "cost_limitations": [
+    "Commission 3bp and slippage 2bp are research assumptions, not this user broker contract.",
+    "Minimum commission, integer lots, order queues and cash/share corporate-action ledger are not simulated.",
+    "Flat fees apply only to this declared 2025-onward OOS; earlier tax regimes are not modelled by the constant rates."
+  ]
+}

@@ -1,0 +1,151 @@
+{
+  "base_protocol": {
+    "config": {
+      "benchmark": "SH000300",
+      "buy_fee_bps": 3.0,
+      "buy_hold_instrument": "SH510300",
+      "cash_reserve_pct": 0.0,
+      "fold_sessions": 126,
+      "lookback_sessions": 60,
+      "oos_end": "2025-12-31",
+      "oos_start": "2021-01-01",
+      "periods_per_year": 252,
+      "positive_momentum_only": true,
+      "rebalance_sessions": 20,
+      "risk_free_rate": 0.03,
+      "sell_fee_bps": 3.0,
+      "slippage_bps": 2.0,
+      "top_k": 1,
+      "train_end": "2018-12-31",
+      "train_start": "2014-01-01",
+      "validation_end": "2020-12-31",
+      "validation_start": "2019-01-01"
+    },
+    "historical_oos_is_retrospective": true,
+    "locked_at": "2026-10-19T08:34:03.513702+00:00",
+    "policy_version": "fixed-momentum-fractional-v1",
+    "protocol_sha256": "da427ba633a3f2b23fc76612d359b969533cf3947c1dbc9851127f62304aac44",
+    "schema_version": 1,
+    "universe": {
+      "coverage_end": "2025-12-31",
+      "coverage_evidence": [],
+      "coverage_start": "2013-01-01",
+      "expected_size": 3,
+      "intervals": [
+        {
+          "effective_from": "2013-01-01",
+          "effective_to": "2026-01-01",
+          "instrument": "SH510300",
+          "known_at": "2026-10-19",
+          "source": "repository_experiment_spec",
+          "source_url": "repository:docs/research/m2_etf_tencent_spec.json"
+        },
+        {
+          "effective_from": "2013-01-01",
+          "effective_to": "2026-01-01",
+          "instrument": "SH510500",
+          "known_at": "2026-10-19",
+          "source": "repository_experiment_spec",
+          "source_url": "repository:docs/research/m2_etf_tencent_spec.json"
+        },
+        {
+          "effective_from": "2013-01-01",
+          "effective_to": "2026-01-01",
+          "instrument": "SZ159915",
+          "known_at": "2026-10-19",
+          "source": "repository_experiment_spec",
+          "source_url": "repository:docs/research/m2_etf_tencent_spec.json"
+        }
+      ],
+      "kind": "fixed",
+      "limitations": [
+        "固定研究池不是指数历史成分；池中证券由本次研究选定，不能据此声称消除了选池与幸存者偏差。"
+      ],
+      "metadata": {
+        "research_data_request": {
+          "adjustment": "hfq",
+          "calendar_source": "baostock.query_trade_dates",
+          "end_date": "2025-12-31",
+          "instruments": [
+            "SH510300",
+            "SH510500",
+            "SZ159915",
+            "SH000300"
+          ],
+          "source": "tencent",
+          "start_date": "2013-01-01"
+        }
+      },
+      "name": "M2 固定 ETF 池历史样本外验证",
+      "schema_version": 1,
+      "selection_date": "2026-10-19",
+      "sha256": "1edf4a3d51eb51c329e0877407ed7aa2742e7af0bf4bc01f583c22c0944053fe"
+    },
+    "universe_sha256": "cb6fabaadcdd460014737621f0fe3b86438d33440de4757408d9a67340092f9a"
+  },
+  "base_protocol_sha256": "da427ba633a3f2b23fc76612d359b969533cf3947c1dbc9851127f62304aac44",
+  "feature_implementation_sha256": "5d6c3f128a3016934a6fc640718364a0ac1bb6abacfd4c4faf4c88fd7f4cc448",
+  "feature_names": [
+    "return_1",
+    "return_5",
+    "return_20",
+    "return_60",
+    "volatility_20",
+    "volatility_60",
+    "intraday_return",
+    "overnight_gap",
+    "daily_range",
+    "range_mean_20",
+    "volume_ratio_20",
+    "close_to_ma20",
+    "close_to_ma60"
+  ],
+  "feature_version": "causal-ohlcv-ratios-v1",
+  "feature_warmup_sessions": 60,
+  "label": "adjusted_open[t+H+1]*(1-sell_cost)/(adjusted_open[t+1]*(1+buy_cost))-1",
+  "limitations": [
+    "仅在声明的小型固定ETF池进行回归排序/配置实验，不能据此证明A股个股选股有效。",
+    "模型实际训练与协议锁定时间均为本次执行时间；2018截止训练是回溯隔离设计，不是假称当年已经训练或预注册。",
+    "开发期标签高度重叠且同日ETF相关，训练样本数不等于独立观测数；没有参数搜索、验证集早停或最终样本外重训。",
+    "模型标签是复权零碎敞口的次日开盘至20个交易日后开盘、扣固定双边成本收益，不是券商整数股可执行成交保证。",
+    "特征仅用信号日收盘及之前OHLCV，不包含新闻、大语言模型结论、证券身份编码或未来价格；不填补缺价。",
+    "原始成交量仅用于同证券滚动相对量，未证明所有公司行为或历史数据修订已按当时版本还原。",
+    "模型、协议与依赖版本冻结；未来模拟只生成新预测，不在线学习或根据未来结果自动更换模型。"
+  ],
+  "locked_at": "2026-10-19T08:42:46.775772+00:00",
+  "model_selection": "one fixed candidate; no early stopping; validation diagnostic only; no OOS fitting",
+  "model_spec": {
+    "label_horizon_sessions": 20,
+    "lambda_l2": 1.0,
+    "learning_rate": 0.03,
+    "max_depth": 3,
+    "min_data_in_leaf": 50,
+    "num_boost_round": 100,
+    "num_leaves": 7,
+    "seed": 20261019
+  },
+  "policy_version": "fixed-etf-lightgbm-open20-v1",
+  "protocol_sha256": "25b24b4e5ecc8a34d77882f961319a7b5f71c3f3e8548c7cfd00878735e086af",
+  "schema_version": 1,
+  "selection_rule": "top1 predicted net holding return strictly >0, else cash; instrument ascending tie break",
+  "train_params": {
+    "bagging_fraction": 1.0,
+    "bagging_freq": 0,
+    "bagging_seed": 20261019,
+    "data_random_seed": 20261019,
+    "deterministic": true,
+    "feature_fraction": 1.0,
+    "feature_fraction_seed": 20261019,
+    "force_col_wise": true,
+    "lambda_l2": 1.0,
+    "learning_rate": 0.03,
+    "max_depth": 3,
+    "metric": "l2",
+    "min_data_in_leaf": 50,
+    "num_leaves": 7,
+    "num_threads": 1,
+    "objective": "regression_l2",
+    "seed": 20261019,
+    "verbosity": -1
+  }
+}

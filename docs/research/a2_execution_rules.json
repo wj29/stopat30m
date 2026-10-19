@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "rule_version": "a2-raw-integer-2025-modern-rules-v1",
+  "checked_on": "2026-10-19",
+  "scope": "Ordinary mainland A-share research from 2025-01-01; daily historical status and actual exchange reference preclose are required. Not a broker fill certification.",
+  "evidence_kind": "official_web_rule_summaries_and_web_read_pdf_text",
+  "original_source_bytes_saved": false,
+  "source_byte_sha256": null,
+  "sources": [
+    {
+      "id": "sse_2026_t_plus_one",
+      "url": "https://www.sse.com.cn/lawandrules/sselawsrules2025/fund/trading/c/c_20260424_10817739.shtml",
+      "sections": ["3.1.4", "3.1.5"],
+      "supporting_investor_rule_url": "https://www.csrc.gov.cn/hubei/c105451/c1292890/content.shtml",
+      "summary": "The exchange disallows selling purchased securities before settlement except expressly eligible same-day turnover products. Ordinary A-share stock is not a same-day turnover exception; the CSRC investor explanation describes next-trading-day resale."
+    },
+    {
+      "id": "sse_2026_effective_st_change",
+      "url": "https://www.sse.com.cn/aboutus/mediacenter/hotandd/c/c_20260424_10816474.shtml",
+      "published_on": "2026-04-24",
+      "effective_on": "2026-07-06",
+      "summary": "The exchange states that its 2026 trading-rule revision changes main-board risk-warning daily limits from 5% to 10%, effective 2026-07-06. The 2025-06-27 consultation was not an implementation date."
+    },
+    {
+      "id": "szse_2026_rules",
+      "url": "https://docs.static.szse.cn/www/lawrules/rule/trade/W020260424690713155663.pdf",
+      "published_on": "2026-04-24",
+      "effective_on": "2026-07-06",
+      "pdf_pages_1_based": [12, 13, 40],
+      "sections": ["3.3.8", "3.3.9", "3.3.11", "3.3.13-3.3.15", "10.9"],
+      "summary": "Main-board daily limit 10%; ChiNext 20%. Main-board/ChiNext auction buys use 100-share multiples and odd sell balances are sold together. A-share tick CNY0.01. IPO first five sessions have no daily limit. Main-board single-order maximum one million shares; ChiNext limit order maximum 300,000. The rule becomes effective on 2026-07-06."
+    },
+    {
+      "id": "szse_pre_2026_st",
+      "url": "https://www.szse.cn/www/investor/knowledge/stock/deal/t20210127_584469.html",
+      "published_on": "2021-01-27",
+      "summary": "The exchange investor explanation specifies 5% risk-warning daily limits on the main board and 20% on ChiNext. This supplies the main-board ST regime before the 2026-07-06 amendment, not a current forever-valid 5% assumption."
+    },
+    {
+      "id": "sse_star_lots_and_ipo",
+      "url": "https://edu.sse.com.cn/tib/qa/",
+      "sections": ["STAR stock trading questions 5 and 6"],
+      "summary": "STAR daily limits are 20%, with no daily limit during the first five IPO sessions. Limit orders start at 200 shares, then increase by one share; the maximum is 100,000 shares. A sell balance under 200 is sold in one order."
+    },
+    {
+      "id": "sse_odd_lot_sales",
+      "url": "https://www.sse.com.cn/lawandrules/guide/stock/jyglywznylc/tz/c/c_20230209_5716007.shtml",
+      "published_on": "2014-06-27",
+      "summary": "SSE expressly permits an entire odd remainder alone or combined with regular lots, but forbids splitting that remainder. A 299-share balance may be sold as 100+199 or 99+200, but not 298+1."
+    },
+    {
+      "id": "bse_rules",
+      "url": "https://www.bse.cn/jygl_list/200028217.html",
+      "published_on": "2026-04-24",
+      "effective_on": "2026-07-06",
+      "sections": ["3.3.8-3.3.12"],
+      "prior_rule_url": "https://www.bse.cn/jygl_list/200010919.html",
+      "summary": "BSE auction orders start at 100 shares, without a 100-share-multiple requirement. Tick CNY0.01; ordinary daily limits 30%; IPO first trading day has no daily limit. Maximum single order one million shares; an odd sell remainder must be sold together. The corresponding pre-2026 rules have the same relevant provisions."
+    },
+    {
+      "id": "sse_trading_costs",
+      "url": "https://one.sse.com.cn/onething/gptz/",
+      "summary": "The exchange investor service describes seller stamp duty 0.5 per mille, transfer fee 0.01 per mille in both directions and commission minimum CNY5. The commission rate used here is the separately declared 3bp assumption, including exchange/regulatory handling charges rather than adding those twice."
+    },
+    {
+      "id": "stamp_tax_2023_39",
+      "url": "https://fgk.chinatax.gov.cn/zcfgk/c102416/c5211343/content.html",
+      "published_on": "2023-08-27",
+      "effective_on": "2023-08-28",
+      "summary": "MOF/STA Announcement 2023 No.39 halves securities transaction stamp duty from 2023-08-28. The selected 2025-onward research uses seller 5bp."
+    }
+  ],
+  "implementation_policy": {
+    "initial_cash_cny": "100000.00",
+    "commission_rate": "0.0003",
+    "minimum_commission_per_direction_per_order_cny": "5.00",
+    "transfer_rate_both_directions": "0.00001",
+    "stamp_rate_sell_only": "0.0005",
+    "slippage_bps": "2",
+    "slippage_tick_rounding": "Round away from the reference in the adverse direction to CNY0.01; cap at the daily price limit. Actual model slippage may exceed 2bp because of the tick and is recorded separately.",
+    "cash_and_fees_rounding": "Decimal, per-order CNY cents ROUND_HALF_UP; exact cash_before+cash_change=cash_after.",
+    "t_plus_one": "Same-session purchased shares are locked, including repeated calls; next real exchange session unlocks.",
+    "ipo_no_limit_sessions": "Identify first five sessions on Shanghai/Shenzhen or first session on BSE, then conservatively refuse execution during that window. This is a research exclusion, not a legal prohibition.",
+    "adverse_limit_execution": "Refuse buying at the upper daily limit and selling at the lower daily limit; ordinary observed prices still do not prove actual fillability.",
+    "dividend_tax_rate": "0.20",
+    "dividend_tax_scope": "Conservative fixed cash-dividend tax assumption; not individual holding-period taxation or a complete tax opinion.",
+    "fractional_action_allocations": "Floor integer shares; retain unresolved fractional claim without spending it. Publish conservative integer NAV, fractional estimate and at-most-one-extra-share-per-event upper bound separately. Not CSDC random-tail reconstruction."
+  },
+  "limitations": [
+    "These are structured summaries of official web/PDF text inspected by the web reader. No original source-byte SHA is claimed.",
+    "History requires day-specific raw execution prices, exchange ex-right preclose references, trading status, ST status and listing metadata. Unknown inputs are rejected, never silently assumed ordinary 10% shares.",
+    "No order-book queue, market depth, volume participation, actual auction priority, price-cage best bid/ask reconstruction or real order placement is provided.",
+    "New-listing no-limit sessions, re-listings and delisting-period execution are conservatively excluded or unsupported. Investor access permissions are not inferred from a CNY100,000 research account; STAR/BSE eligibility is a separate unmodelled assumption.",
+    "Raw-share cash dividends and bonus shares require record-date close holding snapshots and evidenced ex/payment/tradable dates. No adjusted-price return is automatically added to a raw ledger.",
+    "Known verified suspension can retain a disclosed stale mark, but that is not an execution price or proof of fair liquidation value. Unknown gaps beyond the declared session limit stop valuation.",
+    "Cash dividends are reserved at a fixed 20% tax rate; taxes specific to stock dividends, capital-reserve transfers, holding periods or investor categories need event-specific treatment and are not a full tax ledger."
+  ]
+}
