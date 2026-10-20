@@ -56,7 +56,7 @@ def test_definition_uses_exact_paper_and_reports_and_thirty_weekday_times(job):
     assert value["EnvironmentVariables"] == {"PYTHONUNBUFFERED": "1", "TZ": "Asia/Shanghai"}
     actual = {(row["Weekday"], row["Hour"], row["Minute"]) for row in value["StartCalendarInterval"]}
     expected = {(day, hour, minute) for day in range(1, 6)
-        for hour, minute in ((9, 35), (9, 40), (9, 44), (16, 45), (17, 15), (17, 45))}
+        for hour, minute in ((9, 35), (9, 40), (9, 44), (19, 0), (19, 45), (20, 30))}
     assert len(value["StartCalendarInterval"]) == len(actual) == 30
     assert actual == expected  # No weekend or extra execution window.
     assert value["RunAtLoad"] is True

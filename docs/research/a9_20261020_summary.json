@@ -1,0 +1,221 @@
+{
+  "kind": "a9_daily_low_turnover_actual_startup",
+  "recorded_at": "2026-10-20T11:55:11.203037+00:00",
+  "status": "running_scheduled_awaiting_first_fill",
+  "initial_implementation_commit": "d925086",
+  "user_scope": "pause_old_Cinda_exchange_accounting_use_existing_low_turnover_model_for_prospective_daily_paper",
+  "paper_dir": "/Users/wujiang/workspace/stopat30m/output/research/ashare/forward/low_turnover_20261020_v1",
+  "paper_created_at": "2026-10-20T11:20:18.111060+00:00",
+  "strategy": {
+    "keep_rank": 40,
+    "key": "hold10_cap2",
+    "max_replacements": 2,
+    "minimum_hold_sessions": 10,
+    "rebalance_sessions": 5,
+    "require_signal_affordability": true,
+    "top_k": 20
+  },
+  "initial_cash_cny": "100000.00",
+  "model_sha256": "775962e66eda59931b80a43c273deb27a11ea968c11e49f96cb8da30745a5e7b",
+  "model_retrained": false,
+  "watchlist": "fixed_2026-10-19_official_CSI300_and_CSI1000_1300_not_daily_current_membership",
+  "source": {
+    "session": "2026-10-20",
+    "response_count": 2601,
+    "stats": {
+      "complete_price_pairs": 1300,
+      "raw_rows": 53300,
+      "hfq_rows": 53300,
+      "current_raw_rows": 1300,
+      "trading": 1300,
+      "suspended": 0,
+      "st": 0,
+      "missing_current": [],
+      "failed_response_hashes": []
+    },
+    "min_actual_valid_overlap": 30,
+    "unchanged_bridge_policy": {
+      "base_raw_volume_multiplier": 100,
+      "factor_rtol": 0.0005,
+      "min_overlap": 20,
+      "price_rtol": 0.0005,
+      "require_fields": [
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "factor",
+        "vwap"
+      ],
+      "volume_rtol": 0.001,
+      "vwap_rtol": 0.001
+    },
+    "snapshot_path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/forward_sources/low_turnover_20261020_v1/daily/2026-10-20/versions/snapshots/507daa129eda00984d7e78239223ab85718b084b76d00e7ef6100757dbd8a088",
+    "snapshot_manifest_sha256": "fd5c2a29bbd0bd2498cf70662806ec0d5eea0dc206ac2f3d9432de416d466e31"
+  },
+  "first_close": {
+    "session": "2026-10-20",
+    "attempt_count": 1,
+    "status": "completed",
+    "eligible_count": 1300,
+    "signal_sha256": "a581a1e3b4fbf995db7499390072353e655fb23445ed12f75dffb8954c061461",
+    "next_conditional_execution_session": "2026-10-21",
+    "rebalance_anchor": "2026-10-21",
+    "cash_cny": "100000.00",
+    "positions": 0,
+    "fills": 0,
+    "complete_close_observations": 1,
+    "no_strategy_profit_evidence": true,
+    "no_annualized_or_historical_qualification_claim": true
+  },
+  "daily_monitoring_at_start": {
+    "status": "diagnostic",
+    "diagnostic_reasons": [
+      "no_committed_fills_not_profit_evidence"
+    ],
+    "latest_session": "2026-10-20",
+    "latest_close_session": "2026-10-20",
+    "latest": {
+      "strategy": "model",
+      "session": "2026-10-20",
+      "close_observed_at": "2026-10-20T11:49:24.649686+00:00",
+      "previous_close_session": null,
+      "previous_nav_lower": "100000.00",
+      "previous_nav_upper": "100000.00",
+      "nav_lower": "100000.00",
+      "nav_upper": "100000.00",
+      "net_pnl_since_previous_close": "0.00",
+      "return_since_previous_close": 0.0,
+      "daily_net_return": 0.0,
+      "valuation_complete": true,
+      "conservative_drawdown": 0.0,
+      "diagnostic_status": "complete_observed_close",
+      "trade_count": 0,
+      "rejected_order_count": 0,
+      "orders_coverage_complete": true,
+      "notional_cny": "0.00",
+      "one_way_turnover_previous_close_nav": 0.0,
+      "minimum_commission_fill_count": 0,
+      "commission_cny": "0.00",
+      "transfer_fee_cny": "0.00",
+      "stamp_tax_cny": "0.00",
+      "total_fee_cny": "0.00",
+      "slippage_cost_cny": "0.00",
+      "fees_plus_slippage_cny": "0.00",
+      "dividend_gross_recognized_cny": "0.00",
+      "dividend_tax_recognized_cny": "0.00",
+      "dividend_tax_coverage_complete": true
+    },
+    "max_drawdown_conservative": 0.0,
+    "stability": {
+      "20": {
+        "required_actual_sessions": 20,
+        "observed_complete_sessions": 1,
+        "end_session": "2026-10-20",
+        "net_return_lower": null,
+        "max_drawdown_conservative": null,
+        "positive_session_fraction": null,
+        "worst_session_return": null,
+        "status": "insufficient_continuous_complete_observations"
+      },
+      "60": {
+        "required_actual_sessions": 60,
+        "observed_complete_sessions": 1,
+        "end_session": "2026-10-20",
+        "net_return_lower": null,
+        "max_drawdown_conservative": null,
+        "positive_session_fraction": null,
+        "worst_session_return": null,
+        "status": "insufficient_continuous_complete_observations"
+      }
+    },
+    "dividend_tax_coverage": "complete_recorded_entitlement_inventory_not_independent_tax_validation",
+    "dividend_tax_recognized_cny": "0.00",
+    "annualized_return": null,
+    "performance_qualification_claimed": false
+  },
+  "native_task": {
+    "label": "com.stopat30m.lowturnover.14dafa86b1e6",
+    "installed_and_loaded": true,
+    "first_exit_code": 0,
+    "replay_only_no_network": true,
+    "ledger_bytes_unchanged": true,
+    "weekday_open_times_local": [
+      "09:35",
+      "09:40",
+      "09:44"
+    ],
+    "weekday_close_times_local": [
+      "19:00",
+      "19:45",
+      "20:30"
+    ],
+    "timezone": "Asia/Shanghai"
+  },
+  "heartbeat": {
+    "id": "automation",
+    "kind": "heartbeat",
+    "status": "ACTIVE",
+    "target_thread_id": "01a1520e-f31c-7b12-a51e-bac6e3da5501",
+    "weekday_check_time_local": "21:30"
+  },
+  "old_period_preserved": {
+    "fills": 25,
+    "jobs_disabled_and_unloaded": true,
+    "state_sha256": "7d2ec28f60e7c354faacf7dab71ec08a726c8cd66b16f7154762fa045c2ce1e9",
+    "balances_not_imported": true
+  },
+  "validation": {
+    "full_suite_passed": 1958,
+    "skipped": 1,
+    "last_schedule_tests_passed": 10,
+    "real_first_close_exit": 0,
+    "real_native_replay_exit": 0
+  },
+  "evidence": {
+    "a9_initialized_candidate_review_20261020_v1.json": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/experiments/a9_initialized_candidate_review_20261020_v1.json",
+      "sha256": "a61863f75aca359b50460ab5c76878ee33f95c0031c68a0be3fa6ee081e57495"
+    },
+    "a9_completed_capture_inventory_20261020_v1.json": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/experiments/a9_completed_capture_inventory_20261020_v1.json",
+      "sha256": "703e2e9dfac6783562df0ae66288546fa878d385874915c62bd8b81bafe40864"
+    },
+    "a9_first_close_review_20261020_v1.json": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/experiments/a9_first_close_review_20261020_v1.json",
+      "sha256": "617c57c523e95342c136476edaafb07b37621da4c25e780ee5484db4f75e064b"
+    },
+    "a9_first_daily_report_review_20261020_v1.json": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/experiments/a9_first_daily_report_review_20261020_v1.json",
+      "sha256": "e6a84d0e0f348df0d5ecd2540fe24e69dd23dcbc737ce4067b9a37e1129d296a"
+    },
+    "a9_low_turnover_candidate_exact_review_20261020_v2.json": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/experiments/a9_low_turnover_candidate_exact_review_20261020_v2.json",
+      "sha256": "b41b0c283ee5ea5e9fee2d6e52bd4839c99f2c83e9871cd6f92a8c6eeaf7a92d"
+    },
+    "native_job_verified": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/forward_setups/low_turnover_20261020_v1/native_job_verified.json",
+      "sha256": "3d30d9bf53a54bf506fc6b05c66b10f560f3556c347cc0add852dc63d5c1c866"
+    },
+    "native_plist_v2": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/forward_setups/low_turnover_20261020_v1/launch-agent-v2.plist",
+      "sha256": "967975bbebf3f37c6c522d506aec95cc25304ba0b15e4363a5ce6a38e977dcb0"
+    },
+    "heartbeat_v2": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/forward_setups/low_turnover_20261020_v1/heartbeat_updated_v2.json",
+      "sha256": "f50fd630f17378b8e06d61dec65edcb8fd508f35f319f4e2641f2e062005d478"
+    },
+    "observation_policy": {
+      "path": "/Users/wujiang/workspace/stopat30m/docs/research/a9_forward_monitoring_policy_v1.json",
+      "sha256": "266816dadb905716e40dfe16c2442626f6246c77b2fc1e2fdf335ca206272cbc"
+    }
+  },
+  "limitations": [
+    "no_fills_yet_not_profit_evidence",
+    "local_mac_awake_and_logged_in",
+    "verified_calendar_through_2026-12-31_60_observations_need_evidenced_calendar_extension_with_ledger_preservation",
+    "no_auto_retrain_switch_cash_reset_or_real_broker",
+    "successful_missing_today_originals_need_explicit_new_generation_not_overwrite"
+  ]
+}

@@ -21,7 +21,7 @@ def launch_agent_definition(project_root,paper_dir,report_dir):
         '--phase','auto','--report-dir',str(report)],'WorkingDirectory':str(root),
         'EnvironmentVariables':{'PYTHONUNBUFFERED':'1','TZ':'Asia/Shanghai'},
         'RunAtLoad':True,'StartCalendarInterval':[{'Weekday':d,'Hour':h,'Minute':m}
-            for d in range(1,6) for h,m in ((9,35),(9,40),(9,44),(16,45),(17,15),(17,45))],
+            for d in range(1,6) for h,m in ((9,35),(9,40),(9,44),(19,0),(19,45),(20,30))],
         'StandardOutPath':str(logs/'scheduler.log'),'StandardErrorPath':str(logs/'scheduler-error.log'),
         'ProcessType':'Background','ThrottleInterval':60}
 
