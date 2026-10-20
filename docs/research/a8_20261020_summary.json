@@ -1,0 +1,698 @@
+{
+  "active_paper_changed": false,
+  "artifacts": {
+    "accounting_review": {
+      "path": "output/research/ashare/experiments/a8_shared_panel_horizon_accounting_review_20261020_v1.json",
+      "sha256": "094a0e965c6a5b12a8bc04275e3df4e7f96aa79a93f2f5fd02ac28c17de332bc"
+    },
+    "accounting_review_implementation": {
+      "path": "output/research/ashare/experiments/a8_shared_panel_horizon_accounting_review_20261020_v1.py",
+      "sha256": "2a2a9d02395d86cf2c7c6fd0e412296b91c40044e66c79cb167682baf4d73150"
+    },
+    "design": {
+      "path": "docs/research/a8_shared_panel_horizon_design_v1.json",
+      "sha256": "70b3d529c9c6cec34b32ab95f08c2464067eb67480c797b75e661883f88aa331"
+    },
+    "design_freeze": {
+      "path": "output/research/ashare/experiments/a8_shared_panel_horizon_design_20261020_v1.json",
+      "sha256": "5de742eefd55cc53f2f49e52558ce800a3fab6f23d591280038e32d7d823b095"
+    },
+    "execution_declaration": {
+      "path": "output/research/ashare/experiments/a8_shared_panel_horizon_execution_20261020_v1.json",
+      "sha256": "9a67482eb26634608c45c8fc7042bdee0869cd73a9c270cd3d748c2c10e6a7bc"
+    },
+    "figures_manifest": {
+      "path": "output/research/ashare/plots/a8_horizon_comparison_20261020_v1/manifest.json",
+      "sha256": "a06ea067111b786a3531e4a5d2375fcd9b58a400204710081b39c92e0bd51e05"
+    },
+    "ledger_manifest": {
+      "path": "output/research/ashare/experiments/a8_shared_panel_horizon_fee_validation_20261020_v1/manifest.json",
+      "sha256": "44b6dbd684a4a46e5a4c4768419c195225eb321235c605de0f9b283e1ee5bdaf"
+    },
+    "model_manifest": {
+      "path": "output/research/ashare/models/a8_shared_panel_horizon_20261020_v1/manifest.json",
+      "sha256": "265a96298bbd1e9a220a8c417b9990cef4b89a0c44e591f49dfd5a978a704bba"
+    },
+    "report": {
+      "path": "output/research/ashare/experiments/a8_shared_panel_horizon_fee_validation_20261020_v1/report.json",
+      "sha256": "f9b82adaa12af74b614ef19f7607bd76628233afff27b5e8225f01270555cfb6"
+    },
+    "training_protocol": {
+      "path": "output/research/ashare/experiments/a8_shared_panel_horizon_protocol_20261020_v1.json",
+      "sha256": "ba394f7215b6b89959964a97b15ba2f4dadf373dcb7968336c03373a6a8e805f"
+    },
+    "training_review": {
+      "path": "output/research/ashare/experiments/a8_shared_panel_horizon_training_review_20261020_v1.json",
+      "sha256": "2f9fab1be89376cee96093175d2d8afa50ff353d6b594678aa51955e9215066a"
+    },
+    "training_review_implementation": {
+      "path": "output/research/ashare/experiments/a8_shared_panel_horizon_training_review_20261020_v1.py",
+      "sha256": "31ae8bd1bc11daac31194a03ef5f4f1f6f50f967d457e585fede365dde399a16"
+    }
+  },
+  "broker_order_sent": false,
+  "completed_at": "2026-10-20T09:59:01.498272+00:00",
+  "decision": {
+    "H20_improves_under_declared_historical_comparison": false,
+    "broker_order_sent": false,
+    "invalid_metric_comparisons_are_diagnostic_only": true,
+    "model_selected_for_active_paper": null,
+    "new_future_out_of_sample_claim": false,
+    "next_research": "resolve_invalid_paths_no_model_selection",
+    "predeclared_gate_results": {
+      "H20_positive_net_return_all_three_periods": true,
+      "all_six_paths_accounting_valid": false,
+      "continuous_max_drawdown_no_worse_than_H5": false,
+      "continuous_turnover_no_higher_than_H5": false,
+      "higher_continuous_net_return_than_H5": false
+    }
+  },
+  "execution": {
+    "adverse_slippage_bps": "2",
+    "cash_dividend_tax_reserve_rate": "0.20",
+    "commission_rate": "0.0003",
+    "initial_cash_cny": "100000.00",
+    "keep_rank": 40,
+    "minimum_commission_cny": "5.00",
+    "rebalance_sessions": 20,
+    "require_signal_affordability": true,
+    "top_k": 20,
+    "transfer_rate": "0.00001"
+  },
+  "feature_processor_fit_count": 2,
+  "folds": [
+    {
+      "data_cutoff": "2024-12-31",
+      "execution_year": 2025,
+      "models": {
+        "H20": {
+          "consumed_ranked_label_sha256": "4983f0d29084b030fac836b1db05e2b846b18069da7dba8c144e3bdd25b677fe",
+          "consumed_training_features_sha256": "4e8e972409a7bd2276382bd26505f6606adf4bddb6eec89f668cb679400f48dc",
+          "fitted_at": "2026-10-20T09:48:20.805648+00:00",
+          "label": "Ref($open,-21)/Ref($open,-1)-1",
+          "model_sha256": "10a7cf18a8e6ee096a239fed77d0c12a3eee4bfbc7c6fc5a6f3c7bb98b9dd5af",
+          "prediction_rows": 316743
+        },
+        "H5": {
+          "consumed_ranked_label_sha256": "cae8a4a38bcca2154dac4140c1a2fa0d4432d969e9a8b3f2c2b8297af0ad8bff",
+          "consumed_training_features_sha256": "4e8e972409a7bd2276382bd26505f6606adf4bddb6eec89f668cb679400f48dc",
+          "fitted_at": "2026-10-20T09:47:32.951258+00:00",
+          "label": "Ref($open,-6)/Ref($open,-1)-1",
+          "model_sha256": "a8b9c5ffb6c3d3c1be77dd2b6236f1f1361be09294e3bd8d67b4a5cb051c2b88",
+          "prediction_rows": 316743
+        }
+      },
+      "processed_features_sha256": "4e8e972409a7bd2276382bd26505f6606adf4bddb6eec89f668cb679400f48dc",
+      "processors_sha256": "06baa6263595104a7fd7ce229219daba1b63e15acfbf64eaba2814a2b6509735",
+      "ranked_label_sha256": {
+        "H20": "4983f0d29084b030fac836b1db05e2b846b18069da7dba8c144e3bdd25b677fe",
+        "H5": "cae8a4a38bcca2154dac4140c1a2fa0d4432d969e9a8b3f2c2b8297af0ad8bff"
+      },
+      "signal_end": "2025-12-31",
+      "signal_start": "2024-12-31",
+      "train_signal_end": "2024-12-02",
+      "train_start": "2020-01-01",
+      "training_index_sha256": "1e43750d6cbab9e05fb8f9bbc9517f4af438bf732e9768721ad3f23cbe84b49d",
+      "training_rows_per_arm": 1543595
+    },
+    {
+      "data_cutoff": "2025-12-31",
+      "execution_year": 2026,
+      "models": {
+        "H20": {
+          "consumed_ranked_label_sha256": "3892981f9b6fc5fddf95db68acc2ba6187354a90d43fa65990e0f80cf53af4b4",
+          "consumed_training_features_sha256": "64f22594ae007c1ab323ade1583f84a462bbf8d44474a18ad2cf9f805a3f22ff",
+          "fitted_at": "2026-10-20T09:53:52.300741+00:00",
+          "label": "Ref($open,-21)/Ref($open,-1)-1",
+          "model_sha256": "46109140c9a6c5dce823ba49c854902945791e5d8f90ee9b31b79eb7a2cc3b3c",
+          "prediction_rows": 246746
+        },
+        "H5": {
+          "consumed_ranked_label_sha256": "3804ba69093fc066964ba8d773fc35d8a156b4f9abe75c771c923564d9a7dac5",
+          "consumed_training_features_sha256": "64f22594ae007c1ab323ade1583f84a462bbf8d44474a18ad2cf9f805a3f22ff",
+          "fitted_at": "2026-10-20T09:53:03.547099+00:00",
+          "label": "Ref($open,-6)/Ref($open,-1)-1",
+          "model_sha256": "88ec692c1859d68ce9ccddc0a3c03f00f8e18434272a383e31751eb4b13d3394",
+          "prediction_rows": 246746
+        }
+      },
+      "processed_features_sha256": "64f22594ae007c1ab323ade1583f84a462bbf8d44474a18ad2cf9f805a3f22ff",
+      "processors_sha256": "134eef6c414cb9e777849292892ad200d9aca6591326b6104a2aefbdb1cb7faf",
+      "ranked_label_sha256": {
+        "H20": "3892981f9b6fc5fddf95db68acc2ba6187354a90d43fa65990e0f80cf53af4b4",
+        "H5": "3804ba69093fc066964ba8d773fc35d8a156b4f9abe75c771c923564d9a7dac5"
+      },
+      "signal_end": "2026-10-19",
+      "signal_start": "2025-12-31",
+      "train_signal_end": "2025-12-02",
+      "train_start": "2021-01-01",
+      "training_index_sha256": "c14ca6243d68e40b325533d96cf5c8b0217292d7f3636120885966d1dd96b586",
+      "training_rows_per_arm": 1543991
+    }
+  ],
+  "independent_review_status": {
+    "accounting_review": "passed",
+    "training_review": "passed"
+  },
+  "invalid_path_count": 1,
+  "kind": "a8_completed_shared_panel_horizon_historical_summary",
+  "limitations": [
+    "Previously observed historical windows, not fresh future out-of-sample evidence.",
+    "New H5 control shares H20's21-session mature training panel; it cannot be equated to the old H5 model or A6 execution.",
+    "Native label quality has different maturity tails; only the common fee-ledger comparison is the primary model control.",
+    "Unpriced delisted rights invalidate a path; no proxy value, cutoff change, cash recovery or security exclusion overrides that gate.",
+    "Daily observed quotes do not establish queue priority, broker fills or liquidation values.",
+    "Maximum conservative distribution-tax reserves and unresolved source classifications remain disclosed.",
+    "No model is promoted to an active paper or real account."
+  ],
+  "native_fit_count": 4,
+  "new_future_out_of_sample_claim": false,
+  "original_baseline_reproduction_passed": true,
+  "original_prediction_sha256": "1d2664e973bb28ae6708ecdee16129ccb5e0c23584009e364df2961d90f21cd9",
+  "prediction_rows": 1126978,
+  "results": [
+    {
+      "actual_last_valued_session": "2025-12-31",
+      "arm": "H5",
+      "metrics": {
+        "accounting_invalid_days": 0,
+        "additional_distribution_tax_reserved_cny": "0.00",
+        "annualized_return": 0.03742003575968611,
+        "annualized_volatility": 0.1264077076496395,
+        "best_month_return": 0.05259422225877608,
+        "calendar_year_returns": {
+          "2025": 0.03605980000000053
+        },
+        "cash_distribution_rounding_reserved_cny": "0",
+        "commission_cny": "1860.00",
+        "cost_attribution_is_counterfactual_rerun": false,
+        "declared_end_reached": true,
+        "fees_plus_slippage_as_initial_cash_fraction": 0.0448175,
+        "final_equity_cny": "103605.98",
+        "incomplete_valuation_days": 5,
+        "max_drawdown_conservative_exact": "-0.0871378907558641520451713114",
+        "mean_invested_fraction": 0.8813716244807576,
+        "monthly_returns": {
+          "2025-01": -0.026361700000000154,
+          "2025-02": -0.01770565106159061,
+          "2025-03": 0.036399019070902705,
+          "2025-04": -0.028483328581571987,
+          "2025-05": 0.05259422225877608,
+          "2025-06": 0.011619676103255205,
+          "2025-07": 0.029274914704308985,
+          "2025-08": 0.014501591353828891,
+          "2025-09": -0.036211084165773344,
+          "2025-10": 0.03781452915785466,
+          "2025-11": -0.015135790358364876,
+          "2025-12": -0.017736791408158648
+        },
+        "notional_cny": "1687345.20",
+        "one_way_turnover_average_nav": 8.239682331663442,
+        "positive_month_fraction": 0.5,
+        "recognized_distribution_tax_reserve_cny": "704.62",
+        "recognized_dividend_gross_cash_cny": "3523.11",
+        "recognized_dividend_legacy_rounded_gross_cash_cny": "3523.11",
+        "rejected_order_count": 0,
+        "rolling_126_sessions": {
+          "median": 0.09214002780584896,
+          "minimum": 0.006326493441366043,
+          "observations": 118,
+          "positive_fraction": 1.0
+        },
+        "rolling_63_sessions": {
+          "median": 0.024538235685825693,
+          "minimum": -0.05654160000000008,
+          "observations": 181,
+          "positive_fraction": 0.7679558011049724
+        },
+        "session_count": 243,
+        "slippage_cost_cny": "2205.00",
+        "source_confirmed_carry_days": 5,
+        "stamp_tax_cny": "399.72",
+        "terminal_prices_fresh": true,
+        "total_distribution_tax_reserved_cny": "704.62",
+        "total_fee_cny": "2276.75",
+        "total_return_lower_exact": "0.0360598",
+        "total_return_upper_exact": "0.0360598",
+        "trade_count": 372,
+        "transfer_fee_cny": "17.03",
+        "turnover_definition": "sum_buy_and_sell_actual_notional_divided_by_two_and_mean_daily_NAV",
+        "worst_month_return": -0.036211084165773344
+      },
+      "metrics_basis": "declared_accounting_NAV_not_actual_liquidation",
+      "minimum_commission_fill_fraction": 1.0,
+      "performance_valid": true,
+      "period": "2025",
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2026-10-19",
+      "arm": "H5",
+      "metrics": {
+        "accounting_invalid_days": 1,
+        "additional_distribution_tax_reserved_cny": "0.00",
+        "annualized_return": -0.007004116493735668,
+        "annualized_volatility": 0.16264436450649983,
+        "best_month_return": 0.07182991971042996,
+        "calendar_year_returns": {
+          "2026": -0.005257700000001253
+        },
+        "cash_distribution_rounding_reserved_cny": "0.00",
+        "commission_cny": "1645.00",
+        "cost_attribution_is_counterfactual_rerun": false,
+        "declared_end_reached": true,
+        "fees_plus_slippage_as_initial_cash_fraction": 0.0381633,
+        "final_equity_cny": "99474.23",
+        "incomplete_valuation_days": 19,
+        "max_drawdown_conservative_exact": "-0.1837962458897538329260234013",
+        "mean_invested_fraction": 0.8652534610315206,
+        "monthly_returns": {
+          "2026-01": 0.026272800000000318,
+          "2026-02": -0.00526107678192389,
+          "2026-03": -0.01234589790018037,
+          "2026-04": -0.029218862925492584,
+          "2026-05": -0.03811436629031206,
+          "2026-06": -0.09611146096553969,
+          "2026-07": 0.07059370973550894,
+          "2026-08": 0.07182991971042996,
+          "2026-09": -0.010520789257344232,
+          "2026-10": 0.029477594678778196
+        },
+        "notional_cny": "1355791.20",
+        "one_way_turnover_average_nav": 7.028533586226012,
+        "positive_month_fraction": 0.4,
+        "recognized_distribution_tax_reserve_cny": "428.22",
+        "recognized_dividend_gross_cash_cny": "2141.08",
+        "recognized_dividend_legacy_rounded_gross_cash_cny": "2141.08",
+        "rejected_order_count": 1,
+        "rolling_126_sessions": {
+          "median": -0.04298364017620471,
+          "minimum": -0.15506279016887003,
+          "observations": 64,
+          "positive_fraction": 0.0625
+        },
+        "rolling_63_sessions": {
+          "median": -0.04408955512726309,
+          "minimum": -0.15742063518387295,
+          "observations": 127,
+          "positive_fraction": 0.3228346456692913
+        },
+        "session_count": 189,
+        "slippage_cost_cny": "1841.09",
+        "source_confirmed_carry_days": 18,
+        "stamp_tax_cny": "316.67",
+        "terminal_prices_fresh": false,
+        "total_distribution_tax_reserved_cny": "428.22",
+        "total_fee_cny": "1975.24",
+        "total_return_lower_exact": "-0.0052577",
+        "total_return_upper_exact": "-0.0052577",
+        "trade_count": 329,
+        "transfer_fee_cny": "13.57",
+        "turnover_definition": "sum_buy_and_sell_actual_notional_divided_by_two_and_mean_daily_NAV",
+        "worst_month_return": -0.09611146096553969
+      },
+      "metrics_basis": "invalid_indicative_carried_ledger_do_not_use_for_selection",
+      "minimum_commission_fill_fraction": 1.0,
+      "performance_valid": false,
+      "period": "2026",
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2026-10-19",
+      "arm": "H5",
+      "metrics": {
+        "accounting_invalid_days": 0,
+        "additional_distribution_tax_reserved_cny": "0.00",
+        "annualized_return": 0.06508436385960636,
+        "annualized_volatility": 0.16127819683251296,
+        "best_month_return": 0.13247585989930166,
+        "calendar_year_returns": {
+          "2025": 0.03605980000000053,
+          "2026": 0.07537315896244667
+        },
+        "cash_distribution_rounding_reserved_cny": "0.00",
+        "commission_cny": "3425.00",
+        "cost_attribution_is_counterfactual_rerun": false,
+        "declared_end_reached": true,
+        "fees_plus_slippage_as_initial_cash_fraction": 0.0822284,
+        "final_equity_cny": "111415.09",
+        "incomplete_valuation_days": 5,
+        "max_drawdown_conservative_exact": "-0.1701465960364538817131313320",
+        "mean_invested_fraction": 0.880004493185612,
+        "monthly_returns": {
+          "2025-01": -0.026361700000000154,
+          "2025-02": -0.01770565106159061,
+          "2025-03": 0.036399019070902705,
+          "2025-04": -0.028483328581571987,
+          "2025-05": 0.05259422225877608,
+          "2025-06": 0.011619676103255205,
+          "2025-07": 0.029274914704308985,
+          "2025-08": 0.014501591353828891,
+          "2025-09": -0.036211084165773344,
+          "2025-10": 0.03781452915785466,
+          "2025-11": -0.015135790358364876,
+          "2025-12": -0.017736791408158648,
+          "2026-01": 0.04299877285075682,
+          "2026-02": 0.008152809373898506,
+          "2026-03": 0.00837932802903918,
+          "2026-04": -0.026856639907397506,
+          "2026-05": -0.05664862937404669,
+          "2026-06": -0.06334366071070008,
+          "2026-07": 0.054266478397176465,
+          "2026-08": 0.13247585989930166,
+          "2026-09": -0.011421525040619662,
+          "2026-10": -0.0006813102935167015
+        },
+        "notional_cny": "3124770.49",
+        "one_way_turnover_average_nav": 15.029721783043822,
+        "positive_month_fraction": 0.5,
+        "recognized_distribution_tax_reserve_cny": "1068.71",
+        "recognized_dividend_gross_cash_cny": "5343.59",
+        "recognized_dividend_legacy_rounded_gross_cash_cny": "5343.59",
+        "rejected_order_count": 1,
+        "rolling_126_sessions": {
+          "median": 0.029676413057234674,
+          "minimum": -0.12065031548506255,
+          "observations": 307,
+          "positive_fraction": 0.745928338762215
+        },
+        "rolling_252_sessions": {
+          "median": 0.06197726240859325,
+          "minimum": -0.10396155634544801,
+          "observations": 181,
+          "positive_fraction": 0.7403314917127072
+        },
+        "rolling_63_sessions": {
+          "median": 0.018121954726439182,
+          "minimum": -0.1407495845167972,
+          "observations": 370,
+          "positive_fraction": 0.6675675675675675
+        },
+        "session_count": 432,
+        "slippage_cost_cny": "4006.58",
+        "source_confirmed_carry_days": 5,
+        "stamp_tax_cny": "759.93",
+        "terminal_prices_fresh": true,
+        "total_distribution_tax_reserved_cny": "1068.71",
+        "total_fee_cny": "4216.26",
+        "total_return_lower_exact": "0.1141509",
+        "total_return_upper_exact": "0.1141509",
+        "trade_count": 685,
+        "transfer_fee_cny": "31.33",
+        "turnover_definition": "sum_buy_and_sell_actual_notional_divided_by_two_and_mean_daily_NAV",
+        "worst_month_return": -0.06334366071070008
+      },
+      "metrics_basis": "declared_accounting_NAV_not_actual_liquidation",
+      "minimum_commission_fill_fraction": 1.0,
+      "performance_valid": true,
+      "period": "continuous",
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2025-12-31",
+      "arm": "H20",
+      "metrics": {
+        "accounting_invalid_days": 0,
+        "additional_distribution_tax_reserved_cny": "0.00",
+        "annualized_return": 0.06100367453484701,
+        "annualized_volatility": 0.11812821314524403,
+        "best_month_return": 0.05520367239500579,
+        "calendar_year_returns": {
+          "2025": 0.05876220000000121
+        },
+        "cash_distribution_rounding_reserved_cny": "0",
+        "commission_cny": "1970.00",
+        "cost_attribution_is_counterfactual_rerun": false,
+        "declared_end_reached": true,
+        "fees_plus_slippage_as_initial_cash_fraction": 0.0488636,
+        "final_equity_cny": "105876.22",
+        "incomplete_valuation_days": 0,
+        "max_drawdown_conservative_exact": "-0.0767290170065645445529470950",
+        "mean_invested_fraction": 0.8996012001668345,
+        "monthly_returns": {
+          "2025-01": -0.03396489999999941,
+          "2025-02": -0.0069296653920754014,
+          "2025-03": 0.024005859023195963,
+          "2025-04": -0.013585809673049565,
+          "2025-05": 0.05520367239500579,
+          "2025-06": 0.03935167889465041,
+          "2025-07": 0.021822981347172643,
+          "2025-08": 0.00848935441954235,
+          "2025-09": -0.036378916718933674,
+          "2025-10": 0.04962721008658666,
+          "2025-11": -0.008594390968234,
+          "2025-12": -0.035893049148991274
+        },
+        "notional_cny": "1837135.95",
+        "one_way_turnover_average_nav": 8.810243965571276,
+        "positive_month_fraction": 0.5,
+        "recognized_distribution_tax_reserve_cny": "965.98",
+        "recognized_dividend_gross_cash_cny": "4829.93",
+        "recognized_dividend_legacy_rounded_gross_cash_cny": "4829.93",
+        "rejected_order_count": 0,
+        "rolling_126_sessions": {
+          "median": 0.12886614826683573,
+          "minimum": -0.016506511481655828,
+          "observations": 118,
+          "positive_fraction": 0.9661016949152542
+        },
+        "rolling_63_sessions": {
+          "median": 0.04316389844018631,
+          "minimum": -0.04939119999999997,
+          "observations": 181,
+          "positive_fraction": 0.7845303867403315
+        },
+        "session_count": 243,
+        "slippage_cost_cny": "2462.72",
+        "source_confirmed_carry_days": 0,
+        "stamp_tax_cny": "435.29",
+        "terminal_prices_fresh": true,
+        "total_distribution_tax_reserved_cny": "965.98",
+        "total_fee_cny": "2423.64",
+        "total_return_lower_exact": "0.0587622",
+        "total_return_upper_exact": "0.0587622",
+        "trade_count": 394,
+        "transfer_fee_cny": "18.35",
+        "turnover_definition": "sum_buy_and_sell_actual_notional_divided_by_two_and_mean_daily_NAV",
+        "worst_month_return": -0.036378916718933674
+      },
+      "metrics_basis": "declared_accounting_NAV_not_actual_liquidation",
+      "minimum_commission_fill_fraction": 1.0,
+      "performance_valid": true,
+      "period": "2025",
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2026-10-19",
+      "arm": "H20",
+      "metrics": {
+        "accounting_invalid_days": 0,
+        "additional_distribution_tax_reserved_cny": "0.00",
+        "annualized_return": 0.15796988662906175,
+        "annualized_volatility": 0.23195475821622913,
+        "best_month_return": 0.24884488168621255,
+        "calendar_year_returns": {
+          "2026": 0.11627950000000298
+        },
+        "cash_distribution_rounding_reserved_cny": "0.00",
+        "commission_cny": "1780.00",
+        "cost_attribution_is_counterfactual_rerun": false,
+        "declared_end_reached": true,
+        "fees_plus_slippage_as_initial_cash_fraction": 0.04171,
+        "final_equity_cny": "111627.95",
+        "incomplete_valuation_days": 0,
+        "max_drawdown_conservative_exact": "-0.2468192416517643078837503125",
+        "mean_invested_fraction": 0.8700102669583614,
+        "monthly_returns": {
+          "2026-01": 0.08070139999999948,
+          "2026-02": -0.026007368918000817,
+          "2026-03": -0.02606833092151617,
+          "2026-04": 0.0006903340936079694,
+          "2026-05": -0.030737227711093773,
+          "2026-06": -0.1003489480819919,
+          "2026-07": -0.025730332707618597,
+          "2026-08": 0.24884488168621255,
+          "2026-09": -0.009584064253674529,
+          "2026-10": 0.035529432609804124
+        },
+        "notional_cny": "1557373.21",
+        "one_way_turnover_average_nav": 7.6781997631588945,
+        "positive_month_fraction": 0.4,
+        "recognized_distribution_tax_reserve_cny": "272.98",
+        "recognized_dividend_gross_cash_cny": "1324.90",
+        "recognized_dividend_legacy_rounded_gross_cash_cny": "1324.90",
+        "rejected_order_count": 2,
+        "rolling_126_sessions": {
+          "median": 0.028734418311322285,
+          "minimum": -0.19494744749243542,
+          "observations": 64,
+          "positive_fraction": 0.578125
+        },
+        "rolling_63_sessions": {
+          "median": -0.021877485161288623,
+          "minimum": -0.21758869170818418,
+          "observations": 127,
+          "positive_fraction": 0.4094488188976378
+        },
+        "session_count": 189,
+        "slippage_cost_cny": "2008.04",
+        "source_confirmed_carry_days": 0,
+        "stamp_tax_cny": "367.44",
+        "terminal_prices_fresh": true,
+        "total_distribution_tax_reserved_cny": "272.98",
+        "total_fee_cny": "2162.96",
+        "total_return_lower_exact": "0.1162795",
+        "total_return_upper_exact": "0.1162795",
+        "trade_count": 356,
+        "transfer_fee_cny": "15.52",
+        "turnover_definition": "sum_buy_and_sell_actual_notional_divided_by_two_and_mean_daily_NAV",
+        "worst_month_return": -0.1003489480819919
+      },
+      "metrics_basis": "declared_accounting_NAV_not_actual_liquidation",
+      "minimum_commission_fill_fraction": 1.0,
+      "performance_valid": true,
+      "period": "2026",
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2026-10-19",
+      "arm": "H20",
+      "metrics": {
+        "accounting_invalid_days": 0,
+        "additional_distribution_tax_reserved_cny": "0.00",
+        "annualized_return": 0.02749778851846285,
+        "annualized_volatility": 0.16729730931837067,
+        "best_month_return": 0.12695189402994744,
+        "calendar_year_returns": {
+          "2025": 0.05876220000000121,
+          "2026": -0.010541932834398415
+        },
+        "cash_distribution_rounding_reserved_cny": "0.00",
+        "commission_cny": "3560.00",
+        "cost_attribution_is_counterfactual_rerun": false,
+        "declared_end_reached": true,
+        "fees_plus_slippage_as_initial_cash_fraction": 0.0884878,
+        "final_equity_cny": "104760.08",
+        "incomplete_valuation_days": 5,
+        "max_drawdown_conservative_exact": "-0.2143489176772679481592913825",
+        "mean_invested_fraction": 0.8966277605469573,
+        "monthly_returns": {
+          "2025-01": -0.03396489999999941,
+          "2025-02": -0.0069296653920754014,
+          "2025-03": 0.024005859023195963,
+          "2025-04": -0.013585809673049565,
+          "2025-05": 0.05520367239500579,
+          "2025-06": 0.03935167889465041,
+          "2025-07": 0.021822981347172643,
+          "2025-08": 0.00848935441954235,
+          "2025-09": -0.036378916718933674,
+          "2025-10": 0.04962721008658666,
+          "2025-11": -0.008594390968234,
+          "2025-12": -0.035893049148991274,
+          "2026-01": 0.043667407091035226,
+          "2026-02": 0.0031855330464665155,
+          "2026-03": -0.03441304750244378,
+          "2026-04": 0.013020566193951089,
+          "2026-05": -0.041168398190546185,
+          "2026-06": -0.06934852821468918,
+          "2026-07": -0.010848038781000047,
+          "2026-08": 0.12695189402994744,
+          "2026-09": -0.029360943165330666,
+          "2026-10": 0.0006651992292709963
+        },
+        "notional_cny": "3316143.58",
+        "one_way_turnover_average_nav": 15.814611813087387,
+        "positive_month_fraction": 0.5,
+        "recognized_distribution_tax_reserve_cny": "1311.31",
+        "recognized_dividend_gross_cash_cny": "6556.61",
+        "recognized_dividend_legacy_rounded_gross_cash_cny": "6556.61",
+        "rejected_order_count": 0,
+        "rolling_126_sessions": {
+          "median": 0.004848439935884796,
+          "minimum": -0.161540779554747,
+          "observations": 307,
+          "positive_fraction": 0.5374592833876222
+        },
+        "rolling_252_sessions": {
+          "median": 0.02933242770397082,
+          "minimum": -0.16147023395906956,
+          "observations": 181,
+          "positive_fraction": 0.5580110497237569
+        },
+        "rolling_63_sessions": {
+          "median": 0.012830232901983707,
+          "minimum": -0.1608333820780603,
+          "observations": 370,
+          "positive_fraction": 0.5972972972972973
+        },
+        "session_count": 432,
+        "slippage_cost_cny": "4449.06",
+        "source_confirmed_carry_days": 5,
+        "stamp_tax_cny": "806.64",
+        "terminal_prices_fresh": true,
+        "total_distribution_tax_reserved_cny": "1311.31",
+        "total_fee_cny": "4399.72",
+        "total_return_lower_exact": "0.0476008",
+        "total_return_upper_exact": "0.0476008",
+        "trade_count": 712,
+        "transfer_fee_cny": "33.08",
+        "turnover_definition": "sum_buy_and_sell_actual_notional_divided_by_two_and_mean_daily_NAV",
+        "worst_month_return": -0.06934852821468918
+      },
+      "metrics_basis": "declared_accounting_NAV_not_actual_liquidation",
+      "minimum_commission_fill_fraction": 1.0,
+      "performance_valid": true,
+      "period": "continuous",
+      "stopped": null
+    }
+  ],
+  "schema_version": 1,
+  "scope": "Historical CSI300 and CSI1000 signal-date members; common H5/H20 control with frozen 20-session execution.",
+  "source_field_hashes_independently_checked": 16863,
+  "training": {
+    "common_endpoint_offsets": [
+      1,
+      6,
+      21
+    ],
+    "common_purge_future_sessions": 21,
+    "common_training_panel": true,
+    "early_stopping": false,
+    "entry_delay_sessions": 1,
+    "evaluation_end": "2026-10-19",
+    "execution_years": [
+      2025,
+      2026
+    ],
+    "fixed_lightgbm_spec": {
+      "lambda_l2": 1.0,
+      "learning_rate": 0.03,
+      "max_depth": 6,
+      "min_data_in_leaf": 100,
+      "num_boost_round": 100,
+      "num_leaves": 31,
+      "seed": 20261019
+    },
+    "hyperparameter_search": false,
+    "labels": {
+      "H20": "Ref($open,-21)/Ref($open,-1)-1",
+      "H5": "Ref($open,-6)/Ref($open,-1)-1"
+    },
+    "lookback_calendar_years": 5,
+    "membership_filter": "signal_date_only_no_future_membership_survival_condition",
+    "shared_feature_processors": true
+  },
+  "valid_path_count": 5,
+  "verification": {
+    "duration_seconds": 85.14,
+    "figure_visual_review_performed": true,
+    "new_focused_tests_passed": 58,
+    "pytest_passed": 1892,
+    "pytest_skipped": 1,
+    "subtests_passed": 20,
+    "test_log": "/private/tmp/stopat30m_a8_all_tests_20261020.log",
+    "validation_cli_exit_code": 1,
+    "validation_exit_reason": "Completed with all six paths preserved; one invalid path prevents promotion.",
+    "warnings": 296
+  }
+}

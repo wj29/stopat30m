@@ -1,0 +1,91 @@
+{
+  "all_new_fits_and_returns_computed_before_declaration": false,
+  "declared_at": "2026-10-20T09:29:39.937885+00:00",
+  "execution": {
+    "adverse_slippage_bps": "2",
+    "cash_dividend_tax_reserve_rate": "0.20",
+    "commission_rate": "0.0003",
+    "initial_cash_cny": "100000.00",
+    "keep_rank": 40,
+    "minimum_commission_cny": "5.00",
+    "rebalance_sessions": 20,
+    "require_signal_affordability": true,
+    "top_k": 20,
+    "transfer_rate": "0.00001"
+  },
+  "fixed_fit_budget": 4,
+  "fixed_ledger_budget": 6,
+  "full_original_baselines_reproduced_before_new_returns": true,
+  "invalid_path": "preserve diagnostic ledger, exclude from performance qualification; no truncation, deletion, cash fiction or A7 proxy override",
+  "kind": "a8_shared_panel_label_horizon_design",
+  "labels": {
+    "H20": "Ref($open,-21)/Ref($open,-1)-1",
+    "H5": "Ref($open,-6)/Ref($open,-1)-1"
+  },
+  "minimum_evidence_for_H20_improvement": {
+    "H20_positive_net_return_all_three_periods": true,
+    "all_six_paths_accounting_valid": true,
+    "continuous_max_drawdown_no_worse_than_H5": true,
+    "continuous_turnover_no_higher_than_H5": true,
+    "higher_continuous_net_return_than_H5": true
+  },
+  "minimum_hold_and_replacement_caps_from_A6_added": false,
+  "model_package_sealed_before_any_new_ledger_returns": true,
+  "models": [
+    "H5",
+    "H20"
+  ],
+  "new_H5_control_is_not_reuse_of_old_H5_model": true,
+  "new_parameter_grid_or_threshold_or_timing": false,
+  "overlapping_labels": "do not treat daily correlation/window observations as independent trials",
+  "periods": {
+    "2025": [
+      "2025-01-01",
+      "2025-12-31"
+    ],
+    "2026": [
+      "2026-01-01",
+      "2026-10-19"
+    ],
+    "continuous": [
+      "2025-01-01",
+      "2026-10-19"
+    ]
+  },
+  "schema_version": 1,
+  "selection_scope": "retrospective research comparator only; no active paper or broker promotion even if improving",
+  "source_limitations": "Qlib historical base with existing eligibility/source-vintage coverage; do not claim independent raw reconstruction of every older training bar",
+  "training": {
+    "common_endpoint_offsets": [
+      1,
+      6,
+      21
+    ],
+    "common_purge_future_sessions": 21,
+    "common_training_panel": true,
+    "early_stopping": false,
+    "entry_delay_sessions": 1,
+    "evaluation_end": "2026-10-19",
+    "execution_years": [
+      2025,
+      2026
+    ],
+    "fixed_lightgbm_spec": {
+      "lambda_l2": 1.0,
+      "learning_rate": 0.03,
+      "max_depth": 6,
+      "min_data_in_leaf": 100,
+      "num_boost_round": 100,
+      "num_leaves": 31,
+      "seed": 20261019
+    },
+    "hyperparameter_search": false,
+    "labels": {
+      "H20": "Ref($open,-21)/Ref($open,-1)-1",
+      "H5": "Ref($open,-6)/Ref($open,-1)-1"
+    },
+    "lookback_calendar_years": 5,
+    "membership_filter": "signal_date_only_no_future_membership_survival_condition",
+    "shared_feature_processors": true
+  }
+}
