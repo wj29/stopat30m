@@ -1,0 +1,83 @@
+{
+  "allocation_policy": "account_aggregate_floor_or_ceil_largest_remainder",
+  "completion_verified": false,
+  "declared_at": "2026-10-20T09:11:28.135837+00:00",
+  "delisting_date": "2026-10-19",
+  "delisting_known_at": "2026-10-16T23:59:59+08:00",
+  "evidence": {
+    "1225606336": {
+      "original_pdf_visual_reviewed": true,
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/collections/a7_cinda_exchange_20261020_v1/601995_1225606336.pdf",
+      "pdf_pages_1based": [
+        1,
+        2,
+        5,
+        6,
+        8
+      ],
+      "public_known_at": "2026-10-16T23:59:59+08:00",
+      "sha256": "9553a01c4278f46f18fcc05665640fbe39a759c546d5f2f6a47010cc1c7d94cf",
+      "url": "https://static.cninfo.com.cn/finalpage/2026-10-16/1225606336.PDF"
+    },
+    "1225606573": {
+      "original_pdf_visual_reviewed": true,
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/collections/a7_cinda_exchange_20261020_v1/601059_1225606573.pdf",
+      "pdf_pages_1based": [
+        1,
+        2,
+        5,
+        7
+      ],
+      "public_known_at": "2026-10-16T23:59:59+08:00",
+      "sha256": "887cfa1be991d9cf7a7f1b73113b5e4197a13b62e519b33536efbb4bfa8bc473",
+      "url": "https://static.cninfo.com.cn/finalpage/2026-10-16/1225606573.PDF"
+    },
+    "1225608258": {
+      "original_pdf_visual_reviewed": true,
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/collections/a7_cinda_exchange_20261020_v1/601995_1225608258.pdf",
+      "pdf_pages_1based": [
+        1,
+        2,
+        6,
+        8
+      ],
+      "public_known_at": "2026-10-17T23:59:59+08:00",
+      "sha256": "fd97d72a8fb4ba65b893037410eda9da39df54d1c4e071e762f489b3f0de7715",
+      "url": "https://static.cninfo.com.cn/finalpage/2026-10-17/1225608258.PDF"
+    }
+  },
+  "facts_verified": [
+    "record_date",
+    "ratio",
+    "delisting",
+    "allocation_policy",
+    "pending_completion"
+  ],
+  "from_instrument": "SH601059",
+  "id": "cinda_A_pending_CICC_A_20261019",
+  "kind": "a7_verified_pending_share_exchange",
+  "ratio": "0.5210",
+  "ratio_known_at": "2026-10-16T23:59:59+08:00",
+  "record_date": "2026-10-16",
+  "record_date_known_at": "2026-10-16T23:59:59+08:00",
+  "shareholder_class": "ordinary_public_non_locked_no_cash_option_exercise",
+  "source_manifest_proof": {
+    "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/collections/a7_cinda_exchange_20261020_v1/manifest.json",
+    "sha256": "9f41ca4b31a698685ac0c610334657869e86adfcbb3cd1e338f5cfc997663138"
+  },
+  "source_terms_proof": {
+    "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/collections/a7_cinda_exchange_20261020_v1/official_exchange_terms_verified_v1.json",
+    "sha256": "16d18b3fdcdb954e38b15a311b5f328812712305928eed3d49b2d096ec878dcd"
+  },
+  "to_instrument": "SH601995",
+  "tradability_verified": false,
+  "valuation_assumptions": {
+    "all15_paths_same_policy_no_selection": true,
+    "conditional_proxy": "observed same-session successor close times conditional floor/ceil quantity, no liquidity discount assumption",
+    "no_actual_delivery_or_broker_sell_permission": true,
+    "original_A6_performance_flags_preserved": true,
+    "source_absence_does_not_establish_zero_rights": true,
+    "unconditional_nonnegative_recovery_floor_cny": "0.00",
+    "whole_account_aggregate_not_per_lot": true
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "kind": "a7_frozen_lgb_horizon_diagnostic_design",
+  "version": 1,
+  "declared_at": "2026-10-20T09:05:52.979591+00:00",
+  "horizons_actual_sessions": [
+    5,
+    10,
+    20
+  ],
+  "periods": [
+    "2025",
+    "2026",
+    "continuous"
+  ],
+  "evaluation_end": "2026-10-19",
+  "entry": "observed normalized open at t+1",
+  "exit": "observed normalized open at t+horizon+1",
+  "training_or_new_predictions": false,
+  "original_five_session_guard": "full original score_quality dict must exactly reproduce all3 periods before other horizon output",
+  "native_comparison": "each horizon consumes only its own fully mature observed positive price pairs; explicitly report excluded pairs and days",
+  "matched_comparison": "all horizons share the same t+21 mature signal dates and intersection of valid names across5/10/20 endpoints within signal-day historical members; never require future index membership",
+  "statistics": [
+    "IC",
+    "rank_IC",
+    "positive_date_fraction",
+    "pair_coverage",
+    "daily_observations"
+  ],
+  "inference": "rank diagnostic only; does not establish executable returns or select strategies or model hyperparameters",
+  "input_score_is_expected_return": false,
+  "strategy_or_paper_changes": false,
+  "real_horizon_results_computed_before_design": false
+}
