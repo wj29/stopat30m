@@ -1,0 +1,99 @@
+{
+  "kind": "a6_fixed_lgb_turnover_design",
+  "version": 2,
+  "model": "LGB",
+  "periods": [
+    "2025",
+    "2026",
+    "continuous"
+  ],
+  "evaluation_end": "2026-10-19",
+  "variants": [
+    {
+      "key": "baseline",
+      "minimum_hold_sessions": 0,
+      "max_replacements": null
+    },
+    {
+      "key": "hold10_cap2",
+      "minimum_hold_sessions": 10,
+      "max_replacements": 2
+    },
+    {
+      "key": "hold10_cap5",
+      "minimum_hold_sessions": 10,
+      "max_replacements": 5
+    },
+    {
+      "key": "hold20_cap2",
+      "minimum_hold_sessions": 20,
+      "max_replacements": 2
+    },
+    {
+      "key": "hold20_cap5",
+      "minimum_hold_sessions": 20,
+      "max_replacements": 5
+    }
+  ],
+  "unchanged": {
+    "native_models_processors_predictions": "byte-identical frozen2025/2026 LGB package",
+    "signal": "previous_actual_session_only; no execution-day quote in selection",
+    "target_top_k": 20,
+    "keep_rank": 40,
+    "rebalance_actual_sessions": 5,
+    "initial_cash_cny": "100000.00",
+    "minimum_commission_cny": "5.00",
+    "all_fees_slippage_lot_T1_limits_tax_valuation": "exact original source-bound stability execution",
+    "historical_membership": "signal-date CSI300 plus CSI1000; held out-of-index assets remain in account"
+  },
+  "holding_clock": {
+    "unit": "actual exchange session index difference",
+    "formula": "index(planned execution session) minus index(actual first BUY in current tradable holding epoch)",
+    "buy_day_age": 0,
+    "example": "BUY at D0 can exit at a scheduled D10 rebalance when minimum_hold_sessions=10",
+    "uses_execution_day_prices_or_results": false,
+    "partial_sale_or_additional_buy": "does not reset an existing tradable holding epoch",
+    "stock_dividend_and_capital_transfer": "inherit evidenced record-date actual holding origin",
+    "confirmed_share_exchange": "inherit predecessor origin; when combined with an existing successor use the earlier evidenced origin",
+    "unknown_origin": "fail closed; never infer from latest quote or registry IPO",
+    "tradable_active": "positive actual positions or any positive pending bonus entitlement, including exact fractional entitlement, matching the unchanged legacy planner",
+    "fractional_claim": "positive pending bonus retains record-date origin until settlement; settled fraction-only state.claims cannot extend a cleared epoch or give a new BUY an old age",
+    "reentry": "actual new BUY restarts age after no actual shares and no positive pending bonus entitlement; settled fraction-only claims do not extend the epoch"
+  },
+  "replacement_semantics": {
+    "cap_unit": "number of distinct planned exit securities per scheduled rebalance, not promised completed sales",
+    "eligible_exit": "original buffer would exit and minimum holding age is met",
+    "priority": "missing signal rank first, then descending rank number, then ascending instrument",
+    "locked_or_over_cap": "retain actual shares unchanged and occupy target slots, including out-of-index or unscored securities",
+    "initial_build_and_vacancies": "may fill target vacancies; not counted as replacements",
+    "failed_execution": "same original executor, no replacement stock or replanning after observing execution-day tradability",
+    "actual_holdings_above_target": "possible after refused exits under the unchanged baseline executor; explicitly audited, no new BUY slot rule",
+    "forced_retained_above_target": "retain every locked security and submit no new entries; never force an early exit"
+  },
+  "validity_and_comparison": {
+    "baseline_before_treatments": "reproduce all three original LGB paths: metrics, final state and canonical records; mismatch stops all treatments",
+    "invalid_path": "keep diagnostic records, exclude from qualified performance and ranking",
+    "primary_metrics": [
+      "net_return",
+      "max_drawdown",
+      "one_way_turnover_average_nav"
+    ],
+    "secondary_metrics": [
+      "monthly_and_rolling_returns",
+      "fees",
+      "slippage",
+      "fill_count",
+      "minimum_commission_fraction",
+      "mean_invested_fraction",
+      "refused_exits",
+      "actual_holding_age"
+    ],
+    "execution_improvement": "valid in every period; continuous return strictly higher, drawdown no worse and turnover strictly lower than baseline",
+    "retain_five_day_signal_for_next_forward_test": "at least one predeclared variant passes execution_improvement and has positive net return in2025, partial2026 and continuous",
+    "otherwise": "longer-horizon20-session label research is justified as a next separate experiment; no20-day model is trained in this run",
+    "window_interpretation": "already examined retrospective historical comparison, not fresh future out-of-sample evidence",
+    "multiple_tests": "all four treatments reported; no new grid points or parameter changes after seeing candidate results",
+    "active_paper_or_broker_changes": false
+  },
+  "implementation_clarification": "Before any candidate execution, direct inspection confirmed legacy pending bonus stores exact quantity, potentially fractional; active semantics therefore follow any positive pending entitlement. Grid, periods, fees and decision criteria are unchanged."
+}

@@ -719,3 +719,7 @@ _register_ashare_union_commands(research_group)
 from stopat30m.ashare_stability_cli import register_commands as _register_ashare_stability_commands
 
 _register_ashare_stability_commands(research_group)
+
+from stopat30m.ashare_turnover_experiment import register_commands as _register_ashare_turnover_commands
+
+_register_ashare_turnover_commands(research_group)
