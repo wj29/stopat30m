@@ -1,0 +1,20 @@
+{
+  "kind": "a5_narrow_current_code_forward_factor_adjustment_spec",
+  "version": 1,
+  "allowed_instrument": "SZ302132",
+  "old_instrument": "SZ300114",
+  "first_legal_code_session": "2025-02-17",
+  "verified_original_ipo": "2010-08-27",
+  "method": "raw_OHLC_times_latest_official_foreAdjustFactor_divided_by_first_legal_session_foreAdjustFactor",
+  "scope": "Entire original current-code legal period; no use of prior-code prices",
+  "original_failure": "Backward source factors reset to1 on the legal code date and jump the next session while forward factors remain identical",
+  "independent_scale_verification": "All factor records after the first legal session require one common backward/forward scale inside their original six-decimal half-last-digit rounding intervals; the first record must be disjoint",
+  "original_HFQ_numeric_verification": "Every legal raw OHLC times the independently captured official backward factor must agree with the original supplier HFQ within unchanged rtol1e-6 and atol1e-8",
+  "forward_factor_default": false,
+  "price_mapping_before_legal_code_clock_allowed": false,
+  "original_price_bytes_or_mode_flags_modified": false,
+  "source_derived_adjustment_not_vendor_HFQ": true,
+  "strict_whole_rebuild_and_temporal_gate_required": true,
+  "financial_tolerance_changes": false,
+  "source_selection_uses_returns_or_model_metrics": false
+}
