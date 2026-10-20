@@ -1,0 +1,46 @@
+{
+  "accounting": "integer_shares_actual_observed_execution_quotes_current_fees_slippage_and_conservative_cash_distribution_tax",
+  "attention_threshold_does_not_change_orders": true,
+  "automatic_cash_reset": false,
+  "automatic_model_retraining": false,
+  "automatic_model_switching": false,
+  "calendar_boundary": "only_verified_sessions_current_coverage_through_2026-12-31_check_extension_before_exhaustion_no_weekday_guess",
+  "daily_primary": [
+    "after_cost_NAV",
+    "conservative_upper_peak_drawdown",
+    "actual_turnover",
+    "fees_and_slippage",
+    "holding_age",
+    "refused_orders",
+    "data_and_valuation_integrity"
+  ],
+  "declared_at": "2026-10-20T11:19:27.360525+00:00",
+  "drawdown_attention_threshold_fraction": "0.10",
+  "failure": "no_stale_fills_no_source_bypass_missing_held_actions_or_observed_gaps_block_orders_and_raise_attention",
+  "first_valid_signal_anchors_execution_phase_once": true,
+  "history": "A6/A8_original_invalid_claim_paths_unchanged_no_historical_qualification_claim",
+  "insufficient_observations": "null_and_explicit_count_not_annualized_or_backfilled",
+  "kind": "a9_forward_low_turnover_observation_policy",
+  "machine_requirement": "local_mac_must_be_awake_with_user_logged_in_no_server_deployment_in_this_task",
+  "observation_start": "new_actual_freeze_then_first_complete_close_signal_no_imported_holdings_no_past_fills",
+  "periodic_monitor": "quiet_when_unchanged_or_normal_save_daily_reports_notify_on_actionable_failure_drawdown_attention_or_review_milestone",
+  "review_after_complete_observed_closes": [
+    20,
+    60
+  ],
+  "schema_version": 1,
+  "source_scope": "fixed_2026-10-19_official_CSI300_CSI1000_1300_anchor_prospective_watchlist_not_daily_membership",
+  "stability_actual_sessions": [
+    20,
+    60
+  ],
+  "strategy": {
+    "initial_cash_cny": "100000.00",
+    "keep_rank": 40,
+    "max_exit_intents_per_rebalance": 2,
+    "minimum_hold_sessions": 10,
+    "native_model": "unchanged_A5_LGB_2026_H5",
+    "rebalance_actual_sessions": 5,
+    "target_names": 20
+  }
+}
