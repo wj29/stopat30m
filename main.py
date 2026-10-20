@@ -37,6 +37,26 @@ def cli(ctx: click.Context, config: str | None) -> None:
         load_config(config)
 
 
+def _legacy_universe(value=None):
+    """Reject a broad or unaudited raw universe before any model/data operation."""
+    from stopat30m.config import get
+    from stopat30m.settings_store import SettingsError, validate_legacy_universe
+    try:
+        return validate_legacy_universe(get("data", "universe", "csi300") if value is None else value,
+            require_audited_samples=True)
+    except SettingsError as exc:
+        raise click.ClickException(str(exc)) from None
+
+
+def _legacy_prediction_scope(metadata, universe):
+    """A cached prediction file must not silently bypass the requested pool."""
+    from stopat30m.settings_store import SettingsError, validate_legacy_prediction_scope
+    try:
+        validate_legacy_prediction_scope(metadata, universe)
+    except SettingsError as exc:
+        raise click.ClickException(str(exc)) from None
+
+
 @cli.command()
 @click.option("--source", default="baostock",
               type=click.Choice(["baostock", "qlib+baostock", "qlib", "akshare", "efinance", "tushare"]),
@@ -402,12 +422,14 @@ def _save_train_run_to_db(
 @click.option("--model-type", default=None, help="lgbm / xgboost / mlp / lstm / transformer")
 @click.option("--save-name", default="model", help="Model save name")
 @click.option("--factor-groups", default=None, help="Comma-separated factor groups")
-@click.option("--universe", default=None, help="Stock universe: csi300 / csi500 / all")
+@click.option("--universe", default=None, type=click.Choice(["csi300", "csi1000"]), help="CSI1000 requires the separately audited research workflow.")
 @click.option("--top-k", default=0, type=int, help="Output top K predicted stocks after training (0=skip)")
 def train(model_type: str | None, save_name: str, factor_groups: str | None, universe: str | None, top_k: int) -> None:
     """Train alpha prediction model."""
     import json
     from pathlib import Path
+    universe = _legacy_universe(universe)
+    from stopat30m.config import get
 
     from stopat30m.data.provider import init_qlib
     from stopat30m.factors.handler import AlphaExtendedHandler
@@ -451,7 +473,7 @@ def train(model_type: str | None, save_name: str, factor_groups: str | None, uni
 @cli.command()
 @click.option("--model-path", default=None, help="Path to .pkl model")
 @click.option("--pred-path", default=None, help="Path to cached predictions .pkl")
-@click.option("--universe", default=None, help="Stock universe: csi300 / csi500 / all")
+@click.option("--universe", default=None, type=click.Choice(["csi300", "csi1000"]), help="CSI1000 requires the separately audited research workflow.")
 @click.option("--top-k", default=None, type=int, help="Number of stocks to hold (default from config)")
 @click.option("--rebalance-freq", default=None, type=int, help="Rebalance every N trading days")
 @click.option("--deal-price", default=None, type=click.Choice(["open", "close"]),
@@ -461,6 +483,7 @@ def backtest(model_path: str | None, pred_path: str | None, universe: str | None
              top_k: int | None, rebalance_freq: int | None, deal_price: str | None,
              factor_groups: str | None) -> None:
     """Backtest a trained model on test data."""
+    universe = _legacy_universe(universe)
     from stopat30m.backtest.common import load_prediction_source
     from stopat30m.backtest.engine import BacktestEngine
 
@@ -470,6 +493,7 @@ def backtest(model_path: str | None, pred_path: str | None, universe: str | None
         universe=universe,
         factor_groups=factor_groups,
     )
+    _legacy_prediction_scope(metadata, universe)
     logger.info(f"Prediction source: {metadata.get('source', 'unknown')}, rows: {len(pred)}")
 
     kwargs: dict = {}
@@ -507,7 +531,7 @@ def backtest(model_path: str | None, pred_path: str | None, universe: str | None
 
 @cli.command("cache-predictions")
 @click.option("--model-path", required=True, help="Path to .pkl model")
-@click.option("--universe", default=None, help="Stock universe: csi300 / csi500 / all")
+@click.option("--universe", default=None, type=click.Choice(["csi300", "csi1000"]), help="CSI1000 requires the separately audited research workflow.")
 @click.option("--factor-groups", default=None, help="Comma-separated factor groups")
 @click.option("--tag", default="", help="Optional output tag")
 def cache_predictions(
@@ -517,6 +541,7 @@ def cache_predictions(
     tag: str,
 ) -> None:
     """Generate predictions once and save them for reuse by backtests."""
+    universe = _legacy_universe(universe)
     import time as _time
     from stopat30m.backtest.common import load_model_predictions, save_prediction_bundle
 
@@ -562,7 +587,7 @@ def cache_predictions(
 @cli.command("signal-backtest")
 @click.option("--model-path", default=None, help="Path to .pkl model")
 @click.option("--pred-path", default=None, help="Path to cached predictions .pkl")
-@click.option("--universe", default=None, help="Stock universe: csi300 / csi500 / all")
+@click.option("--universe", default=None, type=click.Choice(["csi300", "csi1000"]), help="CSI1000 requires the separately audited research workflow.")
 @click.option("--top-k", default=None, type=int, help="Number of stocks per signal")
 @click.option("--method", default=None, type=click.Choice(["top_k", "long_short", "quantile"]),
               help="Signal construction method")
@@ -586,6 +611,7 @@ def signal_backtest(
     tag: str,
 ) -> None:
     """Run signal-level backtest and save a run under output/backtests/signal."""
+    universe = _legacy_universe(universe)
     from stopat30m.backtest.common import load_prediction_source
     from stopat30m.backtest.signal_backtest import SignalBacktestEngine
     from stopat30m.config import get
@@ -597,6 +623,7 @@ def signal_backtest(
         universe=universe,
         factor_groups=factor_groups,
     )
+    _legacy_prediction_scope(metadata, universe)
     logger.info(
         f"Prediction source={metadata.get('source', '?')}, "
         f"universe={metadata.get('universe', metadata.get('source_path', '?'))}"
@@ -625,7 +652,7 @@ def signal_backtest(
 @cli.command("account-backtest")
 @click.option("--model-path", default=None, help="Path to .pkl model")
 @click.option("--pred-path", default=None, help="Path to cached predictions .pkl")
-@click.option("--universe", default=None, help="Stock universe: csi300 / csi500 / all")
+@click.option("--universe", default=None, type=click.Choice(["csi300", "csi1000"]), help="CSI1000 requires the separately audited research workflow.")
 @click.option("--top-k", default=None, type=int, help="Number of stocks to hold")
 @click.option("--method", default=None, type=click.Choice(["top_k", "quantile"]),
               help="Signal construction method for account backtest")
@@ -663,6 +690,7 @@ def account_backtest(
     tag: str,
 ) -> None:
     """Run account-level backtest and save a run under output/backtests/account."""
+    universe = _legacy_universe(universe)
     from stopat30m.backtest.account_backtest import AccountBacktestEngine
     from stopat30m.backtest.common import load_prediction_source
     from stopat30m.config import get
@@ -674,6 +702,7 @@ def account_backtest(
         universe=universe,
         factor_groups=factor_groups,
     )
+    _legacy_prediction_scope(metadata, universe)
     logger.info(
         f"Prediction source={metadata.get('source', '?')}, "
         f"universe={metadata.get('universe', metadata.get('source_path', '?'))}"
@@ -709,10 +738,12 @@ def account_backtest(
 @click.option("--model-path", required=True, help="Path to .pkl model")
 @click.option("--date", default=None, help="Signal date (YYYY-MM-DD)")
 @click.option("--publish", is_flag=True, help="Publish to Redis")
-def signal(model_path: str, date: str | None, publish: bool) -> None:
+@click.option("--universe", default=None, type=click.Choice(["csi300", "csi1000"]), help="CSI1000 requires the separately audited research workflow.")
+def signal(model_path: str, date: str | None, publish: bool, universe: str | None = None) -> None:
     """Generate trading signals from trained model."""
     import pickle
     from pathlib import Path
+    universe = _legacy_universe(universe)
 
     from stopat30m.data.provider import init_qlib
     from stopat30m.factors.handler import AlphaExtendedHandler
@@ -723,7 +754,7 @@ def signal(model_path: str, date: str | None, publish: bool) -> None:
     with open(model_path, "rb") as f:
         model = pickle.load(f)
 
-    handler = AlphaExtendedHandler()
+    handler = AlphaExtendedHandler(instruments=universe)
     dataset = handler.build_dataset()
     pred = model.predict(dataset)
 

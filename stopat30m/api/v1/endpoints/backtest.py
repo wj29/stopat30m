@@ -21,6 +21,7 @@ from stopat30m.auth.deps import get_current_user
 from stopat30m.storage.models import BacktestRun, User
 from stopat30m.config import PROJECT_ROOT, get
 from stopat30m.backtest.common import BACKTEST_LIMITATIONS
+from stopat30m.settings_store import SettingsError, validate_legacy_prediction_scope, validate_legacy_universe
 
 router = APIRouter(prefix="/backtest")
 
@@ -46,6 +47,7 @@ class BacktestRequest(BaseModel):
     kind: Literal["backtest", "signal", "account"]
     model_path: str | None = None
     pred_path: str | None = None
+    universe: str | None = None
     tag: str = Field("", max_length=80, pattern=r"^[\w. -]*$")
     top_k: int | None = Field(None, ge=1, le=1000)
     rebalance_freq: int | None = Field(None, ge=1, le=252)
@@ -320,6 +322,13 @@ def submit_backtest(
         raise HTTPException(status_code=400, detail="Provide only one of model_path or pred_path")
     if body.horizons and any(h < 1 or h > 252 for h in body.horizons):
         raise HTTPException(status_code=422, detail="Horizons must be between 1 and 252 trading days")
+    try:
+        body.universe = validate_legacy_universe(
+            body.universe if "universe" in body.model_fields_set else get("data", "universe", "csi300"),
+            require_audited_samples=True,
+        )
+    except SettingsError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from None
     # These files contain pickle objects. Only server-managed model directories
     # are accepted; an HTTP client must never choose an arbitrary local pickle.
     for key, root in (("model_path", MODEL_ROOT), ("pred_path", PREDICTION_ROOT)):
@@ -331,6 +340,18 @@ def submit_backtest(
             if not target.is_relative_to(root.resolve()) or target.suffix != ".pkl" or not target.is_file():
                 raise HTTPException(status_code=422, detail=f"Invalid {key}: select a listed server asset")
             setattr(body, key, str(target))
+
+    if body.pred_path:
+        # Inspect only a server-managed asset, before scheduling any data/model work.
+        from stopat30m.backtest.common import load_prediction_bundle
+        try:
+            _, _, metadata = load_prediction_bundle(body.pred_path)
+        except Exception:
+            raise HTTPException(status_code=422, detail="无法读取预测缓存，不能验证股票池来源。") from None
+        try:
+            validate_legacy_prediction_scope(metadata, body.universe)
+        except SettingsError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from None
 
     with _tasks_lock:
         for t in _tasks.values():
@@ -377,6 +398,8 @@ def _run_backtest_task(task_id: str, params: dict, user_id: int) -> None:
                 _tasks[task_id].update(extra)
 
     try:
+        # Keep the accepted scope fixed even if settings change while queued.
+        universe = validate_legacy_universe(params.get("universe"), require_audited_samples=True)
         _update("running", "Initializing data provider...")
         from stopat30m.data.provider import init_qlib
         init_qlib()
@@ -388,7 +411,10 @@ def _run_backtest_task(task_id: str, params: dict, user_id: int) -> None:
         pred, labels, metadata = load_prediction_source(
             model_path=params.get("model_path"),
             pred_path=params.get("pred_path"),
+            universe=universe,
         )
+        # Recheck after loading: a server asset may have changed since submission.
+        validate_legacy_prediction_scope(metadata, universe)
 
         if kind == "backtest":
             run_id = _run_basic_backtest(task_id, pred, params, metadata, user_id, _update)

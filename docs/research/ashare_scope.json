@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "kind": "personal_ashare_research_scope",
+  "declared_at": "2026-10-20T02:00:56.346092+00:00",
+  "allowed_indices": {
+    "csi300": {
+      "name": "沪深300",
+      "index_code": "000300",
+      "expected_current_count": 300
+    },
+    "csi1000": {
+      "name": "中证1000",
+      "index_code": "000852",
+      "expected_current_count": 1000
+    }
+  },
+  "default_scope": "union",
+  "historical_policy": "actual_date_effective_membership_union_never_current_members_backfilled",
+  "current_policy": "complete_date_explicit_independent_sources_for_both_indices_required",
+  "outside_scope_new_buys": false,
+  "outside_scope_new_training_samples": false,
+  "outside_scope_new_download_targets": false,
+  "existing_holdings_sell_and_valuation_always_allowed": true,
+  "immutable_source_snapshot_preserved": true,
+  "legacy_csi300_experiments_role": "within_scope_subset_not_evidence_for_csi1000",
+  "csi1000_requires_separate_data_model_and_fee_validation": true,
+  "original_a3_and_a4_protocols_are_not_rewritten": true
+}

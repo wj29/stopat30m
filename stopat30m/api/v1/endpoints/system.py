@@ -162,7 +162,12 @@ def _deep_merge(base: Any, override: Any) -> Any:
 def generate_train_command(payload: dict[str, Any] = Body(...)) -> dict[str, str]:
     """Generate a copy-pasteable CLI command from the given config."""
     model_type = payload.get("model_type", "")
-    universe = payload.get("universe", "")
+    from stopat30m.settings_store import SettingsError, validate_legacy_universe
+    try:
+        universe = validate_legacy_universe(payload["universe"] if "universe" in payload
+            else get("data", "universe", "csi300"), require_audited_samples=True)
+    except SettingsError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from None
     save_name = payload.get("save_name", "model")
     factor_groups = payload.get("factor_groups", "")
     top_k = payload.get("top_k", 0)

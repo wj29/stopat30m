@@ -40,21 +40,10 @@ def download_cn_data(
     parallel: bool = True,
     workers: int | None = None,
 ) -> None:
-    """Download A-share data.
+    """Reject the former unscoped whole-market download before collection/writes.
 
-    Default behavior is **incremental**: if local data already exists, only
-    fetch new data since the last trusted date (per-stock).  When *parallel*
-    is True (default), multiple data sources are used concurrently.
-
-    Args:
-        source: Legacy fetcher source: 'baostock' (default), 'akshare',
-                'efinance' or 'tushare'. Qlib archives use research ashare-base.
-        target_dir: Override target directory.
-        start_date: Start date (full download only, ignored for incremental).
-        end_date: End date (default today).
-        parallel: Use multiple sources in parallel (default True).
-        workers: Number of parallel sub-processes per source (BaoStock only).
-                 None → fetcher default (4 for BaoStock).
+    Keep the public signature for existing CLI/web callers. New research
+    collection uses audited dated membership targets, not fetch_stock_list.
     """
     if source not in VALID_SOURCES:
         raise ValueError(f"Unknown source '{source}'. Choose from: {VALID_SOURCES}")
@@ -70,14 +59,11 @@ def download_cn_data(
     target_path = Path(target).expanduser()
     if (target_path.parent / "manifest.json").is_file() or (target_path / "incremental_manifest.json").is_file():
         raise ValueError("研究数据版本不可原地更新；请用 research ashare-update 发布新版本。")
-    target_path.mkdir(parents=True, exist_ok=True)
-
-    cal_path = target_path / "calendars" / "day.txt"
-    if cal_path.exists():
-        _append_from_fetcher(source, target_path, end_date, parallel=parallel, workers=workers)
-    else:
-        logger.info("No existing data found. Running full download...")
-        _download_from_fetcher(source, target_path, start_date, end_date)
+    raise ValueError(
+        "研究范围已限定为沪深300和中证1000，旧全市场下载/更新入口已停用。"
+        "请使用通过日期和来源校验的股票池目标进行研究采集；"
+        "现有沪深300每日模拟盘仍按独立任务更新。详见 docs/ASHARE_SCOPE.md。"
+    )
 
 
 def _create_fetcher(source: str, workers: int | None = None):

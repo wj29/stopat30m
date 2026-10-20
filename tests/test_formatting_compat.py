@@ -29,7 +29,7 @@ def test_zero_percent_money_and_integer_counts_preserve_meaning():
 def test_cli_prints_nullable_metrics_and_finishes(command, monkeypatch, tmp_path):
     import main
     from stopat30m.backtest import common, engine, account_backtest, signal_backtest
-    monkeypatch.setattr(common, "load_prediction_source", lambda **kw: (pd.Series([1.0]), None, {}))
+    monkeypatch.setattr(common, "load_prediction_source", lambda **kw: (pd.Series([1.0]), None, {"universe": "csi300"}))
     missing = {key: None for key in ["annual_return", "sharpe", "sortino", "max_drawdown", "calmar",
                                     "win_rate", "profit_loss_ratio", "ic_5d_mean", "rank_ic_5d_mean"]}
     missing.update({"total_trades": 0, "observation_days": 2})

@@ -29,6 +29,24 @@ def test_legacy_append_cannot_mutate_a_frozen_dataset(tmp_path):
     assert not (root / "dataset").exists()
 
 
+@pytest.mark.parametrize("source", ["baostock", "akshare", "efinance", "tushare"])
+@pytest.mark.parametrize("existing", [False, True])
+def test_unscoped_whole_market_download_cannot_bypass_project_scope(tmp_path, monkeypatch, source, existing):
+    destination = tmp_path / "dataset"
+    if existing:
+        (destination / "calendars").mkdir(parents=True)
+        (destination / "calendars/day.txt").write_text("2024-12-31\n")
+    before = {str(path.relative_to(destination)): path.read_bytes()
+        for path in destination.rglob("*") if path.is_file()} if existing else {}
+    monkeypatch.setattr(provider, "_create_fetcher", lambda *_args, **_kwargs: pytest.fail("unscoped source must not start"))
+    with pytest.raises(ValueError, match="旧全市场下载/更新入口已停用"):
+        provider.download_cn_data(source=source, target_dir=str(destination))
+    after = {str(path.relative_to(destination)): path.read_bytes()
+        for path in destination.rglob("*") if path.is_file()} if destination.exists() else {}
+    assert before == after
+    assert destination.exists() == existing
+
+
 def test_base_command_uses_exact_pinned_source_checksum_and_preserves_classification(tmp_path, monkeypatch):
     source = {"kind": "community", "release_tag": "2026-10-18", "url": "https://example.test/pinned.tar.gz",
               "release_manifest": {"archive_sha256": "a" * 64, "archive_size_bytes": 500}}

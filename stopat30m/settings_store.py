@@ -24,6 +24,27 @@ class SettingsError(ValueError):
         self.status_code = status_code
 
 
+LEGACY_ALLOWED_UNIVERSES = ("csi300", "csi1000")
+
+
+def validate_legacy_universe(value, *, require_audited_samples=False):
+    """Restrict legacy entry points without relabelling a CSI300 validation."""
+    if not isinstance(value, str) or value not in LEGACY_ALLOWED_UNIVERSES:
+        raise SettingsError("个人系统股票池仅支持 csi300（沪深300）和 csi1000（中证1000）。")
+    if require_audited_samples and value == "csi1000":
+        raise SettingsError("旧训练、预测和回测入口暂不支持 csi1000：请先完成已审计历史样本、独立模型和含费验证；不会自动改用 csi300。", 409)
+    return value
+
+
+def validate_legacy_prediction_scope(metadata, universe):
+    """Require a declared matching pool before starting a new legacy backtest."""
+    if not isinstance(metadata, dict) or not metadata.get("universe"):
+        raise SettingsError("缓存预测缺少明确的股票池来源，不能用于新的限池回测；已有缓存和历史结果保持不变。")
+    actual = validate_legacy_universe(metadata["universe"], require_audited_samples=True)
+    if actual != universe:
+        raise SettingsError("缓存预测股票池与本次请求不一致；不会静默更换股票池。")
+
+
 _GROUPS = {
     "research": ("研究下载偏好", "仅影响后续下载任务；不改动已锁协议、策略和现有产物。"),
     "llm": ("AI 分析", "已有请求保持原参数，新实例使用保存值；凭据和服务地址需重启进程。"),
@@ -404,20 +425,25 @@ class SettingsStore:
                 if not isinstance(overrides, dict) or not isinstance(reference, dict):
                     raise SettingsError("Legacy configuration sections must be objects.")
                 for name, value in overrides.items():
-                    if not isinstance(name, str) or name not in reference:
+                    if not isinstance(name, str):
                         raise SettingsError("Unknown legacy configuration key.")
                     key = f"{prefix}.{name}"
+                    if name not in reference and key != "data.universe":
+                        raise SettingsError("Unknown legacy configuration key.")
                     if any(word in name.lower() for word in ("api_key", "password", "secret", "token")):
                         raise SettingsError("Credentials cannot be edited through the legacy model interface.")
-                    if isinstance(reference[name], dict):
-                        merge_fields(value, reference[name], key)
+                    reference_value = reference.get(name, "csi300")
+                    if isinstance(reference_value, dict):
+                        merge_fields(value, reference_value, key)
                         continue
                     if self._env_name(key):
                         raise SettingsError(f"Environment-controlled field is read-only: {key}.", 409)
-                    if key in _FIELDS:
+                    if key == "data.universe":
+                        value = validate_legacy_universe(value)
+                    elif key in _FIELDS:
                         value = _validate(key, value)
                     else:
-                        old = reference[name]
+                        old = reference_value
                         if isinstance(old, bool):
                             valid = isinstance(value, bool)
                         elif isinstance(old, int):

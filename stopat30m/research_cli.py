@@ -103,15 +103,18 @@ def ashare_base_command(source_spec: Path, output_dir: Path) -> None:
 @click.option("--end-date", required=True)
 @click.option("--index-date", default=None, help="Current index snapshot used only to choose download targets.")
 @click.option("--instruments", default=None, help="Optional comma-separated canonical stock download targets.")
+@click.option("--historical-scope-dir", type=click.Path(exists=True, file_okay=False, path_type=Path),
+              default=None, help="Verified derived CSI300/CSI1000 scope; required with explicit --instruments.")
 @click.option("--output-dir", type=click.Path(path_type=Path), required=True)
 def ashare_collect_command(start_date: str, end_date: str, index_date: str | None,
-                           instruments: str | None, output_dir: Path) -> None:
+                           instruments: str | None, historical_scope_dir: Path | None, output_dir: Path) -> None:
     """Collect original BaoStock stock raw/HFQ responses; no in-place writes."""
-    from stopat30m.data.ashare_daily import collect_baostock_increment, load_collection_frames
+    from stopat30m.data.ashare_daily import load_collection_frames
+    from stopat30m.data.ashare_collection_scope import collect_scope_checked_increment
     try:
-        path = collect_baostock_increment(output_dir, start_date, end_date, index_date=index_date,
-            instruments=[part.strip().upper() for part in instruments.split(",")] if instruments else None,
-            progress=click.echo)
+        path = collect_scope_checked_increment(output_dir, start_date, end_date, index_date=index_date,
+            instruments=[part.strip().upper() for part in instruments.split(",")] if instruments is not None else None,
+            historical_scope_dir=historical_scope_dir, progress=click.echo)
         raw, _, manifest = load_collection_frames(path)
     except (ValueError, KeyError, OSError, RuntimeError) as exc:
         raise click.ClickException(str(exc)) from exc
@@ -700,3 +703,11 @@ def universe_audit_command(universe_path: Path, start: str, end: str, require_pi
 from stopat30m.ashare_forward_cli import register_commands as _register_ashare_forward_commands
 
 _register_ashare_forward_commands(research_group)
+
+from stopat30m.ashare_validation_cli import register_commands as _register_ashare_validation_commands
+
+_register_ashare_validation_commands(research_group)
+
+from stopat30m.ashare_scope_cli import register_commands as _register_ashare_scope_commands
+
+_register_ashare_scope_commands(research_group)

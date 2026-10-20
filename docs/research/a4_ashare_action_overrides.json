@@ -1,0 +1,609 @@
+{
+  "known_at_policy": "Conservative verified notice-date end where intraday publication is unknown; no fabricated publication instant.",
+  "original_supplier_responses_unchanged": true,
+  "patches": [
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/600188_20230710_cninfo.pdf",
+        "sha256": "15feaa25f08f36c07f07c5830cc9f10745a7203bc515eabd77028f8cc451137f",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2023-07-10/1217254673.PDF"
+      },
+      "ex_date": "2023-07-17",
+      "instrument": "SH600188",
+      "operation": "replace",
+      "review_note": "Issuer total includes annual3.07+special1.23; actual stock dividend0.5; notice expressly states RMB1 face value per bonus share.",
+      "values": {
+        "cash_dividend_tax_rate": "0.22325581395348837209302325581395348837209302325582",
+        "cash_per_share": "4.30",
+        "known_at": "2023-07-10T23:59:59+08:00",
+        "reference_bonus_ratio": "0.5",
+        "reference_cash_per_share": "4.30",
+        "taxable_stock_face_value_per_record_share": "0.5"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/600482_1221725633.pdf",
+        "sha256": "451aedacd31a99f8a6a0b36e8aafba4cee8f2a4931d22afe025272ebe46464c1",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2024-11-15/1221725633.PDF"
+      },
+      "ex_date": "2024-11-22",
+      "instrument": "SH600482",
+      "operation": "add",
+      "values": {
+        "bonus_ratio": "0",
+        "capital_reserve_ratio": "0",
+        "cash_per_share": "0.03138",
+        "ex_date": "2024-11-22",
+        "known_at": "2024-11-15T23:59:59+08:00",
+        "listing_date": null,
+        "pay_date": "2024-11-22",
+        "record_date": "2024-11-21",
+        "stock_dividend_ratio": "0",
+        "tax_policy": "same fixed20% conservative reserve; not broker holding-period tax statement"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/600519_1218606528.pdf",
+        "sha256": "6d17512b6f5a0000d53d8053201ef8a3f934714fdca31e8220ef6f1a9bb67f14",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2023-12-14/1218606528.PDF"
+      },
+      "ex_date": "2023-12-20",
+      "instrument": "SH600519",
+      "operation": "add",
+      "values": {
+        "bonus_ratio": "0",
+        "capital_reserve_ratio": "0",
+        "cash_per_share": "19.106",
+        "ex_date": "2023-12-20",
+        "known_at": "2023-12-14T23:59:59+08:00",
+        "listing_date": null,
+        "pay_date": "2023-12-20",
+        "record_date": "2023-12-19",
+        "stock_dividend_ratio": "0",
+        "tax_policy": "same fixed20% conservative reserve; not broker holding-period tax statement"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/601985_1221831318.pdf",
+        "sha256": "815bc49e6884c98feef291f55ab4cfc6c2e6f4fdc8764a829a349ac0fd8c89fb",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2024-11-25/1221831318.PDF"
+      },
+      "ex_date": "2024-12-02",
+      "instrument": "SH601985",
+      "operation": "add",
+      "values": {
+        "bonus_ratio": "0",
+        "capital_reserve_ratio": "0",
+        "cash_per_share": "0.02",
+        "ex_date": "2024-12-02",
+        "known_at": "2024-11-25T23:59:59+08:00",
+        "listing_date": null,
+        "pay_date": "2024-12-02",
+        "record_date": "2024-11-29",
+        "stock_dividend_ratio": "0",
+        "tax_policy": "same fixed20% conservative reserve; not broker holding-period tax statement"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/000538_1221767436.pdf",
+        "sha256": "4ab5e2be23e81810b271ce0e3398fbddfb04dbb932714ca5c485cc2d178407a9",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2024-11-19/1221767436.PDF"
+      },
+      "ex_date": "2024-11-25",
+      "instrument": "SZ000538",
+      "operation": "add",
+      "values": {
+        "bonus_ratio": "0",
+        "capital_reserve_ratio": "0",
+        "cash_per_share": "1.213",
+        "ex_date": "2024-11-25",
+        "known_at": "2024-11-19T23:59:59+08:00",
+        "listing_date": null,
+        "pay_date": "2024-11-25",
+        "record_date": "2024-11-22",
+        "stock_dividend_ratio": "0",
+        "tax_policy": "same fixed20% conservative reserve; not broker holding-period tax statement"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/600600_1217228358.pdf",
+        "sha256": "f93134380e7d19dc8cd14c4aa7ea069666cc80c5618191ef26dfb56f17665cf6",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2023-07-07/1217228358.PDF"
+      },
+      "ex_date": "2023-07-14",
+      "instrument": "SH600600",
+      "operation": "replace",
+      "review_note": "Total actual issuer cash entitlement includes the separately described distribution; exchange virtual reference is retained separately.",
+      "values": {
+        "cash_per_share": "1.80",
+        "known_at": "2023-07-07T23:59:59+08:00",
+        "reference_bonus_ratio": "0",
+        "reference_cash_per_share": "1.80"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/601898_1220848913.pdf",
+        "sha256": "a4f0ab455d78f3ff1681b5de6583a8957cc6127eb455a57168b5e8f835a575cc",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2024-08-13/1220848913.PDF"
+      },
+      "ex_date": "2024-08-20",
+      "instrument": "SH601898",
+      "operation": "replace",
+      "review_note": "Total actual issuer cash entitlement includes the separately described distribution; exchange virtual reference is retained separately.",
+      "values": {
+        "cash_per_share": "0.555",
+        "known_at": "2024-08-13T23:59:59+08:00",
+        "reference_bonus_ratio": "0",
+        "reference_cash_per_share": "0.555"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/300750_1219767154.pdf",
+        "sha256": "7739837887d22cfea7f8768731cb60b59f28e0294a7241b2d2824633bd180fb5",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2024-04-23/1219767154.PDF"
+      },
+      "ex_date": "2024-04-30",
+      "instrument": "SZ300750",
+      "operation": "replace",
+      "review_note": "Total actual issuer cash entitlement includes the separately described distribution; exchange virtual reference is retained separately.",
+      "values": {
+        "cash_per_share": "5.028",
+        "known_at": "2024-04-23T23:59:59+08:00",
+        "reference_bonus_ratio": "0",
+        "reference_cash_per_share": "5.0147304"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/600732_1217034921.pdf",
+        "sha256": "d15c58b400930cb3ac75d241a55ec67f545a8e96e980ac96241d503de3176726",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2023-06-12/1217034921.PDF"
+      },
+      "ex_date": "2023-06-16",
+      "instrument": "SH600732",
+      "operation": "annotate",
+      "review_note": "Issuer explicitly distinguishes actual per-eligible-share entitlement from virtual ex-right reference after excluded shares. Actual cash/bonus delivery remains original.",
+      "values": {
+        "reference_bonus_ratio": "0.397966",
+        "reference_cash_per_share": "0.5472"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/600900_1217309077.pdf",
+        "sha256": "b0629364f15a9f58fc53007156bc74a4b75f745ec0ea067b165353390b3fedca",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2023-07-17/1217309077.PDF"
+      },
+      "ex_date": "2023-07-21",
+      "instrument": "SH600900",
+      "operation": "annotate",
+      "review_note": "Issuer explicitly distinguishes actual per-eligible-share entitlement from virtual ex-right reference after excluded shares. Actual cash/bonus delivery remains original.",
+      "values": {
+        "reference_bonus_ratio": "0",
+        "reference_cash_per_share": "0.8211"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/601318_1217002481.pdf",
+        "sha256": "180746b113c809754ca98ab00f93443f6259b4f3c2bcdb0934cf9885b5def9e9",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2023-06-07/1217002481.PDF"
+      },
+      "ex_date": "2023-06-14",
+      "instrument": "SH601318",
+      "operation": "annotate",
+      "review_note": "Issuer explicitly distinguishes actual per-eligible-share entitlement from virtual ex-right reference after excluded shares. Actual cash/bonus delivery remains original.",
+      "values": {
+        "reference_bonus_ratio": "0",
+        "reference_cash_per_share": "1.4761"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/603296_1220246583.pdf",
+        "sha256": "b72e967539b936017c9ea7e41b3b2da1d6c8a6752137418b986e36dcc0ee077b",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2024-06-04/1220246583.PDF"
+      },
+      "ex_date": "2024-06-11",
+      "instrument": "SH603296",
+      "operation": "annotate",
+      "review_note": "Issuer explicitly distinguishes actual per-eligible-share entitlement from virtual ex-right reference after excluded shares. Actual cash/bonus delivery remains original.",
+      "values": {
+        "reference_bonus_ratio": "0.3991",
+        "reference_cash_per_share": "1.1973"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/603833_1220512658.pdf",
+        "sha256": "ee1f7db021674d7ad2796e535c2fe365bfc609deb836100371e95490f04f50bc",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2024-07-02/1220512658.PDF"
+      },
+      "ex_date": "2024-07-09",
+      "instrument": "SH603833",
+      "operation": "annotate",
+      "review_note": "Issuer explicitly distinguishes actual per-eligible-share entitlement from virtual ex-right reference after excluded shares. Actual cash/bonus delivery remains original.",
+      "values": {
+        "reference_bonus_ratio": "0",
+        "reference_cash_per_share": "2.74"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/000157_1217291719.pdf",
+        "sha256": "8e6a4b10b6d84a550edbd8d21ab1b021aa682697c29d2954ba14cbae091aefb3",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2023-07-14/1217291719.PDF"
+      },
+      "ex_date": "2023-07-21",
+      "instrument": "SZ000157",
+      "operation": "annotate",
+      "review_note": "Virtual A-share reference cash calculated from issuer participating A shares6,672,070,922 / (6,672,070,922+repurchased423,956,766) *actualcash0.32; issuer facts retained; does not change delivered cash0.32.",
+      "values": {
+        "reference_bonus_ratio": "0",
+        "reference_cash_per_share": "0.3008813929306641115800561685"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/000333_1216898601.pdf",
+        "sha256": "a7229455f23fb8364a3a5730ea3ab76cf5c7b1ffa60f9d5d7dc06ec219a9dcd6",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2023-05-25/1216898601.PDF"
+      },
+      "ex_date": "2023-06-01",
+      "instrument": "SZ000333",
+      "operation": "annotate",
+      "review_note": "Issuer explicitly distinguishes actual per-eligible-share entitlement from virtual ex-right reference after excluded shares. Actual cash/bonus delivery remains original.",
+      "values": {
+        "reference_bonus_ratio": "0",
+        "reference_cash_per_share": "2.45"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/000333_1220011030.pdf",
+        "sha256": "c0cab0c355c20c4dbb3510dba55b0645185866696d99a16a87ff3c887a540f34",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2024-05-09/1220011030.PDF"
+      },
+      "ex_date": "2024-05-15",
+      "instrument": "SZ000333",
+      "operation": "annotate",
+      "review_note": "Issuer explicitly distinguishes actual per-eligible-share entitlement from virtual ex-right reference after excluded shares. Actual cash/bonus delivery remains original.",
+      "values": {
+        "reference_bonus_ratio": "0",
+        "reference_cash_per_share": "2.9791154"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/000651_1220939473.pdf",
+        "sha256": "d452ed97074bd22b4ba02d639ef46e8b4bee1d1cf53cc8f931d1c72bd16d9d1c",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2024-08-22/1220939473.PDF"
+      },
+      "ex_date": "2024-08-28",
+      "instrument": "SZ000651",
+      "operation": "annotate",
+      "review_note": "Issuer explicitly distinguishes actual per-eligible-share entitlement from virtual ex-right reference after excluded shares. Actual cash/bonus delivery remains original.",
+      "values": {
+        "reference_bonus_ratio": "0",
+        "reference_cash_per_share": "2.3337380"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/000661_1219583998.pdf",
+        "sha256": "aedd8105c0824681744ef7a06cf6fa78b8f3351cec99bc983a67fbaf9b28d00f",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2024-04-12/1219583998.PDF"
+      },
+      "ex_date": "2024-04-18",
+      "instrument": "SZ000661",
+      "operation": "annotate",
+      "review_note": "Issuer explicitly distinguishes actual per-eligible-share entitlement from virtual ex-right reference after excluded shares. Actual cash/bonus delivery remains original.",
+      "values": {
+        "reference_bonus_ratio": "0",
+        "reference_cash_per_share": "4.4736091"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/002032_1220110386.pdf",
+        "sha256": "b16fecf3741256e762c0ccc494f19dd2475cf1e2156e0ce1112d78ca92dd59e9",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2024-05-21/1220110386.PDF"
+      },
+      "ex_date": "2024-05-28",
+      "instrument": "SZ002032",
+      "operation": "annotate",
+      "review_note": "Issuer explicitly distinguishes actual per-eligible-share entitlement from virtual ex-right reference after excluded shares. Actual cash/bonus delivery remains original.",
+      "values": {
+        "reference_bonus_ratio": "0",
+        "reference_cash_per_share": "2.7141031"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/002271_1220050803.pdf",
+        "sha256": "1b46e044a8daf6521fe4d74d71bd62258767bbffd03a02bb281b0e2cc96d524b",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2024-05-15/1220050803.PDF"
+      },
+      "ex_date": "2024-05-22",
+      "instrument": "SZ002271",
+      "operation": "annotate",
+      "review_note": "Issuer explicitly distinguishes actual per-eligible-share entitlement from virtual ex-right reference after excluded shares. Actual cash/bonus delivery remains original.",
+      "values": {
+        "reference_bonus_ratio": "0",
+        "reference_cash_per_share": "0.584913"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/002410_1216763769.pdf",
+        "sha256": "15d166d942215c9edf9d376907b69f7db0926593ef6209c743ecb47d2b8fb4d6",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2023-05-09/1216763769.PDF"
+      },
+      "ex_date": "2023-05-15",
+      "instrument": "SZ002410",
+      "operation": "annotate",
+      "review_note": "Issuer explicitly distinguishes actual per-eligible-share entitlement from virtual ex-right reference after excluded shares. Actual cash/bonus delivery remains original.",
+      "values": {
+        "reference_bonus_ratio": "0.3978359",
+        "reference_cash_per_share": "0.3978359"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/002756_1220133226.pdf",
+        "sha256": "6dc9ef239022d542b3eafede85ebaa27f859e90814f39c0da6c29b434e1dd1b7",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2024-05-23/1220133226.PDF"
+      },
+      "ex_date": "2024-05-30",
+      "instrument": "SZ002756",
+      "operation": "annotate",
+      "review_note": "Issuer explicitly distinguishes actual per-eligible-share entitlement from virtual ex-right reference after excluded shares. Actual cash/bonus delivery remains original.",
+      "values": {
+        "reference_bonus_ratio": "0",
+        "reference_cash_per_share": "1.9717734"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/002821_1220426001.pdf",
+        "sha256": "a026a24f30e1d50bc52f15660eba7b384f2cd70cc3a8f2070db3ec09c2543bfb",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2024-06-24/1220426001.PDF"
+      },
+      "ex_date": "2024-06-28",
+      "instrument": "SZ002821",
+      "operation": "annotate",
+      "review_note": "Issuer explicitly distinguishes actual per-eligible-share entitlement from virtual ex-right reference after excluded shares. Actual cash/bonus delivery remains original.",
+      "values": {
+        "reference_bonus_ratio": "0",
+        "reference_cash_per_share": "1.7324117"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/300274_1220273086.pdf",
+        "sha256": "dd6bd2d541ac75cc71671a521bbfa9e77667eda1e5a8ad2481d082af60f5c5de",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2024-06-05/1220273086.PDF"
+      },
+      "ex_date": "2024-06-13",
+      "instrument": "SZ300274",
+      "operation": "annotate",
+      "review_note": "Issuer explicitly distinguishes actual per-eligible-share entitlement from virtual ex-right reference after excluded shares. Actual cash/bonus delivery remains original.",
+      "values": {
+        "reference_bonus_ratio": "0.3959600",
+        "reference_cash_per_share": "0.9552535"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/300308_1220213405.pdf",
+        "sha256": "43776bd0a4bd26d2b5660fedd1724041103f4bee1505844dfc61de15a4658a1b",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2024-05-30/1220213405.PDF"
+      },
+      "ex_date": "2024-06-06",
+      "instrument": "SZ300308",
+      "operation": "annotate",
+      "review_note": "Issuer explicitly distinguishes actual per-eligible-share entitlement from virtual ex-right reference after excluded shares. Actual cash/bonus delivery remains original.",
+      "values": {
+        "reference_bonus_ratio": "0.3918236",
+        "reference_cash_per_share": "0.4408015"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/300529_1220146584.pdf",
+        "sha256": "422736f7d667e47600d94d8906cd4a2435c343392f3e8b1cfefecde9a3c0c107",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2024-05-24/1220146584.PDF"
+      },
+      "ex_date": "2024-05-31",
+      "instrument": "SZ300529",
+      "operation": "annotate",
+      "review_note": "Issuer explicitly distinguishes actual per-eligible-share entitlement from virtual ex-right reference after excluded shares. Actual cash/bonus delivery remains original.",
+      "values": {
+        "reference_bonus_ratio": "0",
+        "reference_cash_per_share": "0.3836103"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/300751_1216844142.pdf",
+        "sha256": "a08657e2c479c67a6cc94f27355e5c4ebd7c612c750d60f59efe29bb1148d7b3",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2023-05-18/1216844142.PDF"
+      },
+      "ex_date": "2023-05-25",
+      "instrument": "SZ300751",
+      "operation": "annotate",
+      "review_note": "Issuer explicitly distinguishes actual per-eligible-share entitlement from virtual ex-right reference after excluded shares. Actual cash/bonus delivery remains original.",
+      "values": {
+        "reference_bonus_ratio": "0.5982671",
+        "reference_cash_per_share": "1.4956677"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/300896_1219697497.pdf",
+        "sha256": "c3da1538b34f7e3ca7186b10ae7b580667c1dec7a927202afa57d48db93c2648",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2024-04-19/1219697497.PDF"
+      },
+      "ex_date": "2024-04-29",
+      "instrument": "SZ300896",
+      "operation": "annotate",
+      "review_note": "Issuer explicitly distinguishes actual per-eligible-share entitlement from virtual ex-right reference after excluded shares. Actual cash/bonus delivery remains original.",
+      "values": {
+        "reference_bonus_ratio": "0.3978445",
+        "reference_cash_per_share": "2.3104823"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/300919_1220133221.pdf",
+        "sha256": "bd9fca749472ff8c939bcfef683757dfe2a7ea1a6a0bbabc6e7d64d03dce5bda",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2024-05-22/1220133221.PDF"
+      },
+      "ex_date": "2024-05-29",
+      "instrument": "SZ300919",
+      "operation": "annotate",
+      "review_note": "Issuer explicitly distinguishes actual per-eligible-share entitlement from virtual ex-right reference after excluded shares. Actual cash/bonus delivery remains original.",
+      "values": {
+        "reference_bonus_ratio": "0.3976799",
+        "reference_cash_per_share": "1.1532717"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/600188_20240701_cninfo.pdf",
+        "sha256": "6bdfaa42a112ed7554effc8b1f40d139f32430b9a69fec7d6294441f2313f708",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2024-07-01/1220505695.PDF"
+      },
+      "ex_date": "2024-07-08",
+      "instrument": "SH600188",
+      "operation": "annotate",
+      "review_note": "Issuer expressly states RMB1 face value per bonus share; total10% tax0.179=C0.149+bonus0.03.",
+      "values": {
+        "cash_dividend_tax_rate": "0.24026845637583892617449664429530201342281879194631",
+        "taxable_stock_face_value_per_record_share": "0.3"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/600763_20240701_cninfo.pdf",
+        "sha256": "d48bdde979d56fa83a370efc1e1dcd56b0003772352001e87601769b550eeff3",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2024-07-01/1220505721.PDF"
+      },
+      "ex_date": "2024-07-05",
+      "instrument": "SH600763",
+      "operation": "annotate",
+      "review_note": "Issuer10% after-tax cash0.35203 agrees with C-(C+0.400595)*10%, rounded to5decimals; separately includes stock dividend and verifies RMB1 implied face.",
+      "values": {
+        "cash_dividend_tax_rate": "0.38390680592218524044531160335131412831401354298176",
+        "taxable_stock_face_value_per_record_share": "0.400595"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/603288_1216907347.pdf",
+        "sha256": "ba515369ab00294ecc56eb846fb93743c7d5de1f244ffe5cedda070df1c08c84",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2023-05-26/1216907347.PDF"
+      },
+      "ex_date": "2023-06-01",
+      "instrument": "SH603288",
+      "operation": "annotate",
+      "review_note": "Issuer10% after-tax cash0.61 verifies totaltax0.09=(cash0.7+stock0.2*RMB1)*10%.",
+      "values": {
+        "cash_dividend_tax_rate": "0.25714285714285714285714285714285714285714285714286",
+        "taxable_stock_face_value_per_record_share": "0.2"
+      }
+    },
+    {
+      "evidence": {
+        "kind": "issuer_original_pdf_bytes",
+        "path": "../../output/research/ashare/collections/a4_action_evidence_20261020/300122_1217028943.pdf",
+        "sha256": "06dc20f09df3eb3e0ace7b56af2a883b879e7885c07b7d7edad3c34ea5a28d94",
+        "text_extraction": "pypdf; monetary terms and relevant full notice sections manually reviewed",
+        "url": "https://static.cninfo.com.cn/finalpage/2023-06-09/1217028943.PDF"
+      },
+      "ex_date": "2023-06-16",
+      "instrument": "SZ300122",
+      "operation": "annotate",
+      "review_note": "Issuer20% maximum tax0.18 perrecordshare verifies C0.5+stock0.4*RMB1; capitalreserve0.1 excluded from F.",
+      "values": {
+        "cash_dividend_tax_rate": "0.36",
+        "taxable_stock_face_value_per_record_share": "0.4"
+      }
+    }
+  ],
+  "policy": "separately_evidenced_actual_entitlements_and_exchange_reference_terms",
+  "rights_issues_separate": "../../output/research/ashare/collections/a4_action_evidence_20261020/rights_events.json",
+  "schema_version": 1,
+  "selected_without_strategy_return_observation": true
+}

@@ -194,7 +194,7 @@ data:
   test_start: "2025-01-01"
   # test_end: 留空 = 自动使用今天
   benchmark: "SH000300"
-  universe: "csi300" # csi300 | csi500 | all
+  universe: "csi300" # csi300 | csi1000；中证1000需完成独立数据、模型及含费验证后启用
 
 # ── 因子库 ──────────────────────────────────────────────────────
 factors:

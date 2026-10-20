@@ -32,10 +32,8 @@ const MODEL_TYPE_HINTS: Record<string, string> = {
 };
 
 const UNIVERSE_HINTS: Record<string, string> = {
-  csi300: '大盘股300只，数据质量高，训练快。新手推荐。',
-  csi500: '中盘股500只，覆盖更广，波动更大。',
-  csi1000: '小盘股1000只，机会多但噪声大。',
-  all: '全A股4000+只，数据量大，训练慢，噪声高。',
+  csi300: '沪深300。现有研究与模拟盘使用此子集。',
+  csi1000: '中证1000。可保存配置；传统训练入口暂不开放，需完成独立历史数据、模型与含费验证。',
 };
 
 const PARAM_HINTS: Record<string, string> = {
@@ -107,6 +105,7 @@ export default function ModelLabPage() {
   const [saveMsg, setSaveMsg] = useState('');
 
   const [cliCmd, setCliCmd] = useState('');
+  const [cliError, setCliError] = useState('');
   const [copied, setCopied] = useState(false);
 
   const [guideOpen, setGuideOpen] = useState(false);
@@ -127,6 +126,8 @@ export default function ModelLabPage() {
   const modelParams = cfg?.model?.params?.[modelType] ?? {};
   const factors = cfg?.factors ?? {};
   const dataSection = cfg?.data ?? {};
+  const selectedUniverse = dataSection.universe ?? 'csi300';
+  const allowedUniverse = selectedUniverse === 'csi300' || selectedUniverse === 'csi1000';
 
   function setModelType(t: string) {
     setCfg((prev) => prev ? { ...prev, model: { ...prev.model, type: t } } : prev);
@@ -152,6 +153,9 @@ export default function ModelLabPage() {
   }
 
   function setUniverse(u: string) {
+    setCliCmd('');
+    setCliError('');
+    setCopied(false);
     setCfg((prev) => prev ? { ...prev, data: { ...prev.data, universe: u } } : prev);
   }
 
@@ -194,15 +198,21 @@ export default function ModelLabPage() {
 
   /* ---------- generate CLI command ---------- */
   async function handleGenerate() {
+    setCliCmd('');
+    setCliError('');
+    setCopied(false);
     try {
       const res = await generateTrainCommand({
         model_type: modelType,
-        universe: dataSection.universe ?? '',
+        universe: selectedUniverse,
       });
       setCliCmd(res.command);
       setCopied(false);
-    } catch {
-      setCliCmd('python main.py train');
+    } catch (e: unknown) {
+      setCliError(selectedUniverse === 'csi1000'
+        ? '中证1000需要先完成已审计历史样本、独立模型和含费验证；旧训练入口暂不开放，不会改用沪深300。'
+        : !allowedUniverse ? '股票池仅允许沪深300和中证1000，请选择允许的股票池后保存。'
+          : e instanceof Error ? e.message : '命令生成失败，请重试。');
     }
   }
 
@@ -294,16 +304,15 @@ export default function ModelLabPage() {
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-500">股票池</label>
                   <select
-                    value={dataSection.universe ?? 'all'}
+                    value={selectedUniverse}
                     onChange={(e) => setUniverse(e.target.value)}
                     className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
                   >
                     <option value="csi300">沪深300</option>
-                    <option value="csi500">中证500</option>
                     <option value="csi1000">中证1000</option>
-                    <option value="all">全A股</option>
                   </select>
-                  <p className="mt-1 text-[11px] text-gray-400">{UNIVERSE_HINTS[dataSection.universe ?? 'all'] ?? ''}</p>
+                  <p className="mt-1 text-[11px] text-gray-400">{UNIVERSE_HINTS[selectedUniverse] ?? ''}</p>
+                  {!allowedUniverse && <p role="alert" className="mt-1 text-xs text-red-600">已保存的股票池不在允许范围，请选择后保存；系统不会自动替换。</p>}
                 </div>
 
                 {/* Label */}
@@ -387,6 +396,7 @@ export default function ModelLabPage() {
               </div>
 
               {/* CLI command display */}
+              {cliError && <p role="alert" className="mt-3 text-xs text-red-600">{cliError}</p>}
               {cliCmd && (
                 <div className="mt-3 rounded-md border border-gray-200 bg-gray-50 p-3">
                   <div className="flex items-center justify-between">
@@ -495,7 +505,7 @@ export default function ModelLabPage() {
                 <strong>推荐调参路线（从上到下依次尝试）：</strong>
                 <ol className="mt-1 list-inside list-decimal space-y-1">
                   <li><strong>Baseline</strong> — 用默认参数训练一次，记录 IC / Sharpe / 回撤，作为对比基准</li>
-                  <li><strong>股票池</strong> — csi300（快速迭代）→ csi500（更多信号）→ all（最终验证）</li>
+                  <li><strong>股票池</strong> — 限沪深300与中证1000；先验证沪深300子集，中证1000另做历史数据、模型与含费验证</li>
                   <li><strong>标签窗口</strong> — 5天 → 3天 → 10天，观察 IC 变化选最优</li>
                   <li><strong>超参微调</strong> — learning_rate（0.005~0.05）、num_leaves（64~256）、reg_lambda（0~10）</li>
                   <li><strong>模型类型</strong> — lgbm → xgboost → mlp，看哪个 IC 最高且稳定</li>
