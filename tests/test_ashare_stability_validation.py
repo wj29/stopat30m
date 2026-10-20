@@ -62,7 +62,12 @@ def test_no_extra_tax_path_reproduces_reviewed_engine_positions_and_costs():
     before = primary.simulate_union(market(), period="test", model="LGB")
     after = stability.simulate_stability(market(), period="test", model="LGB")
     assert after["final_state"] == before["final_state"]
-    assert after["records"] == before["records"]
+    assert {key: rows for key, rows in after["records"].items() if key != "plans"} == {
+        key: rows for key, rows in before["records"].items() if key != "plans"}
+    for old, new in zip(before["records"]["plans"], after["records"]["plans"], strict=True):
+        assert {key: value for key, value in old.items() if key != "policy_version"} == {
+            key: new[key] for key in old if key != "policy_version"}
+        assert new["targets_use_budget_reduced_quantities"] is True
     assert after["performance_valid"]
     assert after["metrics"]["additional_distribution_tax_reserved_cny"] == "0"
 

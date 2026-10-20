@@ -1,6 +1,6 @@
 """Synthetic native-LightGBM forward refit tests; no performance claims/network."""
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 from types import SimpleNamespace
 
@@ -13,9 +13,21 @@ from stopat30m.backtest import model_comparison as ml
 from stopat30m.backtest import walk_forward as wf
 from stopat30m.data.historical_universe import HistoricalUniverse
 from stopat30m.data.research_prices import download_research_prices
+from stopat30m.data import research_prices
 
 POOL = ["SH510300", "SH510500", "SZ159915"]
 NOW = datetime(2026, 10, 20, 8, 0, tzinfo=timezone.utc)
+
+
+@pytest.fixture(autouse=True)
+def fixed_synthetic_source_capture_clock(monkeypatch):
+    """Fixture acquisition must precede its fixed training time on every date."""
+    class SourceClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            instant = NOW - timedelta(minutes=5)
+            return instant.astimezone(tz) if tz is not None else instant.replace(tzinfo=None)
+    monkeypatch.setattr(research_prices, "datetime", SourceClock)
 
 
 class Provider:
@@ -219,6 +231,9 @@ def test_invalid_time_and_snapshot_receipt_are_rejected(source, tmp_path):
     wrong = replace(source.artifact, manifest_sha256="0" * 64)
     with pytest.raises(ValueError, match="verified immutable"):
         training.fit_forward_candidate(wrong, source.universe, source.reference, tmp_path / "bad", now=NOW)
+    with pytest.raises(ValueError, match="after the execution time"):
+        training.fit_forward_candidate(source.artifact, source.universe, source.reference, tmp_path / "future-source",
+                                       now=NOW-timedelta(minutes=10))
 
 
 def test_insufficient_mature_rows_do_not_create_a_model(source, tmp_path):

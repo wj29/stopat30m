@@ -130,12 +130,13 @@ def read_bound_execution_model_prices(source, instrument, bound):
 
 def implementation_proofs():
     from stopat30m.backtest import ashare_execution, ashare_historical_execution
-    from stopat30m import ashare_optimization_execution, ashare_historical_optimization_execution
+    from stopat30m import ashare_optimization_execution, ashare_historical_optimization_execution, ashare_stability_rank_execution
     from stopat30m.data import a5_capital_tax, a5_distribution_tax
     return {name: _proof(path) for name, path in {
         "union_validation": __file__, "modern_engine": ashare_execution.__file__,
         "historical_engine": ashare_historical_execution.__file__,
         "modern_rank_adapter": ashare_optimization_execution.__file__,
+        "stability_rank_adapter": ashare_stability_rank_execution.__file__,
         "historical_rank_adapter": ashare_historical_optimization_execution.__file__,
         "corporate_actions": a2.__file__, "rights_and_validity": daily_inputs.__code__.co_filename,
         "event_selection": relevant_events.__code__.co_filename,
@@ -144,6 +145,14 @@ def implementation_proofs():
         "distribution_tax_adapter": a5_distribution_tax.__file__,
         "distribution_tax_spec": a5_distribution_tax.SPEC_PATH,
         "primary_validation_helpers": primary.__file__}.items()}
+
+
+def _engine(day):
+    engine, adapter = primary._engine(day)
+    if day >= "2025-01-01":
+        from stopat30m import ashare_stability_rank_execution
+        adapter = ashare_stability_rank_execution
+    return engine, adapter
 
 
 def freeze_stability_protocol(path, snapshot_path, scope_directory, *, evaluation_end,
