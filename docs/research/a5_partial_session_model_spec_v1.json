@@ -1,0 +1,29 @@
+{
+  "approved_security_sessions": [
+    [
+      "SH688065",
+      "2023-06-15"
+    ]
+  ],
+  "chain": "every_original_observed_close_divided_by_its_published_preclose",
+  "chain_interval": "product_close_over_reference_plus_minus_same_original_0.011_CNY_margin_outward_Decimal50; intersect_model_anchor_ratio_with_half_adjacent_float32_ULP_intervals",
+  "complete_source_quote_exceptions": false,
+  "declared_at": "2026-10-20T04:58:54.471534+00:00",
+  "endpoints": "finite_positive_exact_float32_model_closes_and_complete_original_quotes_on_both_sides",
+  "execution_remains_blocked": true,
+  "individual_gap_model_return_certified": false,
+  "kind": "a5_specific_partial_session_model_spec",
+  "limitations": [
+    "Only the total observed source return across the missing model session is certified. No individual model close, factor, feature or score is reconstructed.",
+    "Issuer original body identifies2023-06-15 afternoon halt; signature year2022 is a preserved printing error, not a backdated publication clock."
+  ],
+  "missing_model_score": "explicitly_reported_partial_session_exception_only",
+  "model_bar_factors_or_prices_mutated": false,
+  "model_bar_imputation": false,
+  "partial_original_quotes_preserved_for_valuation": true,
+  "portfolio_returns_consulted": false,
+  "schema_version": 1,
+  "source_reference_margin_cny": "0.011",
+  "source_reference_margin_unit": "CNY not cents; unchanged1.1cents on each original reference leg",
+  "status": "frozen_before_union_model_fit_and_performance"
+}

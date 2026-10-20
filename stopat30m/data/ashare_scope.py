@@ -8,12 +8,14 @@ PIT database or an instruction to sell an existing out-of-scope holding.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from contextlib import contextmanager
 from datetime import date, datetime, timedelta
 import hashlib
 import json
 from pathlib import Path
 import re
 import shutil
+import threading
 from typing import Mapping, Sequence
 from zoneinfo import ZoneInfo
 
@@ -110,15 +112,51 @@ def _membership_view(day, members, *, scope, require_complete=True):
 
 
 class _ScopeView:
-    def assert_unchanged(self):
+    def _assert_all_originals_unchanged(self):
+        checked = set()
         for proof in self._proofs.values():
+            identity = (proof.path, proof.sha256)
+            if identity in checked:
+                continue
             proof.assert_unchanged()
+            checked.add(identity)
+
+    def assert_unchanged(self):
+        owner = getattr(self, "_verified_batch_owner", None)
+        if owner is not None:
+            if owner != threading.get_ident():
+                raise AshareScopeError("A verified membership batch cannot be shared across threads")
+            return
+        self._assert_all_originals_unchanged()
+
+    @contextmanager
+    def verified_batch(self):
+        """Use parsed intervals between full SHA checks; publish only after exit.
+
+        The gate is object-local, non-reentrant and bound to its owning thread.
+        File mtimes never substitute for original-byte checks. An exception in
+        the body still runs the complete original verification on exit.
+        """
+        gate = self.__dict__.setdefault("_verified_batch_gate", threading.Lock())
+        if not gate.acquire(blocking=False):
+            raise AshareScopeError("A verified membership batch is already active on this view")
+        try:
+            self._assert_all_originals_unchanged()
+            self._verified_batch_owner = threading.get_ident()
+            try:
+                yield self
+            finally:
+                self._verified_batch_owner = None
+                self._assert_all_originals_unchanged()
+        finally:
+            self._verified_batch_owner = None
+            gate.release()
 
     def source_receipts(self):
         return {name: proof.to_dict() for name, proof in self._proofs.items()}
 
     def members_on(self, day, *, scope="union"):
-        return self.view_on(day, scope=scope)["members"]
+        return self.view_on(day, scope=scope, include_bound_inputs=False)["members"]
 
     def filter_cached_instruments(self, instruments: Sequence[str], day, *, scope="union"):
         """Return an eligible view; never delete files or mutate source/cache input."""
@@ -182,7 +220,26 @@ class HistoricalAshareScope(_ScopeView):
         result.assert_unchanged()
         return result
 
-    def view_on(self, day, *, scope="union", require_complete=True):
+    @classmethod
+    def from_official_reconstruction(cls, directory, *, start, end):
+        """Verify official event semantics and every original, then open dated intervals."""
+        from stopat30m.data.official_index_membership import verify_official_reconstruction
+        root = Path(directory).resolve()
+        try:
+            proofs = verify_official_reconstruction(root, start=start, end=end)
+            manifest = json.loads((root / "manifest.json").read_text())
+            result = cls.from_files({name: root / (name + ".txt") for name in ALLOWED_SCOPES}, start=start, end=end,
+                expected_sha256={name: manifest["files"][name + ".txt"] for name in ALLOWED_SCOPES})
+            result._proofs.update({"official:" + name: SourceProof.read(proof["path"], proof["sha256"])
+                                  for name, proof in proofs.items()})
+        except (ValueError, KeyError, OSError) as exc:
+            raise AshareScopeError(str(exc)) from exc
+        result._basis = "complete_official_adjustment_events_replayed_from_independent_official_anchor_no_price_or_issuer_mapping"
+        result.official_membership_evidence_path = root / "official_membership_evidence.json"
+        result.assert_unchanged()
+        return result
+
+    def view_on(self, day, *, scope="union", require_complete=True, include_bound_inputs=True):
         day = _day(day)
         _scope(scope)
         if not self.start <= day <= self.end:
@@ -190,8 +247,9 @@ class HistoricalAshareScope(_ScopeView):
         self.assert_unchanged()
         members = {name: self._pools[name].members_on(day) for name in ALLOWED_SCOPES}
         result = _membership_view(day, members, scope=scope, require_complete=require_complete)
-        result.update(membership_basis=self._basis,
-            announcement_time_PIT=False, bound_inputs=self.source_receipts())
+        result.update(membership_basis=self._basis, announcement_time_PIT=False)
+        if include_bound_inputs:
+            result["bound_inputs"] = self.source_receipts()
         return result
 
     def audit_sessions(self, sessions, *, scope="union"):
@@ -199,7 +257,7 @@ class HistoricalAshareScope(_ScopeView):
         days = list(sessions)
         if not days or days != sorted(set(days)):
             raise AshareScopeError("Scope audit requires unique ordered actual exchange sessions")
-        rows = [{key: value for key, value in self.view_on(day, scope=scope, require_complete=False).items()
+        rows = [{key: value for key, value in self.view_on(day, scope=scope, require_complete=False, include_bound_inputs=False).items()
                  if key not in {"members", "bound_inputs"}} for day in days]
         self.assert_unchanged()
         return {"kind": "ashare_historical_scope_audit", "scope": scope, "status": "passed" if all(row["usable"] for row in rows) else "blocked",
@@ -237,7 +295,7 @@ class HistoricalAshareScope(_ScopeView):
             raise AshareScopeError("No actual source sessions in the candidate repair window")
         targets = set()
         for day in selected:
-            targets.update(self.view_on(day, scope=scope, require_complete=False)["members"])
+            targets.update(self.view_on(day, scope=scope, require_complete=False, include_bound_inputs=False)["members"])
         self.assert_unchanged()
         return sorted(targets)
 
@@ -265,6 +323,20 @@ class HistoricalAshareScope(_ScopeView):
         else:
             raise AshareScopeError("Training view needs explicit datetime/instrument columns or named index levels")
         return frame.loc[self.training_row_mask(dates, instruments, scope=scope)].copy()
+
+
+def load_verified_historical_scope(directory, *, start, end, require_official=False):
+    """Dispatch explicit derivation kinds; clipping never impersonates official proof."""
+    root = Path(directory).resolve()
+    try:
+        kind = json.loads((root / "manifest.json").read_text()).get("kind")
+    except (ValueError, OSError) as exc:
+        raise AshareScopeError("Historical scope manifest is unavailable") from exc
+    if kind == "ashare_official_event_membership_reconstruction":
+        return HistoricalAshareScope.from_official_reconstruction(root, start=start, end=end)
+    if not require_official and kind == "ashare_code_validity_interval_derivation":
+        return HistoricalAshareScope.from_derived(root, start=start, end=end)
+    raise AshareScopeError("A passed official membership reconstruction is required for this experiment")
 
 
 def _observed_stamp(value, day):
@@ -336,7 +408,7 @@ class CurrentAshareScope(_ScopeView):
         result.assert_unchanged()
         return result
 
-    def view_on(self, day, *, scope="union", require_complete=True):
+    def view_on(self, day, *, scope="union", require_complete=True, include_bound_inputs=True):
         day = _day(day)
         if day != self.as_of_date:
             raise AshareScopeError("Current membership cannot be backdated or carried to another session")
@@ -344,7 +416,9 @@ class CurrentAshareScope(_ScopeView):
         result = _membership_view(day, self._members, scope=scope, require_complete=require_complete)
         result.update(membership_basis="dated_current_source_observation_for_this_date_only",
             historical_membership=False, historical_signal_availability_proven=False,
-            observed_at=dict(self._observed_at), bound_inputs=self.source_receipts())
+            observed_at=dict(self._observed_at))
+        if include_bound_inputs:
+            result["bound_inputs"] = self.source_receipts()
         return result
 
 

@@ -1,0 +1,33 @@
+{
+  "declared_at": "2026-10-20T04:58:54.471534+00:00",
+  "formula": "implied_reference = raw_current_close * normalized_previous_observed_close / normalized_current_close",
+  "halt_prices_inferred_from_missing_bars": false,
+  "initial_original_quote": "reported_boundary_without_a_previous_original_quote_not_a_verified_temporal_comparison",
+  "interval_policy": "outward_Decimal_50_digit_lower_upper_implied_reference_intersects_published_reference_plus_or_minus_margin",
+  "kind": "a5_adjusted_price_temporal_bridge_spec",
+  "missing_model_observation": "blocked_except_independently_frozen_specific_partial_policy_and_certified_full_source_chain",
+  "nonintersecting_intervals": "unresolved_precision_or_adjustment_basis_blocks_raw_ohlc_and_enters_source_review_queue",
+  "normalized_storage_dtype": "float32",
+  "observations": "actual_original_positive_OHLCV_quotes_including_independently_evidenced_partial_sessions",
+  "partial_missing_model_rule": "specific_issuer_evidenced_partial_model_gap_with_full_source_return_chain",
+  "partial_rule_spec": {
+    "path": "/Users/wujiang/workspace/stopat30m/docs/research/a5_partial_session_model_spec_v1.json",
+    "sha256": "fb6a8ce4423d951594eb1cb103ed3f32ad1ce9e8a2df39c7d859e060496c1859"
+  },
+  "portfolio_returns_consulted_for_this_rule": false,
+  "previous_observation": "all_original_observed_quotes; sole specifically approved missing_model_session uses full_source_return_chain_between_real_model_anchors",
+  "prior_rule_preserved": {
+    "path": "/Users/wujiang/workspace/stopat30m/docs/research/a5_adjusted_price_bridge_spec.json",
+    "sha256": "07d9343fc0cb854fc147d2662fcc45494a84f58d36d79d55b587a7be8bd1b7c9"
+  },
+  "provider_pre_storage_rounding_is_automatically_excused": false,
+  "rule_version": "a5-normalized-raw-temporal-bridge-v2-explicit-partial-chain",
+  "schema_version": 1,
+  "source_chain_margin_policy": "propagate_unchanged_0.011_CNY_per_original_reference_leg",
+  "source_corporate_actions_inferred_from_factor_jumps": false,
+  "source_reference_margin_basis": "unchanged_A2_exchange_reference_tick_margin_no_performance_or_exception_count_tuning",
+  "source_reference_margin_cny": "0.011",
+  "status": "frozen_before_union_model_fit_and_performance",
+  "storage_error_bound": "half_adjacent_float32_ULP_on_each_side_of_each_stored_normalized_close",
+  "unknown_precision_requires_independent_original_evidence": true
+}

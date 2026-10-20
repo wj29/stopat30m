@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "kind": "a5_uniform_model_price_window",
+  "declared_before_model_fit_or_portfolio_returns": true,
+  "requested_price_start": "2017-01-01",
+  "end": "2026-10-19",
+  "first_membership_and_training_year": 2018,
+  "price_year_2017_role": "feature_warmup_only_no_claim_of_verified_2017_index_membership",
+  "selection": "all_distinct_official_historical_CSI300_and_CSI1000_members_2018_through_end",
+  "operation": "same_calendar_window_for_every_selected_security_preserve_retained_float32_payload_bytes",
+  "full_original_archive_and_failed_source_rows_preserved": true,
+  "price_or_factor_interpolation": false,
+  "drop_bad_rows_inside_declared_window": false,
+  "new_original_supplier_generation_claimed": false,
+  "whole_security_replacement": "complete_declared_window_with_explicit_original_collection_date_views",
+  "window_reason": "five_year_annual_training_for_2023_first_execution_year_starts_2018_with_a_full_preceding_warmup_year",
+  "performance_used_to_choose_window": false,
+  "declared_at": "2026-10-20T03:35:30.257141+00:00"
+}

@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "kind": "a5_adjusted_price_temporal_bridge_spec",
+  "rule_version": "a5-normalized-raw-temporal-bridge-v1",
+  "declared_at": "2026-10-20T03:22:22+00:00",
+  "status": "frozen_before_union_model_fit_and_performance",
+  "formula": "implied_reference = raw_current_close * normalized_previous_observed_close / normalized_current_close",
+  "observations": "actual_original_positive_OHLCV_quotes_including_independently_evidenced_partial_sessions",
+  "previous_observation": "immediately_previous_original_observed_quote_never_skip_a_missing_model_quote",
+  "source_reference_margin_cny": "0.011",
+  "source_reference_margin_basis": "unchanged_A2_exchange_reference_tick_margin_no_performance_or_exception_count_tuning",
+  "normalized_storage_dtype": "float32",
+  "storage_error_bound": "half_adjacent_float32_ULP_on_each_side_of_each_stored_normalized_close",
+  "interval_policy": "outward_Decimal_50_digit_lower_upper_implied_reference_intersects_published_reference_plus_or_minus_margin",
+  "nonintersecting_intervals": "unresolved_precision_or_adjustment_basis_blocks_raw_ohlc_and_enters_source_review_queue",
+  "provider_pre_storage_rounding_is_automatically_excused": false,
+  "unknown_precision_requires_independent_original_evidence": true,
+  "missing_model_observation": "blocked_not_carried_or_skipped",
+  "initial_original_quote": "reported_boundary_without_a_previous_original_quote_not_a_verified_temporal_comparison",
+  "halt_prices_inferred_from_missing_bars": false,
+  "source_corporate_actions_inferred_from_factor_jumps": false,
+  "portfolio_returns_consulted_for_this_rule": false
+}

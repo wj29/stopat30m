@@ -1,0 +1,39 @@
+{
+  "kind": "a5_capital_tax_accounting_spec",
+  "version": 3,
+  "policy": "individual_public_market_20_percent_upper_bound_no_refund",
+  "base_tax_reserve_rate": "0.20",
+  "maximum_effective_cash_rate": "1",
+  "rate_decimal_places": 50,
+  "rate_rounding": "ceiling",
+  "classification": [
+    "exempt_share_premium",
+    "exempt_issuer_implemented_tax_schedule",
+    "exempt_individually_evidenced",
+    "taxable_other_capital_reserve",
+    "unresolved_conservative_upper_bound"
+  ],
+  "reserve_formula": "0.20 * (cash_per_record_share + evidenced_stock_dividend_face_per_record_share + nonexempt_capital_face_per_record_share)",
+  "effective_cash_rate_formula": "max(existing_evidenced_cash_rate, ceil_50_places(required_reserve / cash_per_record_share))",
+  "scope": "A5 only; preserve frozen A4 implementation and results",
+  "identity_gate": "Every capital fact must exactly match instrument, ex date, cash, stock-dividend ratio and capital-reserve ratio; required face values must be evidenced and finite",
+  "source_gate": "Every referenced original is SHA256 checked; a reviewed original issuer PDF with HTTPS URL and page reference is required",
+  "face_value_gate": "No default face value. Nonexempt capital face must equal the evidenced delivered capital ratio times the evidenced share face value",
+  "cash_gate": "Cash must cover the whole maximum reserve, including any stock dividend. Insufficient or zero cash blocks the event without changing it",
+  "classification_gate": "Unresolved source classification may only use an explicit conservative upper-bound fact with evidenced nominal face; it remains unresolved in the report and is never asserted taxable or exempt",
+  "exempt_gate": "Individually verified share-premium source or issuer exemption statement; separately report an implemented complete personal-tax schedule inference when short-month total tax equals 20% of actual cash to the issuer six decimal places per ten shares, stock dividend is zero, and the reserve subaccount remains unidentified. Neither path exempts cash or stock dividends",
+  "timing": "Reserve at the existing cash-entitlement/payment events. This is a research cost upper bound, not an exact brokerage withholding-date simulation",
+  "holding_period_tax_refund": false,
+  "long_holding_tax_discount": false,
+  "historical_announcement_time_tax_classification_claim": false,
+  "economic_terms_mutation": false,
+  "annotation_values_allowed": [
+    "cash_dividend_tax_rate"
+  ],
+  "sidecar": "Keep evidenced capital face, source classifications, unresolved keys, tax arithmetic, receipts and implementation/spec SHA in the A5 accounting report",
+  "policy_sources": [
+    "https://www.chinatax.gov.cn/chinatax/n810341/n810765/n1465977/201512/c2061137/content.html",
+    "https://www.chinatax.gov.cn/n810341/n810755/c1797427/content.html"
+  ],
+  "exempt_basis_disclosure": "Generic individually reviewed legacy exemption facts retain their original basis_kind, basis and inference disclosure; do not relabel an issuer total-tax schedule as direct proof of a share-premium debit. Financial account reconciliation inferences remain separately disclosed. Tax costs are unchanged."
+}

@@ -711,3 +711,7 @@ _register_ashare_validation_commands(research_group)
 from stopat30m.ashare_scope_cli import register_commands as _register_ashare_scope_commands
 
 _register_ashare_scope_commands(research_group)
+
+from stopat30m.ashare_union_cli import register_commands as _register_ashare_union_commands
+
+_register_ashare_union_commands(research_group)
