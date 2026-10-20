@@ -1,0 +1,20 @@
+{
+  "kind": "a5_distribution_tax_reserve_spec",
+  "version": 1,
+  "base_tax_reserve_rate": "0.20",
+  "effective_cash_rate_decimal_places": 50,
+  "holding_period_tax_refund": false,
+  "source_classification_unknown_is_exempt": false,
+  "nominal_share_face_default": null,
+  "existing_cash_rate_maximum": "1",
+  "reserve_clock": "known_ex_date_before_orders_from_existing_spendable_cash",
+  "quantity_basis": "finalized_actual_record_date_holdings_only",
+  "additional_tax_rounding": "ceil_cent_of_exact_additional_and_at_least_ceil_cent_full_less_legacy_cash_tax",
+  "legacy_cash_tax_rounding": "HALF_UP(quantity_times_actual_cash)_then_HALF_UP(gross_times_effective_cash_rate)",
+  "cash_shortfall_policy": "invalidate_and_stop_no_borrowing_no_tax_clipping",
+  "replay_policy": "once_per_event_exact_terms_and_record_snapshot_digest",
+  "payment_or_listing_day_extra_tax": false,
+  "research_conservative_expense_not_actual_broker_tax_clock": true,
+  "noncash_delivery_terms_changed": false,
+  "source_scope": "new_independently_gated_stability_research_only_no_primary_rewrite"
+}

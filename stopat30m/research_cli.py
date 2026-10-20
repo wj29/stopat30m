@@ -715,3 +715,7 @@ _register_ashare_scope_commands(research_group)
 from stopat30m.ashare_union_cli import register_commands as _register_ashare_union_commands
 
 _register_ashare_union_commands(research_group)
+
+from stopat30m.ashare_stability_cli import register_commands as _register_ashare_stability_commands
+
+_register_ashare_stability_commands(research_group)

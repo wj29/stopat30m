@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "kind": "a5_two_session_ipo_unit_factor_prefix_derivation_spec",
+  "allowed_instrument": "SH688612",
+  "required_prefix_sessions": 2,
+  "required_prefix_returned_mode": "3",
+  "requested_hfq_mode": "1",
+  "required_official_first_factor_at_raw_session_index": 2,
+  "required_official_first_backward_factor": "1",
+  "ohlc_validation_rtol": 0.000001,
+  "ohlc_validation_atol": 0.00000001,
+  "first_raw_session_must_equal_original_official_ipo": true,
+  "prefix_must_be_first_two_actual_exchange_sessions": true,
+  "all_later_original_hfq_rows_must_have_mode_one": true,
+  "full_history_raw_times_independent_official_factors_must_match_original_hfq_ohlc": true,
+  "original_response_bytes_or_mode_flags_modified": false,
+  "source_rows_removed": false,
+  "model_metrics_or_returns_used": false,
+  "supplier_atomic_vintage_claimed": false,
+  "derived_frame_retains_original_source_mode_annotations": true
+}
