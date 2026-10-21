@@ -1,0 +1,130 @@
+{
+  "kind": "a14_model_debug_design",
+  "schema_version": 1,
+  "declared_at": "2026-10-21T11:11:08.037217+00:00",
+  "any_new_candidate_fits_or_returns_computed": false,
+  "baseline": "byte_identical_original_A5_annual_H5_models_and_predictions_100rounds_5years",
+  "label": "Ref($open,-6)/Ref($open,-1)-1",
+  "features": "official_Alpha158_original_train_only_processors_and_CSRankNorm_H5_labels",
+  "candidates": [
+    {
+      "key": "capacity300",
+      "lookback_calendar_years": 5,
+      "spec": {
+        "num_boost_round": 300,
+        "learning_rate": 0.03,
+        "num_leaves": 31,
+        "max_depth": 6,
+        "min_data_in_leaf": 100,
+        "lambda_l2": 1.0,
+        "seed": 20261019
+      }
+    },
+    {
+      "key": "regularized300",
+      "lookback_calendar_years": 5,
+      "spec": {
+        "num_boost_round": 300,
+        "learning_rate": 0.03,
+        "num_leaves": 15,
+        "max_depth": 4,
+        "min_data_in_leaf": 500,
+        "lambda_l2": 10.0,
+        "seed": 20261019
+      }
+    },
+    {
+      "key": "recent3_capacity300",
+      "lookback_calendar_years": 3,
+      "spec": {
+        "num_boost_round": 300,
+        "learning_rate": 0.03,
+        "num_leaves": 31,
+        "max_depth": 6,
+        "min_data_in_leaf": 100,
+        "lambda_l2": 1.0,
+        "seed": 20261019
+      }
+    }
+  ],
+  "selection": {
+    "execution_year": 2023,
+    "training_uses": "strict_prior_calendar_years_actual6session_label_maturity",
+    "primary_eligible": "candidate_financially_valid_and_net_strictly_higher_than_original_and_conservative_drawdown_no_worse",
+    "choice": "eligible_candidates_if_any_else_all_financially_valid_candidates_sorted_by_net_return_desc_then_conservative_drawdown_less_negative_then_trade_friction_asc_then_key_lexicographic",
+    "fallback": "best_valid_candidate_is_diagnostic_only_when_no_primary_eligible; if_none_valid_stop_no_confirmation",
+    "selection_metric": "actual_fixed20_hold10_cap2_afterfee_ledger_not_train_loss_or_global_IC",
+    "selection_decision_frozen_before_any_2024_candidate_fit_or_return": true
+  },
+  "confirmation": {
+    "execution_year": 2024,
+    "fit_only_selected_candidate": true,
+    "no_reselection_from_2024": true,
+    "confirmation_pass": "both_years_financially_valid_candidate_net_strictly_higher_than_original_and_conservative_drawdown_no_worse_each_year",
+    "also_run_continuous_2023_2024": "same_selected_candidate_annual_models_with_no_capital_or_phase_reset_no_new_fit"
+  },
+  "retrospective": {
+    "execution_years": [
+      2025,
+      2026
+    ],
+    "evaluation_end": "2026-10-19",
+    "fit_only_selected_candidate": true,
+    "run_even_confirmation_fails": "diagnosis_only_not_promotion",
+    "years_already_viewed": true,
+    "cannot_reselect_model_or_parameters": true,
+    "accounts": [
+      "2025",
+      "2026",
+      "continuous"
+    ]
+  },
+  "source_families": {
+    "primary": "original_A5_primary_v2_snapshot_scope_audit_model_package_for2023_2024",
+    "stability": "original_A5_stability_v2_snapshot_scope_audit_model_package_for2025_2026",
+    "no_snapshot_or_audit_mixing": true
+  },
+  "execution": {
+    "initial_cash_cny": "100000.00",
+    "top_k": 20,
+    "keep_rank": 40,
+    "minimum_hold_actual_sessions": 10,
+    "max_exit_intents": 2,
+    "rebalance_actual_sessions": 5,
+    "fees_lots_T1_limits_tax_events": "original_source_family_bound_rules_actual_rounded_perorder_fees_and_slippage",
+    "cash_control": "none",
+    "unchanged_across_all_models": true,
+    "invalid_Cinda_or_unknown_equity": "retain_invalid_whole_path_no_repair_or_end_trimming",
+    "baseline_stability_full_reproduction": "exact_A6_hold10cap2_all_three_complete_record_sets_before_retrospective_candidate_ledgers"
+  },
+  "budget": {
+    "new_native_fits_max": 6,
+    "selection_fits": 3,
+    "confirmation_fits": 1,
+    "retrospective_fits": 2,
+    "early_stopping": false,
+    "additional_grid_or_seed_search": false,
+    "model_ledgers_if_selected": 14,
+    "selection_ledgers": 4,
+    "confirmation_year_and_continuous_ledgers": 4,
+    "retrospective_ledgers": 6
+  },
+  "diagnostics": [
+    "original_A5_global_RankIC_vs_top20_tail_excess_and_affordable_slice_by_year_month",
+    "train_vs_out_of_time_IC_and_top20_excess",
+    "native_gain_importance_not_causality",
+    "prediction_rank_stability_and_top20_overlap",
+    "actual_afterfee_return_conservative_DD_cost_turnover_monthly_stability"
+  ],
+  "interpretation": [
+    "2023_2024_old_market_history_previously_viewed_but_new_candidate_choice_uses2023_only_2024_untouched_for_this_candidate_selection",
+    "2025_2026_previously_viewed_retrospective_corroboration_not_new_future_OOS",
+    "CSRankNorm_score_is_relative_not_calibrated_absolute_return_or_profit_probability",
+    "positive_global_rank_IC_does_not_prove_top20_tail_or_netprofit",
+    "source_history_reconstructed_not_point_in_time_fundamental_or_historicalmodel_freeze_claim",
+    "no_guarantee_of_20pct_annual_profit"
+  ],
+  "current_paper_action": "keep_original_top20_model_parameters_capital_and_scheduler_unchanged",
+  "auto_promote_or_retrain_live": false,
+  "broker_orders": 0
+}
