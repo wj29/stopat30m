@@ -1,0 +1,90 @@
+{
+  "kind": "a11_fixed_lgb_capital_turnover_design",
+  "schema_version": 1,
+  "declared_at": "2026-10-21T07:02:50.005207+00:00",
+  "any_new_historical_candidate_returns_computed": false,
+  "arms": [
+    {
+      "key": "hold10_cap2",
+      "per_side_NAV_fraction": null
+    },
+    {
+      "key": "cap5pct",
+      "per_side_NAV_fraction": "0.05"
+    },
+    {
+      "key": "cap7p5pct",
+      "per_side_NAV_fraction": "0.075"
+    },
+    {
+      "key": "cap10pct",
+      "per_side_NAV_fraction": "0.10"
+    }
+  ],
+  "periods": [
+    "2025",
+    "2026",
+    "continuous"
+  ],
+  "evaluation_end": "2026-10-19",
+  "initial_cash_cny": "100000.00",
+  "model": "unchanged_original_A5_annual_H5_LGB_2025_and_LGB_2026_predictions",
+  "unchanged": {
+    "top_k": 20,
+    "keep_rank": 40,
+    "minimum_hold_sessions": 10,
+    "max_exit_intents_per_rebalance": 2,
+    "rebalance_actual_sessions": 5,
+    "original_fees_slippage_board_lots_T1_price_limits_halts_tax_and_corporate_actions": true,
+    "signal_ranking_and_entry_candidates": "preceding_actual_close_frozen_original_plan",
+    "retained_shares": "not_reweighted",
+    "no_reselection_or_reallocation_after_rejected_orders": true
+  },
+  "capital_limit": {
+    "denominator": "preceding_actual_close_conservative_lower_NAV",
+    "per_side_budget": "floor_to_CNY_cent(prior_NAV*fraction)",
+    "measurement": "actual_filled_gross_notional_at_slippage_inclusive_execution_price",
+    "buy_sell_budgets": "independent_no_borrowing_no_unused_carry_forward",
+    "fees": "excluded_from_notional_cap_but_cash_must_cover_original_rounded_fees",
+    "initial_exemption": "first_scheduled_rebalance_batch_only_even_if_no_fill_never_again_when_cash",
+    "allocation_priority": "original_frozen_exit_priority_and_entry_rank_order_no_execution_day_rerank",
+    "sell_quantity": "partial_sell_allowed_by_original_full_position_board_odd_lot_T1_rules_remaining_keeps_origin",
+    "buy_quantity": "can_only_shrink_original_frozen_quantity_no_new_candidates",
+    "execution_guard": "current_observed_open_reference_quantity_guard_no_future_high_low_close",
+    "quote_budget_bound": "BUY_adverse_ceiling_tick_SELL_observed_reference_upper_bound_fallback_reserves_only_never_fills",
+    "slots": "unchanged_original_failed_exit_semantics_no_actual_holdings_hard_cap_partial_exits_can_overflow_target",
+    "rejected_allocation": "unused_reserved_budget_not_reallocated_no_second_pass"
+  },
+  "budget": {
+    "reported_ledgers": 12,
+    "baseline_full_paths_before_candidates": 3,
+    "native_fits": 0,
+    "regenerated_predictions": 0,
+    "post_result_grid_expansion": false
+  },
+  "baseline_reproduction": "all_A6_core_summary_final_state_and13_canonical_records_exact_including_invalid_terminal_day",
+  "decision": {
+    "formal_qualification": "all_candidate_and_original_reference_three_paths_valid",
+    "continuous_net_return": "higher",
+    "continuous_conservative_drawdown": "no_worse",
+    "continuous_fees_plus_embedded_slippage": "lower",
+    "continuous_turnover": "lower",
+    "isolated_2025_and_partial2026": "both_positive_net_and_no_worse_than_reference_net_drawdown_with_lower_cost_and_turnover",
+    "average_invested_fraction_reduction_max": 0.05,
+    "stability": "positive_month_fraction_and_worst63_no_worse",
+    "concentration": "complete_coverage_single_max25pct_top3_max65pct_effective_stock_min4",
+    "preference_if_multiple_qualify": "largest_cap_to_minimize_intervention_not_highest_return",
+    "invalid_reference": "INCONCLUSIVE_INVALID_REFERENCE_preserve_all_and_report_valid_paired_period_diagnostics"
+  },
+  "interpretation": [
+    "retrospective_previously_examined_windows_not_new_future_OOS",
+    "partial_exits_can_increase_actual_name_count_report_count_and_risk_not_hard20_claim",
+    "lower_activity_can_change_exposure_and_stock_path_not_pure_fee_causality",
+    "no_cost_addback_as_gross_return_no_zero_cost_counterfactual",
+    "incomplete_valuation_risk_aggregates_null_not_zero",
+    "old_Cinda_unpriced_exchange_paths_remain_invalid_no_repair_truncation_or_synthetic_cash"
+  ],
+  "active_paper_action": "continue_existing_top20_unchanged",
+  "automatic_promotion": false,
+  "repair_old_Cinda_accounting": false
+}
