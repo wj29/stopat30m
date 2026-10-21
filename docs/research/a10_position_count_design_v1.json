@@ -1,0 +1,82 @@
+{
+  "kind": "a10_fixed_lgb_position_count_design",
+  "schema_version": 1,
+  "declared_at": "2026-10-21T06:32:17.096028+00:00",
+  "any_new_historical_candidate_returns_computed": false,
+  "target_counts": [
+    20,
+    15,
+    10,
+    5
+  ],
+  "periods": [
+    "2025",
+    "2026",
+    "continuous"
+  ],
+  "evaluation_end": "2026-10-19",
+  "initial_cash_cny": "100000.00",
+  "model": "unchanged_original_A5_annual_H5_LGB_2025_and_LGB_2026_predictions",
+  "only_changed_input": "prior_close_rank_planner_target_top_k",
+  "unchanged": {
+    "keep_rank": 40,
+    "minimum_hold_sessions": 10,
+    "max_exit_intents_per_rebalance": 2,
+    "rebalance_actual_sessions": 5,
+    "fees": "original_5_CNY_minimum_0.0003_commission_transfer_historical_stamp_tax",
+    "slippage": "original_2_bps_adverse_plus_0.01_price_tick",
+    "execution": "same_whole_lots_T1_price_limits_halts_no_reselection_no_retained_reweight",
+    "history": "same_actual_signal_date_CSI300_and_CSI1000_members_and_corporate_action_sources",
+    "continuous_account": "no_yearly_cash_reset_or_rebalance_phase_reset"
+  },
+  "budget": {
+    "reported_ledgers": 12,
+    "baseline_top20_full_paths_before_other_arms": 3,
+    "native_fits": 0,
+    "regenerated_predictions": 0,
+    "post_result_grid_expansion": false
+  },
+  "baseline_reproduction": {
+    "compare": "all_core_summary_keys_final_state_and_13_canonical_records_exact_including_invalid_terminal_day",
+    "only_normalized_export_fields": [
+      "variant",
+      "variant_terms",
+      "minimum_commission_fill_fraction",
+      "score_quality",
+      "score_quality_is_fixed_universe_diagnostic"
+    ],
+    "fixed_score_quality": "original_file_bound_not_recomputed_or_claimed_new",
+    "mismatch": "stop_all_remaining_arms_preserve_failure"
+  },
+  "decision": {
+    "qualification": "candidate_and_top20_all_three_paths_valid",
+    "continuous_net_return": "strictly_higher",
+    "continuous_conservative_drawdown": "no_worse",
+    "continuous_actual_fees_plus_slippage": "strictly_lower",
+    "continuous_actual_turnover": "no_higher",
+    "isolated_2025_and_2026_net_returns": "both_positive",
+    "continuous_positive_month_fraction": "no_lower",
+    "continuous_worst_63_session_return": "no_worse",
+    "mean_risky_NAV_exposure_reduction_max": 0.05,
+    "max_single_security_NAV_fraction": 0.25,
+    "max_top3_security_NAV_fraction": 0.65,
+    "minimum_effective_stock_count_on_invested_days": 4,
+    "concentration_data": "complete_required_cash_not_a_diversifying_security",
+    "tie_break": "largest_target_count_among_qualified_not_highest_historical_return",
+    "risk_threshold_origin": "predeclared_research_preferences_not_empirical_confidence_or_guarantees",
+    "any_invalid_baseline_path": "inconclusive_invalid_preserve_all_results_no_switch"
+  },
+  "interpretation": [
+    "retrospective_previously_examined_windows_not_new_future_OOS",
+    "topN_changes_per_name_budget_affordability_actual_exposure_and_concentration_not_pure_commission_causality",
+    "same_exit_cap2_becomes_larger_fraction_of_smaller_portfolio",
+    "keep_rank40_is_absolute_not_scaled_to_2N",
+    "targetN_is_not_a_hard_actual_holdings_cap_after_refused_exits",
+    "do_not_add_fees_back_to_NAV_as_counterfactual_gross_return",
+    "source_confirmed_carry_is_not_guaranteed_liquidation_value",
+    "unresolved_Cinda_exchange_paths_remain_invalid_no_delete_truncate_synthetic_conversion_or_cash_recovery"
+  ],
+  "active_paper_action": "continue_existing_top20_unchanged",
+  "automatic_promotion": false,
+  "repair_old_Cinda_accounting": false
+}
