@@ -1,0 +1,4966 @@
+{
+  "active_paper_changed_by_experiment": false,
+  "baseline_full_reproduction": {
+    "cap7p5pct/2025": {
+      "passed": true,
+      "performance_valid": true,
+      "record_types": 14
+    },
+    "cap7p5pct/2026": {
+      "passed": true,
+      "performance_valid": true,
+      "record_types": 14
+    },
+    "cap7p5pct/continuous": {
+      "passed": true,
+      "performance_valid": true,
+      "record_types": 14
+    },
+    "hold10_cap2/2025": {
+      "passed": true,
+      "performance_valid": true,
+      "record_types": 13
+    },
+    "hold10_cap2/2026": {
+      "passed": true,
+      "performance_valid": true,
+      "record_types": 13
+    },
+    "hold10_cap2/continuous": {
+      "passed": true,
+      "performance_valid": false,
+      "record_types": 13
+    },
+    "matched_original/2025": {
+      "passed": true,
+      "performance_valid": true,
+      "record_types": 14
+    },
+    "matched_original/2026": {
+      "passed": true,
+      "performance_valid": true,
+      "record_types": 14
+    },
+    "matched_original/continuous": {
+      "passed": true,
+      "performance_valid": false,
+      "record_types": 14
+    }
+  },
+  "candidates": [
+    {
+      "cash_control_actual_sessions": 3,
+      "key": "cadence3_min500",
+      "minimum_order_execution_notional_cny": "500"
+    },
+    {
+      "cash_control_actual_sessions": 3,
+      "key": "cadence3_min1000",
+      "minimum_order_execution_notional_cny": "1000"
+    },
+    {
+      "cash_control_actual_sessions": 5,
+      "key": "cadence5_min500",
+      "minimum_order_execution_notional_cny": "500"
+    },
+    {
+      "cash_control_actual_sessions": 5,
+      "key": "cadence5_min1000",
+      "minimum_order_execution_notional_cny": "1000"
+    }
+  ],
+  "control_arms": [
+    "hold10_cap2",
+    "cap7p5pct",
+    "matched_original"
+  ],
+  "created_at": "2026-10-21T09:22:15.841740+00:00",
+  "decision": {
+    "comparisons": [
+      {
+        "arm_key": "cadence3_min500",
+        "isolated_period_diagnostic_passed": false,
+        "periods": {
+          "2025": {
+            "all_four_financially_valid": true,
+            "all_period_checks_passed": true,
+            "candidate_matching_status": "MATCHED",
+            "checks": {
+              "cash_control_fill_count_strictly_lower_than_daily": true,
+              "conservative_drawdown_no_worse_than_daily": true,
+              "friction_strictly_lower_than_daily": true,
+              "net_no_lower_than_daily": true
+            },
+            "descriptive_net_bridge": {
+              "candidate_cash_control_related_net_change_including_cost_and_path": "-0.025238",
+              "exact_additive_net_bridge": true,
+              "pure_cash_or_turnover_causal_claim": false,
+              "raw_cap75_minus_original_net": "-0.0116077",
+              "remaining_cap75_minus_candidate_net_gap": "0.0136303"
+            },
+            "eligible_for_descriptive_comparison": true
+          },
+          "2026": {
+            "all_four_financially_valid": true,
+            "all_period_checks_passed": false,
+            "candidate_matching_status": "MATCHING_FAILED",
+            "checks": {
+              "cash_control_fill_count_strictly_lower_than_daily": null,
+              "conservative_drawdown_no_worse_than_daily": null,
+              "friction_strictly_lower_than_daily": null,
+              "net_no_lower_than_daily": null
+            },
+            "descriptive_net_bridge": null,
+            "eligible_for_descriptive_comparison": false
+          },
+          "continuous": {
+            "all_four_financially_valid": false,
+            "all_period_checks_passed": false,
+            "candidate_matching_status": "INVALID_PATH",
+            "checks": {
+              "cash_control_fill_count_strictly_lower_than_daily": null,
+              "conservative_drawdown_no_worse_than_daily": null,
+              "friction_strictly_lower_than_daily": null,
+              "net_no_lower_than_daily": null
+            },
+            "descriptive_net_bridge": null,
+            "eligible_for_descriptive_comparison": false
+          }
+        },
+        "qualified_for_automatic_promotion": false,
+        "sparse_policy": {
+          "cash_control_sessions": 3,
+          "minimum_order_notional_cny": "500"
+        }
+      },
+      {
+        "arm_key": "cadence3_min1000",
+        "isolated_period_diagnostic_passed": false,
+        "periods": {
+          "2025": {
+            "all_four_financially_valid": true,
+            "all_period_checks_passed": false,
+            "candidate_matching_status": "MATCHING_FAILED",
+            "checks": {
+              "cash_control_fill_count_strictly_lower_than_daily": null,
+              "conservative_drawdown_no_worse_than_daily": null,
+              "friction_strictly_lower_than_daily": null,
+              "net_no_lower_than_daily": null
+            },
+            "descriptive_net_bridge": null,
+            "eligible_for_descriptive_comparison": false
+          },
+          "2026": {
+            "all_four_financially_valid": true,
+            "all_period_checks_passed": false,
+            "candidate_matching_status": "MATCHING_FAILED",
+            "checks": {
+              "cash_control_fill_count_strictly_lower_than_daily": null,
+              "conservative_drawdown_no_worse_than_daily": null,
+              "friction_strictly_lower_than_daily": null,
+              "net_no_lower_than_daily": null
+            },
+            "descriptive_net_bridge": null,
+            "eligible_for_descriptive_comparison": false
+          },
+          "continuous": {
+            "all_four_financially_valid": false,
+            "all_period_checks_passed": false,
+            "candidate_matching_status": "INVALID_PATH",
+            "checks": {
+              "cash_control_fill_count_strictly_lower_than_daily": null,
+              "conservative_drawdown_no_worse_than_daily": null,
+              "friction_strictly_lower_than_daily": null,
+              "net_no_lower_than_daily": null
+            },
+            "descriptive_net_bridge": null,
+            "eligible_for_descriptive_comparison": false
+          }
+        },
+        "qualified_for_automatic_promotion": false,
+        "sparse_policy": {
+          "cash_control_sessions": 3,
+          "minimum_order_notional_cny": "1000"
+        }
+      },
+      {
+        "arm_key": "cadence5_min500",
+        "isolated_period_diagnostic_passed": false,
+        "periods": {
+          "2025": {
+            "all_four_financially_valid": true,
+            "all_period_checks_passed": true,
+            "candidate_matching_status": "MATCHED",
+            "checks": {
+              "cash_control_fill_count_strictly_lower_than_daily": true,
+              "conservative_drawdown_no_worse_than_daily": true,
+              "friction_strictly_lower_than_daily": true,
+              "net_no_lower_than_daily": true
+            },
+            "descriptive_net_bridge": {
+              "candidate_cash_control_related_net_change_including_cost_and_path": "-0.0301847",
+              "exact_additive_net_bridge": true,
+              "pure_cash_or_turnover_causal_claim": false,
+              "raw_cap75_minus_original_net": "-0.0116077",
+              "remaining_cap75_minus_candidate_net_gap": "0.0185770"
+            },
+            "eligible_for_descriptive_comparison": true
+          },
+          "2026": {
+            "all_four_financially_valid": true,
+            "all_period_checks_passed": false,
+            "candidate_matching_status": "MATCHING_FAILED",
+            "checks": {
+              "cash_control_fill_count_strictly_lower_than_daily": null,
+              "conservative_drawdown_no_worse_than_daily": null,
+              "friction_strictly_lower_than_daily": null,
+              "net_no_lower_than_daily": null
+            },
+            "descriptive_net_bridge": null,
+            "eligible_for_descriptive_comparison": false
+          },
+          "continuous": {
+            "all_four_financially_valid": false,
+            "all_period_checks_passed": false,
+            "candidate_matching_status": "INVALID_PATH",
+            "checks": {
+              "cash_control_fill_count_strictly_lower_than_daily": null,
+              "conservative_drawdown_no_worse_than_daily": null,
+              "friction_strictly_lower_than_daily": null,
+              "net_no_lower_than_daily": null
+            },
+            "descriptive_net_bridge": null,
+            "eligible_for_descriptive_comparison": false
+          }
+        },
+        "qualified_for_automatic_promotion": false,
+        "sparse_policy": {
+          "cash_control_sessions": 5,
+          "minimum_order_notional_cny": "500"
+        }
+      },
+      {
+        "arm_key": "cadence5_min1000",
+        "isolated_period_diagnostic_passed": false,
+        "periods": {
+          "2025": {
+            "all_four_financially_valid": true,
+            "all_period_checks_passed": false,
+            "candidate_matching_status": "MATCHING_FAILED",
+            "checks": {
+              "cash_control_fill_count_strictly_lower_than_daily": null,
+              "conservative_drawdown_no_worse_than_daily": null,
+              "friction_strictly_lower_than_daily": null,
+              "net_no_lower_than_daily": null
+            },
+            "descriptive_net_bridge": null,
+            "eligible_for_descriptive_comparison": false
+          },
+          "2026": {
+            "all_four_financially_valid": true,
+            "all_period_checks_passed": false,
+            "candidate_matching_status": "MATCHING_FAILED",
+            "checks": {
+              "cash_control_fill_count_strictly_lower_than_daily": null,
+              "conservative_drawdown_no_worse_than_daily": null,
+              "friction_strictly_lower_than_daily": null,
+              "net_no_lower_than_daily": null
+            },
+            "descriptive_net_bridge": null,
+            "eligible_for_descriptive_comparison": false
+          },
+          "continuous": {
+            "all_four_financially_valid": false,
+            "all_period_checks_passed": false,
+            "candidate_matching_status": "INVALID_PATH",
+            "checks": {
+              "cash_control_fill_count_strictly_lower_than_daily": null,
+              "conservative_drawdown_no_worse_than_daily": null,
+              "friction_strictly_lower_than_daily": null,
+              "net_no_lower_than_daily": null
+            },
+            "descriptive_net_bridge": null,
+            "eligible_for_descriptive_comparison": false
+          }
+        },
+        "qualified_for_automatic_promotion": false,
+        "sparse_policy": {
+          "cash_control_sessions": 5,
+          "minimum_order_notional_cny": "1000"
+        }
+      }
+    ],
+    "current_paper_action": "keep_existing_top20_unchanged",
+    "model_retrained": false,
+    "new_future_OOS_claim": false,
+    "no_post_result_parameter_adjustment": true,
+    "status": "INCONCLUSIVE_INVALID_REFERENCE",
+    "strategy_promoted": false
+  },
+  "design_declared_at": "2026-10-21T09:03:39.814038+00:00",
+  "evaluation_end": "2026-10-19",
+  "evidence": {
+    "active_paper_after": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/experiments/a13_active_paper_after_20261021_v1.json",
+      "sha256": "4789d8c555759d282853fbc0ee469961bbdca35e85ce71f878dc230beacbbe30"
+    },
+    "active_paper_before": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/experiments/a13_active_paper_before_20261021_v2.json",
+      "sha256": "ce1d10c0354fda74bd66c640a7c20ed987c82c3285ff0eb10cc9091feb9a9fe4"
+    },
+    "design": {
+      "path": "/Users/wujiang/workspace/stopat30m/docs/research/a13_sparse_exposure_design_v1.json",
+      "sha256": "557fdf7d711a845397abf00eb13cd69b0521f32d5b0a17491c686a3c98465cd4"
+    },
+    "execution_declaration": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/experiments/a13_sparse_exposure_execution_20261021_v1.json",
+      "sha256": "5b4316b69123998691fb1dcafda24014f90b6b3a1cdc2862c57ec03ed43372f6"
+    },
+    "execution_log": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/experiments/a13_sparse_exposure_run_20261021_v1.log",
+      "sha256": "94447d888a66b91929fff9a5deb9ec2e6291817af26f7f02e8a061335d6c3e33"
+    },
+    "full_test_log": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/experiments/a13_full_tests_20261021_v1.log",
+      "sha256": "1cfb3683ac4e332c511714de212e225a074e1be338b9c7b7cc21e879881c9b8d"
+    },
+    "independent_accounting_review": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/experiments/a13_sparse_exposure_accounting_review_20261021_v1.json",
+      "sha256": "a72a1a57bf646455276080536855b16b2b362e5ea85bfcd5e627708f79d63438"
+    },
+    "plot_manifest": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/plots/a13_sparse_exposure_comparison_20261021_v1/manifest.json",
+      "sha256": "2f0ab2add28c7a3396380182e16bc1b870f86f1de8c4eda57afb09a9d9a92bab"
+    },
+    "pre_execution_semantics_review": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/experiments/a13_independent_pre_execution_design_review_20261021_v2.json",
+      "sha256": "0258d5b537f1c234b642b74d24ff5cb9423952e279276701b2729f3311070891"
+    },
+    "result_manifest": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/experiments/a13_sparse_exposure_fee_validation_20261021_v1/manifest.json",
+      "sha256": "aef517625f7803f29cd93fdd868725b3461d6cc4ce25029e2c62b098d8cccf58"
+    },
+    "result_report": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/experiments/a13_sparse_exposure_fee_validation_20261021_v1/report.json",
+      "sha256": "27da188943581ac147a4b140ff60d0d40b63793b4e039dfc764c91f56d88f7b5"
+    },
+    "source_execution_review": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/experiments/a13_sparse_exposure_source_execution_review_20261021_v1.json",
+      "sha256": "0a57562aa0d131a1d1341320b2c1f315e8b3281046879ae19ae2d926b1b09cfe"
+    },
+    "source_preflight_review": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/experiments/a13_sparse_exposure_source_preflight_20261021_v1.json",
+      "sha256": "93efdd7d08d8e5c6ad575bf626f04bfbd1911390149b5405f2da43a6b6aebe60"
+    }
+  },
+  "execution_declared_at": "2026-10-21T09:09:14.636139+00:00",
+  "initial_cash_per_account_cny": "100000.00",
+  "interpretation": [
+    "historical_windows_already_examined_exploratory_retrospective_not_new_future_OOS",
+    "capital_use_matching_is_not_beta_sector_volatility_or_equal_holdings_risk",
+    "lower_frequency_or_threshold_can_fail_matching_preserve_failures",
+    "costs_and_slippage_already_in_NAV_never_subtract_twice_or_addback",
+    "invalid_Cinda_original_evidence_remains_no_repair_or_enddate_trimming",
+    "no_broker_or_production_parameter_changes"
+  ],
+  "invalid_paths": [
+    "hold10_cap2/continuous",
+    "matched_original/continuous",
+    "cadence3_min500/continuous",
+    "cadence3_min1000/continuous",
+    "cadence5_min500/continuous",
+    "cadence5_min1000/continuous"
+  ],
+  "kind": "a13_sparse_exposure_audited_summary",
+  "ledger_count": 21,
+  "live_broker_orders": 0,
+  "matching_by_arm": {
+    "cadence3_min1000": {
+      "2025": {
+        "above_5pp_dates": [
+          "2025-02-07",
+          "2025-02-10",
+          "2025-02-11",
+          "2025-02-12",
+          "2025-02-13",
+          "2025-02-14",
+          "2025-02-17",
+          "2025-02-18",
+          "2025-02-19",
+          "2025-02-20",
+          "2025-02-21",
+          "2025-02-24",
+          "2025-02-25",
+          "2025-02-26",
+          "2025-02-27",
+          "2025-02-28",
+          "2025-03-03",
+          "2025-03-04",
+          "2025-03-05",
+          "2025-03-06",
+          "2025-03-14",
+          "2025-03-17",
+          "2025-03-18",
+          "2025-03-19",
+          "2025-03-20",
+          "2025-03-21",
+          "2025-03-24",
+          "2025-03-25",
+          "2025-03-26",
+          "2025-03-27",
+          "2025-03-28",
+          "2025-03-31",
+          "2025-04-01",
+          "2025-04-02",
+          "2025-04-03",
+          "2025-05-08",
+          "2025-05-09",
+          "2025-05-12",
+          "2025-05-13",
+          "2025-05-14",
+          "2025-05-16",
+          "2025-05-19",
+          "2025-05-22",
+          "2025-05-23",
+          "2025-05-26",
+          "2025-05-27",
+          "2025-05-28",
+          "2025-05-29",
+          "2025-05-30",
+          "2025-06-03",
+          "2025-06-04",
+          "2025-06-05",
+          "2025-06-20",
+          "2025-06-23",
+          "2025-06-24",
+          "2025-06-25",
+          "2025-06-26",
+          "2025-06-27",
+          "2025-06-30",
+          "2025-07-01",
+          "2025-07-02",
+          "2025-07-03",
+          "2025-07-04",
+          "2025-07-07",
+          "2025-07-08",
+          "2025-07-09",
+          "2025-07-10",
+          "2025-07-11",
+          "2025-07-14",
+          "2025-07-15",
+          "2025-07-16",
+          "2025-07-17",
+          "2025-07-18",
+          "2025-07-21",
+          "2025-07-22",
+          "2025-07-23",
+          "2025-07-24",
+          "2025-07-25",
+          "2025-07-28",
+          "2025-07-29",
+          "2025-07-30",
+          "2025-07-31",
+          "2025-08-01",
+          "2025-08-04",
+          "2025-08-05",
+          "2025-08-06",
+          "2025-08-07",
+          "2025-08-08",
+          "2025-08-11",
+          "2025-08-12",
+          "2025-08-13",
+          "2025-08-14",
+          "2025-08-15",
+          "2025-08-18",
+          "2025-08-19",
+          "2025-08-20",
+          "2025-08-21",
+          "2025-08-22",
+          "2025-08-25",
+          "2025-08-26",
+          "2025-08-27",
+          "2025-08-28",
+          "2025-08-29",
+          "2025-09-01",
+          "2025-09-02",
+          "2025-09-03",
+          "2025-09-04",
+          "2025-09-05",
+          "2025-09-08",
+          "2025-09-09",
+          "2025-09-10",
+          "2025-09-11",
+          "2025-09-12",
+          "2025-09-15",
+          "2025-09-16",
+          "2025-09-17",
+          "2025-09-18",
+          "2025-09-19",
+          "2025-09-22",
+          "2025-09-23",
+          "2025-09-24",
+          "2025-09-25",
+          "2025-09-26",
+          "2025-09-29",
+          "2025-09-30",
+          "2025-10-09",
+          "2025-10-10",
+          "2025-10-13",
+          "2025-10-14",
+          "2025-10-15",
+          "2025-10-16",
+          "2025-10-17",
+          "2025-10-20",
+          "2025-10-21",
+          "2025-10-22",
+          "2025-10-23",
+          "2025-10-24",
+          "2025-10-27",
+          "2025-10-28",
+          "2025-10-29",
+          "2025-10-30",
+          "2025-10-31",
+          "2025-11-03",
+          "2025-11-04",
+          "2025-11-05",
+          "2025-11-06",
+          "2025-11-07",
+          "2025-11-10",
+          "2025-11-11",
+          "2025-11-12",
+          "2025-11-13",
+          "2025-11-14",
+          "2025-11-17",
+          "2025-11-18",
+          "2025-11-19",
+          "2025-11-20",
+          "2025-11-21",
+          "2025-11-24",
+          "2025-11-25",
+          "2025-11-26",
+          "2025-11-27",
+          "2025-11-28",
+          "2025-12-01",
+          "2025-12-02",
+          "2025-12-03",
+          "2025-12-04",
+          "2025-12-05",
+          "2025-12-08",
+          "2025-12-09",
+          "2025-12-10",
+          "2025-12-11",
+          "2025-12-12",
+          "2025-12-15",
+          "2025-12-16",
+          "2025-12-17",
+          "2025-12-18",
+          "2025-12-19"
+        ],
+        "accounting_noncash_gap": {
+          "definition": "1-cash/lower_NAV_including_recorded_noncash_assets_not_a_security_risk_substitute",
+          "mean_absolute_gap": 0.06677545803280732,
+          "mean_signed_gap": 0.06677545803280732,
+          "recorded_pair_count": 243,
+          "used_for_matching_gate": false
+        },
+        "checks": {
+          "abs_mean_signed_gap_at_most_1pp": false,
+          "both_paths_valid": true,
+          "known_exposure_coverage_at_least_99pct": true,
+          "mean_absolute_gap_at_most_2pp": false,
+          "p95_absolute_gap_at_most_5pp": false
+        },
+        "gap_RMSE": 0.07282514532758018,
+        "known_exposure_coverage": 0.9917695473251029,
+        "known_exposure_days": 241,
+        "longest_known_above_5pp_run": 125,
+        "matching_does_not_equal_beta_sector_or_volatility_matching": true,
+        "max_absolute_gap": 0.1252940423358966,
+        "mean_absolute_gap": 0.066962653413675,
+        "mean_signed_gap": 0.066962653413675,
+        "p95_absolute_gap": 0.1091290149470856,
+        "passed": false,
+        "session_count": 243,
+        "status": "MATCHING_FAILED",
+        "threshold_arithmetic": "Decimal_of_serialized_exposure_linear_p95_inclusive_bounds",
+        "unknown_dates": [
+          "2025-04-15",
+          "2025-04-30"
+        ],
+        "unknown_is_not_zero_or_omitted_NAV": true,
+        "unknown_reasons": [
+          {
+            "date": "2025-04-15",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": [
+              "valuation_complete_not_true"
+            ]
+          },
+          {
+            "date": "2025-04-30",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": [
+              "valuation_complete_not_true"
+            ]
+          }
+        ]
+      },
+      "2026": {
+        "above_5pp_dates": [
+          "2026-02-24",
+          "2026-02-25",
+          "2026-02-26",
+          "2026-02-27",
+          "2026-03-02",
+          "2026-03-03",
+          "2026-03-04",
+          "2026-03-05",
+          "2026-03-06",
+          "2026-03-09",
+          "2026-03-10",
+          "2026-03-11",
+          "2026-03-12",
+          "2026-03-13",
+          "2026-03-16",
+          "2026-03-17",
+          "2026-03-18",
+          "2026-03-19",
+          "2026-03-20",
+          "2026-03-23",
+          "2026-03-24",
+          "2026-03-25",
+          "2026-03-26",
+          "2026-03-27",
+          "2026-03-30",
+          "2026-03-31",
+          "2026-04-01",
+          "2026-04-02",
+          "2026-04-03",
+          "2026-04-07",
+          "2026-04-08",
+          "2026-04-09",
+          "2026-04-10",
+          "2026-04-13",
+          "2026-04-14",
+          "2026-04-15",
+          "2026-04-16",
+          "2026-04-17",
+          "2026-04-20",
+          "2026-04-21",
+          "2026-05-18",
+          "2026-05-19",
+          "2026-05-20",
+          "2026-05-21",
+          "2026-05-22",
+          "2026-05-25",
+          "2026-05-26",
+          "2026-05-27",
+          "2026-05-28",
+          "2026-05-29",
+          "2026-06-01",
+          "2026-06-02",
+          "2026-06-03",
+          "2026-06-04",
+          "2026-06-05",
+          "2026-06-08",
+          "2026-06-09",
+          "2026-06-10",
+          "2026-06-11",
+          "2026-06-12",
+          "2026-06-15",
+          "2026-06-16",
+          "2026-06-17",
+          "2026-06-18",
+          "2026-06-22",
+          "2026-06-23",
+          "2026-06-24",
+          "2026-06-25",
+          "2026-06-26",
+          "2026-06-29",
+          "2026-06-30",
+          "2026-07-01",
+          "2026-07-02",
+          "2026-07-03",
+          "2026-07-06",
+          "2026-07-07",
+          "2026-07-08",
+          "2026-07-09",
+          "2026-07-10",
+          "2026-07-13",
+          "2026-07-14",
+          "2026-07-21",
+          "2026-07-22",
+          "2026-08-25",
+          "2026-08-26",
+          "2026-08-27",
+          "2026-08-28",
+          "2026-09-09",
+          "2026-09-11",
+          "2026-09-15",
+          "2026-09-16",
+          "2026-09-17",
+          "2026-09-18",
+          "2026-09-21",
+          "2026-09-22",
+          "2026-09-23",
+          "2026-09-24",
+          "2026-09-28",
+          "2026-09-29",
+          "2026-09-30",
+          "2026-10-08",
+          "2026-10-09",
+          "2026-10-12",
+          "2026-10-13",
+          "2026-10-14",
+          "2026-10-15",
+          "2026-10-16",
+          "2026-10-19"
+        ],
+        "accounting_noncash_gap": {
+          "definition": "1-cash/lower_NAV_including_recorded_noncash_assets_not_a_security_risk_substitute",
+          "mean_absolute_gap": 0.05512782667636384,
+          "mean_signed_gap": 0.05512782667636384,
+          "recorded_pair_count": 189,
+          "used_for_matching_gate": false
+        },
+        "checks": {
+          "abs_mean_signed_gap_at_most_1pp": false,
+          "both_paths_valid": true,
+          "known_exposure_coverage_at_least_99pct": true,
+          "mean_absolute_gap_at_most_2pp": false,
+          "p95_absolute_gap_at_most_5pp": false
+        },
+        "gap_RMSE": 0.062493715429221254,
+        "known_exposure_coverage": 1.0,
+        "known_exposure_days": 189,
+        "longest_known_above_5pp_run": 41,
+        "matching_does_not_equal_beta_sector_or_volatility_matching": true,
+        "max_absolute_gap": 0.1353808151804277,
+        "mean_absolute_gap": 0.055127826676363845,
+        "mean_signed_gap": 0.055127826676363845,
+        "p95_absolute_gap": 0.10685124424547976,
+        "passed": false,
+        "session_count": 189,
+        "status": "MATCHING_FAILED",
+        "threshold_arithmetic": "Decimal_of_serialized_exposure_linear_p95_inclusive_bounds",
+        "unknown_dates": [],
+        "unknown_is_not_zero_or_omitted_NAV": true,
+        "unknown_reasons": []
+      },
+      "continuous": {
+        "above_5pp_dates": [
+          "2025-02-07",
+          "2025-02-10",
+          "2025-02-11",
+          "2025-02-12",
+          "2025-02-13",
+          "2025-02-14",
+          "2025-02-17",
+          "2025-02-18",
+          "2025-02-19",
+          "2025-02-20",
+          "2025-02-21",
+          "2025-02-24",
+          "2025-02-25",
+          "2025-02-26",
+          "2025-02-27",
+          "2025-02-28",
+          "2025-03-03",
+          "2025-03-04",
+          "2025-03-05",
+          "2025-03-06",
+          "2025-03-14",
+          "2025-03-17",
+          "2025-03-18",
+          "2025-03-19",
+          "2025-03-20",
+          "2025-03-21",
+          "2025-03-24",
+          "2025-03-25",
+          "2025-03-26",
+          "2025-03-27",
+          "2025-03-28",
+          "2025-03-31",
+          "2025-04-01",
+          "2025-04-02",
+          "2025-04-03",
+          "2025-05-08",
+          "2025-05-09",
+          "2025-05-12",
+          "2025-05-13",
+          "2025-05-14",
+          "2025-05-16",
+          "2025-05-19",
+          "2025-05-22",
+          "2025-05-23",
+          "2025-05-26",
+          "2025-05-27",
+          "2025-05-28",
+          "2025-05-29",
+          "2025-05-30",
+          "2025-06-03",
+          "2025-06-04",
+          "2025-06-05",
+          "2025-06-20",
+          "2025-06-23",
+          "2025-06-24",
+          "2025-06-25",
+          "2025-06-26",
+          "2025-06-27",
+          "2025-06-30",
+          "2025-07-01",
+          "2025-07-02",
+          "2025-07-03",
+          "2025-07-04",
+          "2025-07-07",
+          "2025-07-08",
+          "2025-07-09",
+          "2025-07-10",
+          "2025-07-11",
+          "2025-07-14",
+          "2025-07-15",
+          "2025-07-16",
+          "2025-07-17",
+          "2025-07-18",
+          "2025-07-21",
+          "2025-07-22",
+          "2025-07-23",
+          "2025-07-24",
+          "2025-07-25",
+          "2025-07-28",
+          "2025-07-29",
+          "2025-07-30",
+          "2025-07-31",
+          "2025-08-01",
+          "2025-08-04",
+          "2025-08-05",
+          "2025-08-06",
+          "2025-08-07",
+          "2025-08-08",
+          "2025-08-11",
+          "2025-08-12",
+          "2025-08-13",
+          "2025-08-14",
+          "2025-08-15",
+          "2025-08-18",
+          "2025-08-19",
+          "2025-08-20",
+          "2025-08-21",
+          "2025-08-22",
+          "2025-08-25",
+          "2025-08-26",
+          "2025-08-27",
+          "2025-08-28",
+          "2025-08-29",
+          "2025-09-01",
+          "2025-09-02",
+          "2025-09-03",
+          "2025-09-04",
+          "2025-09-05",
+          "2025-09-08",
+          "2025-09-09",
+          "2025-09-10",
+          "2025-09-11",
+          "2025-09-12",
+          "2025-09-15",
+          "2025-09-16",
+          "2025-09-17",
+          "2025-09-18",
+          "2025-09-19",
+          "2025-09-22",
+          "2025-09-23",
+          "2025-09-24",
+          "2025-09-25",
+          "2025-09-26",
+          "2025-09-29",
+          "2025-09-30",
+          "2025-10-09",
+          "2025-10-10",
+          "2025-10-13",
+          "2025-10-14",
+          "2025-10-15",
+          "2025-10-16",
+          "2025-10-17",
+          "2025-10-20",
+          "2025-10-21",
+          "2025-10-22",
+          "2025-10-23",
+          "2025-10-24",
+          "2025-10-27",
+          "2025-10-28",
+          "2025-10-29",
+          "2025-10-30",
+          "2025-10-31",
+          "2025-11-03",
+          "2025-11-04",
+          "2025-11-05",
+          "2025-11-06",
+          "2025-11-07",
+          "2025-11-10",
+          "2025-11-11",
+          "2025-11-12",
+          "2025-11-13",
+          "2025-11-14",
+          "2025-11-17",
+          "2025-11-18",
+          "2025-11-19",
+          "2025-11-20",
+          "2025-11-21",
+          "2025-11-24",
+          "2025-11-25",
+          "2025-11-26",
+          "2025-11-27",
+          "2025-11-28",
+          "2025-12-01",
+          "2025-12-02",
+          "2025-12-03",
+          "2025-12-04",
+          "2025-12-05",
+          "2025-12-08",
+          "2025-12-09",
+          "2025-12-10",
+          "2025-12-11",
+          "2025-12-12",
+          "2025-12-15",
+          "2025-12-16",
+          "2025-12-17",
+          "2025-12-18",
+          "2025-12-19",
+          "2026-02-04",
+          "2026-02-05",
+          "2026-02-06",
+          "2026-02-09",
+          "2026-02-10",
+          "2026-03-12",
+          "2026-03-13",
+          "2026-03-16",
+          "2026-03-19",
+          "2026-03-20",
+          "2026-03-23",
+          "2026-03-24",
+          "2026-03-25",
+          "2026-03-26",
+          "2026-03-27",
+          "2026-03-30",
+          "2026-03-31",
+          "2026-04-01",
+          "2026-04-17",
+          "2026-04-20",
+          "2026-05-20",
+          "2026-05-21",
+          "2026-05-22",
+          "2026-05-25",
+          "2026-05-26",
+          "2026-05-27",
+          "2026-06-01",
+          "2026-06-03",
+          "2026-06-04",
+          "2026-06-05",
+          "2026-06-08",
+          "2026-06-09",
+          "2026-07-09",
+          "2026-07-10",
+          "2026-07-13",
+          "2026-07-14",
+          "2026-07-15",
+          "2026-07-16",
+          "2026-07-17",
+          "2026-07-20",
+          "2026-07-21",
+          "2026-07-22",
+          "2026-07-30",
+          "2026-08-13",
+          "2026-08-14",
+          "2026-08-17",
+          "2026-08-20"
+        ],
+        "accounting_noncash_gap": {
+          "definition": "1-cash/lower_NAV_including_recorded_noncash_assets_not_a_security_risk_substitute",
+          "mean_absolute_gap": 0.058643116977930676,
+          "mean_signed_gap": 0.058643116977930676,
+          "recorded_pair_count": 432,
+          "used_for_matching_gate": false
+        },
+        "checks": {
+          "abs_mean_signed_gap_at_most_1pp": false,
+          "both_paths_valid": false,
+          "known_exposure_coverage_at_least_99pct": false,
+          "mean_absolute_gap_at_most_2pp": false,
+          "p95_absolute_gap_at_most_5pp": false
+        },
+        "gap_RMSE": 0.06243617800637103,
+        "known_exposure_coverage": 0.9513888888888888,
+        "known_exposure_days": 411,
+        "longest_known_above_5pp_run": 125,
+        "matching_does_not_equal_beta_sector_or_volatility_matching": true,
+        "max_absolute_gap": 0.1252940423358966,
+        "mean_absolute_gap": 0.05576713844913565,
+        "mean_signed_gap": 0.05576713844913565,
+        "p95_absolute_gap": 0.10385507929010394,
+        "passed": false,
+        "session_count": 432,
+        "status": "INVALID_PATH",
+        "threshold_arithmetic": "Decimal_of_serialized_exposure_linear_p95_inclusive_bounds",
+        "unknown_dates": [
+          "2025-04-15",
+          "2025-04-30",
+          "2026-09-15",
+          "2026-09-16",
+          "2026-09-17",
+          "2026-09-18",
+          "2026-09-21",
+          "2026-09-22",
+          "2026-09-23",
+          "2026-09-24",
+          "2026-09-28",
+          "2026-09-29",
+          "2026-09-30",
+          "2026-10-08",
+          "2026-10-09",
+          "2026-10-12",
+          "2026-10-13",
+          "2026-10-14",
+          "2026-10-15",
+          "2026-10-16",
+          "2026-10-19"
+        ],
+        "unknown_is_not_zero_or_omitted_NAV": true,
+        "unknown_reasons": [
+          {
+            "date": "2025-04-15",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": [
+              "valuation_complete_not_true"
+            ]
+          },
+          {
+            "date": "2025-04-30",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": [
+              "valuation_complete_not_true"
+            ]
+          },
+          {
+            "date": "2026-09-15",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-16",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-17",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-18",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-21",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-22",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-23",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-24",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-28",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-29",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-30",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-08",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-09",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-12",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-13",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-14",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-15",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-16",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-19",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true",
+              "accounting_valid_not_true"
+            ],
+            "reference_coverage_gaps": []
+          }
+        ]
+      }
+    },
+    "cadence3_min500": {
+      "2025": {
+        "above_5pp_dates": [
+          "2025-02-07",
+          "2025-06-06",
+          "2025-06-09"
+        ],
+        "accounting_noncash_gap": {
+          "definition": "1-cash/lower_NAV_including_recorded_noncash_assets_not_a_security_risk_substitute",
+          "mean_absolute_gap": 0.009290760809623124,
+          "mean_signed_gap": 0.004487958304413749,
+          "recorded_pair_count": 243,
+          "used_for_matching_gate": false
+        },
+        "checks": {
+          "abs_mean_signed_gap_at_most_1pp": true,
+          "both_paths_valid": true,
+          "known_exposure_coverage_at_least_99pct": true,
+          "mean_absolute_gap_at_most_2pp": true,
+          "p95_absolute_gap_at_most_5pp": true
+        },
+        "gap_RMSE": 0.015213003925932772,
+        "known_exposure_coverage": 0.9917695473251029,
+        "known_exposure_days": 241,
+        "longest_known_above_5pp_run": 2,
+        "matching_does_not_equal_beta_sector_or_volatility_matching": true,
+        "max_absolute_gap": 0.0655844568830892,
+        "mean_absolute_gap": 0.00931305735399108,
+        "mean_signed_gap": 0.0045510099918566905,
+        "p95_absolute_gap": 0.0330454494225392,
+        "passed": true,
+        "session_count": 243,
+        "status": "MATCHED",
+        "threshold_arithmetic": "Decimal_of_serialized_exposure_linear_p95_inclusive_bounds",
+        "unknown_dates": [
+          "2025-04-15",
+          "2025-04-30"
+        ],
+        "unknown_is_not_zero_or_omitted_NAV": true,
+        "unknown_reasons": [
+          {
+            "date": "2025-04-15",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": [
+              "valuation_complete_not_true"
+            ]
+          },
+          {
+            "date": "2025-04-30",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": [
+              "valuation_complete_not_true"
+            ]
+          }
+        ]
+      },
+      "2026": {
+        "above_5pp_dates": [],
+        "accounting_noncash_gap": {
+          "definition": "1-cash/lower_NAV_including_recorded_noncash_assets_not_a_security_risk_substitute",
+          "mean_absolute_gap": 0.013408565796071865,
+          "mean_signed_gap": 0.010726719609194283,
+          "recorded_pair_count": 189,
+          "used_for_matching_gate": false
+        },
+        "checks": {
+          "abs_mean_signed_gap_at_most_1pp": false,
+          "both_paths_valid": true,
+          "known_exposure_coverage_at_least_99pct": true,
+          "mean_absolute_gap_at_most_2pp": true,
+          "p95_absolute_gap_at_most_5pp": true
+        },
+        "gap_RMSE": 0.017352176736520005,
+        "known_exposure_coverage": 1.0,
+        "known_exposure_days": 189,
+        "longest_known_above_5pp_run": 0,
+        "matching_does_not_equal_beta_sector_or_volatility_matching": true,
+        "max_absolute_gap": 0.0470564722464396,
+        "mean_absolute_gap": 0.013408565796071859,
+        "mean_signed_gap": 0.010726719609194281,
+        "p95_absolute_gap": 0.03671690806309878,
+        "passed": false,
+        "session_count": 189,
+        "status": "MATCHING_FAILED",
+        "threshold_arithmetic": "Decimal_of_serialized_exposure_linear_p95_inclusive_bounds",
+        "unknown_dates": [],
+        "unknown_is_not_zero_or_omitted_NAV": true,
+        "unknown_reasons": []
+      },
+      "continuous": {
+        "above_5pp_dates": [
+          "2025-02-07",
+          "2025-06-06",
+          "2025-06-09",
+          "2026-03-19",
+          "2026-07-16",
+          "2026-07-17"
+        ],
+        "accounting_noncash_gap": {
+          "definition": "1-cash/lower_NAV_including_recorded_noncash_assets_not_a_security_risk_substitute",
+          "mean_absolute_gap": 0.01287922219054395,
+          "mean_signed_gap": 0.007813173172505418,
+          "recorded_pair_count": 432,
+          "used_for_matching_gate": false
+        },
+        "checks": {
+          "abs_mean_signed_gap_at_most_1pp": true,
+          "both_paths_valid": false,
+          "known_exposure_coverage_at_least_99pct": false,
+          "mean_absolute_gap_at_most_2pp": true,
+          "p95_absolute_gap_at_most_5pp": true
+        },
+        "gap_RMSE": 0.015272092848710055,
+        "known_exposure_coverage": 0.9513888888888888,
+        "known_exposure_days": 411,
+        "longest_known_above_5pp_run": 2,
+        "matching_does_not_equal_beta_sector_or_volatility_matching": true,
+        "max_absolute_gap": 0.0655844568830892,
+        "mean_absolute_gap": 0.009617088995431091,
+        "mean_signed_gap": 0.004390903109039578,
+        "p95_absolute_gap": 0.03484743793182445,
+        "passed": false,
+        "session_count": 432,
+        "status": "INVALID_PATH",
+        "threshold_arithmetic": "Decimal_of_serialized_exposure_linear_p95_inclusive_bounds",
+        "unknown_dates": [
+          "2025-04-15",
+          "2025-04-30",
+          "2026-09-15",
+          "2026-09-16",
+          "2026-09-17",
+          "2026-09-18",
+          "2026-09-21",
+          "2026-09-22",
+          "2026-09-23",
+          "2026-09-24",
+          "2026-09-28",
+          "2026-09-29",
+          "2026-09-30",
+          "2026-10-08",
+          "2026-10-09",
+          "2026-10-12",
+          "2026-10-13",
+          "2026-10-14",
+          "2026-10-15",
+          "2026-10-16",
+          "2026-10-19"
+        ],
+        "unknown_is_not_zero_or_omitted_NAV": true,
+        "unknown_reasons": [
+          {
+            "date": "2025-04-15",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": [
+              "valuation_complete_not_true"
+            ]
+          },
+          {
+            "date": "2025-04-30",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": [
+              "valuation_complete_not_true"
+            ]
+          },
+          {
+            "date": "2026-09-15",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-16",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-17",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-18",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-21",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-22",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-23",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-24",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-28",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-29",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-30",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-08",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-09",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-12",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-13",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-14",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-15",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-16",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-19",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true",
+              "accounting_valid_not_true"
+            ],
+            "reference_coverage_gaps": []
+          }
+        ]
+      }
+    },
+    "cadence5_min1000": {
+      "2025": {
+        "above_5pp_dates": [
+          "2025-02-07",
+          "2025-02-10",
+          "2025-02-11",
+          "2025-02-12",
+          "2025-02-13",
+          "2025-02-21",
+          "2025-02-24",
+          "2025-02-25",
+          "2025-02-26",
+          "2025-02-27",
+          "2025-02-28",
+          "2025-03-03",
+          "2025-03-04",
+          "2025-03-05",
+          "2025-03-06",
+          "2025-03-14",
+          "2025-03-17",
+          "2025-03-18",
+          "2025-03-19",
+          "2025-03-20",
+          "2025-03-21",
+          "2025-03-24",
+          "2025-03-25",
+          "2025-03-26",
+          "2025-03-27",
+          "2025-03-28",
+          "2025-03-31",
+          "2025-04-01",
+          "2025-04-02",
+          "2025-04-03",
+          "2025-05-08",
+          "2025-05-29",
+          "2025-05-30",
+          "2025-06-03",
+          "2025-06-04",
+          "2025-06-05",
+          "2025-06-20",
+          "2025-06-23",
+          "2025-06-24",
+          "2025-06-25",
+          "2025-06-26",
+          "2025-06-27",
+          "2025-06-30",
+          "2025-07-01",
+          "2025-07-02",
+          "2025-07-03",
+          "2025-07-04",
+          "2025-07-07",
+          "2025-07-08",
+          "2025-07-09",
+          "2025-07-10",
+          "2025-07-11",
+          "2025-07-14",
+          "2025-07-15",
+          "2025-07-16",
+          "2025-07-17",
+          "2025-07-18",
+          "2025-07-21",
+          "2025-07-22",
+          "2025-07-23",
+          "2025-07-24",
+          "2025-07-25",
+          "2025-07-28",
+          "2025-07-29",
+          "2025-07-30",
+          "2025-07-31",
+          "2025-08-01",
+          "2025-08-04",
+          "2025-08-05",
+          "2025-08-06",
+          "2025-08-07",
+          "2025-08-08",
+          "2025-08-11",
+          "2025-08-12",
+          "2025-08-13",
+          "2025-08-14",
+          "2025-08-15",
+          "2025-08-18",
+          "2025-08-19",
+          "2025-08-20",
+          "2025-08-21",
+          "2025-08-22",
+          "2025-08-25",
+          "2025-08-26",
+          "2025-08-27",
+          "2025-08-28",
+          "2025-08-29",
+          "2025-09-01",
+          "2025-09-02",
+          "2025-09-03",
+          "2025-09-04",
+          "2025-09-12",
+          "2025-09-15",
+          "2025-09-16",
+          "2025-09-17",
+          "2025-09-18",
+          "2025-09-19",
+          "2025-09-22",
+          "2025-09-23",
+          "2025-09-24",
+          "2025-09-25",
+          "2025-09-26",
+          "2025-09-29",
+          "2025-09-30",
+          "2025-10-09",
+          "2025-10-10",
+          "2025-10-13",
+          "2025-10-14",
+          "2025-10-15",
+          "2025-10-16",
+          "2025-10-17",
+          "2025-10-20",
+          "2025-10-21",
+          "2025-10-22",
+          "2025-10-23",
+          "2025-10-24",
+          "2025-10-27",
+          "2025-10-28",
+          "2025-10-29",
+          "2025-10-30",
+          "2025-10-31",
+          "2025-11-03",
+          "2025-11-04",
+          "2025-11-05",
+          "2025-11-06",
+          "2025-11-07",
+          "2025-11-10",
+          "2025-11-11",
+          "2025-11-12",
+          "2025-11-13",
+          "2025-11-14",
+          "2025-11-17",
+          "2025-11-18",
+          "2025-11-19",
+          "2025-11-20",
+          "2025-11-21",
+          "2025-11-24",
+          "2025-11-25",
+          "2025-11-26",
+          "2025-11-27",
+          "2025-11-28",
+          "2025-12-01",
+          "2025-12-02",
+          "2025-12-03",
+          "2025-12-04",
+          "2025-12-05",
+          "2025-12-08",
+          "2025-12-09",
+          "2025-12-10",
+          "2025-12-11",
+          "2025-12-12",
+          "2025-12-15",
+          "2025-12-16",
+          "2025-12-17",
+          "2025-12-18",
+          "2025-12-19"
+        ],
+        "accounting_noncash_gap": {
+          "definition": "1-cash/lower_NAV_including_recorded_noncash_assets_not_a_security_risk_substitute",
+          "mean_absolute_gap": 0.06095370157639886,
+          "mean_signed_gap": 0.06095370157639886,
+          "recorded_pair_count": 243,
+          "used_for_matching_gate": false
+        },
+        "checks": {
+          "abs_mean_signed_gap_at_most_1pp": false,
+          "both_paths_valid": true,
+          "known_exposure_coverage_at_least_99pct": true,
+          "mean_absolute_gap_at_most_2pp": false,
+          "p95_absolute_gap_at_most_5pp": false
+        },
+        "gap_RMSE": 0.06667286439671742,
+        "known_exposure_coverage": 0.9917695473251029,
+        "known_exposure_days": 241,
+        "longest_known_above_5pp_run": 65,
+        "matching_does_not_equal_beta_sector_or_volatility_matching": true,
+        "max_absolute_gap": 0.1267434392156139,
+        "mean_absolute_gap": 0.061094757310592614,
+        "mean_signed_gap": 0.061094757310592614,
+        "p95_absolute_gap": 0.1030224756174857,
+        "passed": false,
+        "session_count": 243,
+        "status": "MATCHING_FAILED",
+        "threshold_arithmetic": "Decimal_of_serialized_exposure_linear_p95_inclusive_bounds",
+        "unknown_dates": [
+          "2025-04-15",
+          "2025-04-30"
+        ],
+        "unknown_is_not_zero_or_omitted_NAV": true,
+        "unknown_reasons": [
+          {
+            "date": "2025-04-15",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": [
+              "valuation_complete_not_true"
+            ]
+          },
+          {
+            "date": "2025-04-30",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": [
+              "valuation_complete_not_true"
+            ]
+          }
+        ]
+      },
+      "2026": {
+        "above_5pp_dates": [
+          "2026-02-24",
+          "2026-02-25",
+          "2026-02-26",
+          "2026-02-27",
+          "2026-03-02",
+          "2026-03-03",
+          "2026-03-04",
+          "2026-03-05",
+          "2026-03-06",
+          "2026-03-09",
+          "2026-03-10",
+          "2026-03-11",
+          "2026-03-12",
+          "2026-03-13",
+          "2026-03-16",
+          "2026-03-17",
+          "2026-03-18",
+          "2026-03-19",
+          "2026-03-20",
+          "2026-03-23",
+          "2026-03-24",
+          "2026-03-25",
+          "2026-03-26",
+          "2026-03-27",
+          "2026-03-30",
+          "2026-03-31",
+          "2026-04-01",
+          "2026-04-02",
+          "2026-04-03",
+          "2026-04-07",
+          "2026-04-08",
+          "2026-04-09",
+          "2026-04-10",
+          "2026-04-13",
+          "2026-04-14",
+          "2026-04-15",
+          "2026-04-16",
+          "2026-04-17",
+          "2026-04-20",
+          "2026-04-21",
+          "2026-04-29",
+          "2026-04-30",
+          "2026-05-06",
+          "2026-05-07",
+          "2026-05-08",
+          "2026-05-18",
+          "2026-05-19",
+          "2026-05-20",
+          "2026-05-21",
+          "2026-05-22",
+          "2026-05-25",
+          "2026-05-26",
+          "2026-05-27",
+          "2026-05-28",
+          "2026-05-29",
+          "2026-06-01",
+          "2026-06-02",
+          "2026-06-03",
+          "2026-06-04",
+          "2026-06-05",
+          "2026-06-08",
+          "2026-06-09",
+          "2026-06-10",
+          "2026-06-11",
+          "2026-06-12",
+          "2026-06-15",
+          "2026-06-16",
+          "2026-06-17",
+          "2026-06-18",
+          "2026-06-22",
+          "2026-06-23",
+          "2026-06-24",
+          "2026-06-25",
+          "2026-06-26",
+          "2026-06-29",
+          "2026-06-30",
+          "2026-07-01",
+          "2026-07-02",
+          "2026-07-03",
+          "2026-07-06",
+          "2026-07-07",
+          "2026-07-08",
+          "2026-07-09",
+          "2026-07-10",
+          "2026-07-13",
+          "2026-08-25",
+          "2026-08-26",
+          "2026-08-27",
+          "2026-08-28",
+          "2026-08-31",
+          "2026-09-01",
+          "2026-09-02",
+          "2026-09-03",
+          "2026-09-04",
+          "2026-09-07",
+          "2026-09-08",
+          "2026-09-09",
+          "2026-09-10",
+          "2026-09-11",
+          "2026-09-14",
+          "2026-09-15",
+          "2026-09-16",
+          "2026-09-17",
+          "2026-09-18",
+          "2026-09-21",
+          "2026-09-22",
+          "2026-09-23",
+          "2026-09-24",
+          "2026-09-28",
+          "2026-09-29",
+          "2026-09-30",
+          "2026-10-08",
+          "2026-10-09",
+          "2026-10-12",
+          "2026-10-13",
+          "2026-10-14",
+          "2026-10-15",
+          "2026-10-16",
+          "2026-10-19"
+        ],
+        "accounting_noncash_gap": {
+          "definition": "1-cash/lower_NAV_including_recorded_noncash_assets_not_a_security_risk_substitute",
+          "mean_absolute_gap": 0.055125142416677375,
+          "mean_signed_gap": 0.055101210825140995,
+          "recorded_pair_count": 189,
+          "used_for_matching_gate": false
+        },
+        "checks": {
+          "abs_mean_signed_gap_at_most_1pp": false,
+          "both_paths_valid": true,
+          "known_exposure_coverage_at_least_99pct": true,
+          "mean_absolute_gap_at_most_2pp": false,
+          "p95_absolute_gap_at_most_5pp": false
+        },
+        "gap_RMSE": 0.06215841430076498,
+        "known_exposure_coverage": 1.0,
+        "known_exposure_days": 189,
+        "longest_known_above_5pp_run": 40,
+        "matching_does_not_equal_beta_sector_or_volatility_matching": true,
+        "max_absolute_gap": 0.1082933770785237,
+        "mean_absolute_gap": 0.055125142416677375,
+        "mean_signed_gap": 0.055101210825140995,
+        "p95_absolute_gap": 0.0970458987050516,
+        "passed": false,
+        "session_count": 189,
+        "status": "MATCHING_FAILED",
+        "threshold_arithmetic": "Decimal_of_serialized_exposure_linear_p95_inclusive_bounds",
+        "unknown_dates": [],
+        "unknown_is_not_zero_or_omitted_NAV": true,
+        "unknown_reasons": []
+      },
+      "continuous": {
+        "above_5pp_dates": [
+          "2025-02-07",
+          "2025-02-10",
+          "2025-02-11",
+          "2025-02-12",
+          "2025-02-13",
+          "2025-02-21",
+          "2025-02-24",
+          "2025-02-25",
+          "2025-02-26",
+          "2025-02-27",
+          "2025-02-28",
+          "2025-03-03",
+          "2025-03-04",
+          "2025-03-05",
+          "2025-03-06",
+          "2025-03-14",
+          "2025-03-17",
+          "2025-03-18",
+          "2025-03-19",
+          "2025-03-20",
+          "2025-03-21",
+          "2025-03-24",
+          "2025-03-25",
+          "2025-03-26",
+          "2025-03-27",
+          "2025-03-28",
+          "2025-03-31",
+          "2025-04-01",
+          "2025-04-02",
+          "2025-04-03",
+          "2025-05-08",
+          "2025-05-29",
+          "2025-05-30",
+          "2025-06-03",
+          "2025-06-04",
+          "2025-06-05",
+          "2025-06-20",
+          "2025-06-23",
+          "2025-06-24",
+          "2025-06-25",
+          "2025-06-26",
+          "2025-06-27",
+          "2025-06-30",
+          "2025-07-01",
+          "2025-07-02",
+          "2025-07-03",
+          "2025-07-04",
+          "2025-07-07",
+          "2025-07-08",
+          "2025-07-09",
+          "2025-07-10",
+          "2025-07-11",
+          "2025-07-14",
+          "2025-07-15",
+          "2025-07-16",
+          "2025-07-17",
+          "2025-07-18",
+          "2025-07-21",
+          "2025-07-22",
+          "2025-07-23",
+          "2025-07-24",
+          "2025-07-25",
+          "2025-07-28",
+          "2025-07-29",
+          "2025-07-30",
+          "2025-07-31",
+          "2025-08-01",
+          "2025-08-04",
+          "2025-08-05",
+          "2025-08-06",
+          "2025-08-07",
+          "2025-08-08",
+          "2025-08-11",
+          "2025-08-12",
+          "2025-08-13",
+          "2025-08-14",
+          "2025-08-15",
+          "2025-08-18",
+          "2025-08-19",
+          "2025-08-20",
+          "2025-08-21",
+          "2025-08-22",
+          "2025-08-25",
+          "2025-08-26",
+          "2025-08-27",
+          "2025-08-28",
+          "2025-08-29",
+          "2025-09-01",
+          "2025-09-02",
+          "2025-09-03",
+          "2025-09-04",
+          "2025-09-12",
+          "2025-09-15",
+          "2025-09-16",
+          "2025-09-17",
+          "2025-09-18",
+          "2025-09-19",
+          "2025-09-22",
+          "2025-09-23",
+          "2025-09-24",
+          "2025-09-25",
+          "2025-09-26",
+          "2025-09-29",
+          "2025-09-30",
+          "2025-10-09",
+          "2025-10-10",
+          "2025-10-13",
+          "2025-10-14",
+          "2025-10-15",
+          "2025-10-16",
+          "2025-10-17",
+          "2025-10-20",
+          "2025-10-21",
+          "2025-10-22",
+          "2025-10-23",
+          "2025-10-24",
+          "2025-10-27",
+          "2025-10-28",
+          "2025-10-29",
+          "2025-10-30",
+          "2025-10-31",
+          "2025-11-03",
+          "2025-11-04",
+          "2025-11-05",
+          "2025-11-06",
+          "2025-11-07",
+          "2025-11-10",
+          "2025-11-11",
+          "2025-11-12",
+          "2025-11-13",
+          "2025-11-14",
+          "2025-11-17",
+          "2025-11-18",
+          "2025-11-19",
+          "2025-11-20",
+          "2025-11-21",
+          "2025-11-24",
+          "2025-11-25",
+          "2025-11-26",
+          "2025-11-27",
+          "2025-11-28",
+          "2025-12-01",
+          "2025-12-02",
+          "2025-12-03",
+          "2025-12-04",
+          "2025-12-05",
+          "2025-12-08",
+          "2025-12-09",
+          "2025-12-10",
+          "2025-12-11",
+          "2025-12-12",
+          "2025-12-15",
+          "2025-12-16",
+          "2025-12-17",
+          "2025-12-18",
+          "2025-12-19",
+          "2026-02-06",
+          "2026-03-19",
+          "2026-03-20",
+          "2026-03-23",
+          "2026-03-24",
+          "2026-03-25",
+          "2026-04-17",
+          "2026-04-20",
+          "2026-04-21",
+          "2026-04-22",
+          "2026-04-23",
+          "2026-07-09",
+          "2026-07-10",
+          "2026-07-13",
+          "2026-07-14",
+          "2026-07-15",
+          "2026-07-16",
+          "2026-07-17",
+          "2026-07-20",
+          "2026-07-21",
+          "2026-07-22",
+          "2026-07-30",
+          "2026-07-31",
+          "2026-08-03",
+          "2026-08-04",
+          "2026-08-05",
+          "2026-08-13",
+          "2026-08-14",
+          "2026-08-17",
+          "2026-08-18",
+          "2026-08-19",
+          "2026-08-20",
+          "2026-08-21",
+          "2026-08-24",
+          "2026-08-25",
+          "2026-08-26"
+        ],
+        "accounting_noncash_gap": {
+          "definition": "1-cash/lower_NAV_including_recorded_noncash_assets_not_a_security_risk_substitute",
+          "mean_absolute_gap": 0.05438555702480854,
+          "mean_signed_gap": 0.0542224909488024,
+          "recorded_pair_count": 432,
+          "used_for_matching_gate": false
+        },
+        "checks": {
+          "abs_mean_signed_gap_at_most_1pp": false,
+          "both_paths_valid": false,
+          "known_exposure_coverage_at_least_99pct": false,
+          "mean_absolute_gap_at_most_2pp": false,
+          "p95_absolute_gap_at_most_5pp": false
+        },
+        "gap_RMSE": 0.05791200300400208,
+        "known_exposure_coverage": 0.9513888888888888,
+        "known_exposure_days": 411,
+        "longest_known_above_5pp_run": 65,
+        "matching_does_not_equal_beta_sector_or_volatility_matching": true,
+        "max_absolute_gap": 0.1267434392156139,
+        "mean_absolute_gap": 0.05144399892171491,
+        "mean_signed_gap": 0.051272601002409185,
+        "p95_absolute_gap": 0.0927099590293752,
+        "passed": false,
+        "session_count": 432,
+        "status": "INVALID_PATH",
+        "threshold_arithmetic": "Decimal_of_serialized_exposure_linear_p95_inclusive_bounds",
+        "unknown_dates": [
+          "2025-04-15",
+          "2025-04-30",
+          "2026-09-15",
+          "2026-09-16",
+          "2026-09-17",
+          "2026-09-18",
+          "2026-09-21",
+          "2026-09-22",
+          "2026-09-23",
+          "2026-09-24",
+          "2026-09-28",
+          "2026-09-29",
+          "2026-09-30",
+          "2026-10-08",
+          "2026-10-09",
+          "2026-10-12",
+          "2026-10-13",
+          "2026-10-14",
+          "2026-10-15",
+          "2026-10-16",
+          "2026-10-19"
+        ],
+        "unknown_is_not_zero_or_omitted_NAV": true,
+        "unknown_reasons": [
+          {
+            "date": "2025-04-15",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": [
+              "valuation_complete_not_true"
+            ]
+          },
+          {
+            "date": "2025-04-30",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": [
+              "valuation_complete_not_true"
+            ]
+          },
+          {
+            "date": "2026-09-15",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-16",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-17",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-18",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-21",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-22",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-23",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-24",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-28",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-29",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-30",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-08",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-09",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-12",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-13",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-14",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-15",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-16",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-19",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true",
+              "accounting_valid_not_true"
+            ],
+            "reference_coverage_gaps": []
+          }
+        ]
+      }
+    },
+    "cadence5_min500": {
+      "2025": {
+        "above_5pp_dates": [],
+        "accounting_noncash_gap": {
+          "definition": "1-cash/lower_NAV_including_recorded_noncash_assets_not_a_security_risk_substitute",
+          "mean_absolute_gap": 0.01659138835372187,
+          "mean_signed_gap": 0.005170846926660607,
+          "recorded_pair_count": 243,
+          "used_for_matching_gate": false
+        },
+        "checks": {
+          "abs_mean_signed_gap_at_most_1pp": true,
+          "both_paths_valid": true,
+          "known_exposure_coverage_at_least_99pct": true,
+          "mean_absolute_gap_at_most_2pp": true,
+          "p95_absolute_gap_at_most_5pp": true
+        },
+        "gap_RMSE": 0.021540928718576827,
+        "known_exposure_coverage": 0.9917695473251029,
+        "known_exposure_days": 241,
+        "longest_known_above_5pp_run": 0,
+        "matching_does_not_equal_beta_sector_or_volatility_matching": true,
+        "max_absolute_gap": 0.0469001664694434,
+        "mean_absolute_gap": 0.01668863777902597,
+        "mean_signed_gap": 0.00525419696426425,
+        "p95_absolute_gap": 0.0443477001801798,
+        "passed": true,
+        "session_count": 243,
+        "status": "MATCHED",
+        "threshold_arithmetic": "Decimal_of_serialized_exposure_linear_p95_inclusive_bounds",
+        "unknown_dates": [
+          "2025-04-15",
+          "2025-04-30"
+        ],
+        "unknown_is_not_zero_or_omitted_NAV": true,
+        "unknown_reasons": [
+          {
+            "date": "2025-04-15",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": [
+              "valuation_complete_not_true"
+            ]
+          },
+          {
+            "date": "2025-04-30",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": [
+              "valuation_complete_not_true"
+            ]
+          }
+        ]
+      },
+      "2026": {
+        "above_5pp_dates": [],
+        "accounting_noncash_gap": {
+          "definition": "1-cash/lower_NAV_including_recorded_noncash_assets_not_a_security_risk_substitute",
+          "mean_absolute_gap": 0.01646861341292349,
+          "mean_signed_gap": 0.011216277261473234,
+          "recorded_pair_count": 189,
+          "used_for_matching_gate": false
+        },
+        "checks": {
+          "abs_mean_signed_gap_at_most_1pp": false,
+          "both_paths_valid": true,
+          "known_exposure_coverage_at_least_99pct": true,
+          "mean_absolute_gap_at_most_2pp": true,
+          "p95_absolute_gap_at_most_5pp": true
+        },
+        "gap_RMSE": 0.020278490184005845,
+        "known_exposure_coverage": 1.0,
+        "known_exposure_days": 189,
+        "longest_known_above_5pp_run": 0,
+        "matching_does_not_equal_beta_sector_or_volatility_matching": true,
+        "max_absolute_gap": 0.0455382016454263,
+        "mean_absolute_gap": 0.016468613412923477,
+        "mean_signed_gap": 0.01121627726147323,
+        "p95_absolute_gap": 0.0385911386861767,
+        "passed": false,
+        "session_count": 189,
+        "status": "MATCHING_FAILED",
+        "threshold_arithmetic": "Decimal_of_serialized_exposure_linear_p95_inclusive_bounds",
+        "unknown_dates": [],
+        "unknown_is_not_zero_or_omitted_NAV": true,
+        "unknown_reasons": []
+      },
+      "continuous": {
+        "above_5pp_dates": [],
+        "accounting_noncash_gap": {
+          "definition": "1-cash/lower_NAV_including_recorded_noncash_assets_not_a_security_risk_substitute",
+          "mean_absolute_gap": 0.019178732072185737,
+          "mean_signed_gap": 0.007227601466897824,
+          "recorded_pair_count": 432,
+          "used_for_matching_gate": false
+        },
+        "checks": {
+          "abs_mean_signed_gap_at_most_1pp": true,
+          "both_paths_valid": false,
+          "known_exposure_coverage_at_least_99pct": false,
+          "mean_absolute_gap_at_most_2pp": true,
+          "p95_absolute_gap_at_most_5pp": true
+        },
+        "gap_RMSE": 0.020811033721872277,
+        "known_exposure_coverage": 0.9513888888888888,
+        "known_exposure_days": 411,
+        "longest_known_above_5pp_run": 0,
+        "matching_does_not_equal_beta_sector_or_volatility_matching": true,
+        "max_absolute_gap": 0.0469001664694434,
+        "mean_absolute_gap": 0.016178893068047713,
+        "mean_signed_gap": 0.0037699229675499032,
+        "p95_absolute_gap": 0.0436990691036876,
+        "passed": false,
+        "session_count": 432,
+        "status": "INVALID_PATH",
+        "threshold_arithmetic": "Decimal_of_serialized_exposure_linear_p95_inclusive_bounds",
+        "unknown_dates": [
+          "2025-04-15",
+          "2025-04-30",
+          "2026-09-15",
+          "2026-09-16",
+          "2026-09-17",
+          "2026-09-18",
+          "2026-09-21",
+          "2026-09-22",
+          "2026-09-23",
+          "2026-09-24",
+          "2026-09-28",
+          "2026-09-29",
+          "2026-09-30",
+          "2026-10-08",
+          "2026-10-09",
+          "2026-10-12",
+          "2026-10-13",
+          "2026-10-14",
+          "2026-10-15",
+          "2026-10-16",
+          "2026-10-19"
+        ],
+        "unknown_is_not_zero_or_omitted_NAV": true,
+        "unknown_reasons": [
+          {
+            "date": "2025-04-15",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": [
+              "valuation_complete_not_true"
+            ]
+          },
+          {
+            "date": "2025-04-30",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": [
+              "valuation_complete_not_true"
+            ]
+          },
+          {
+            "date": "2026-09-15",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-16",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-17",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-18",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-21",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-22",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-23",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-24",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-28",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-29",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-30",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-08",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-09",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-12",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-13",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-14",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-15",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-16",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-19",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true",
+              "accounting_valid_not_true"
+            ],
+            "reference_coverage_gaps": []
+          }
+        ]
+      }
+    },
+    "matched_original": {
+      "2025": {
+        "above_5pp_dates": [],
+        "accounting_noncash_gap": {
+          "definition": "1-cash/lower_NAV_including_recorded_noncash_assets_not_a_security_risk_substitute",
+          "mean_absolute_gap": 0.0053099247144044355,
+          "mean_signed_gap": 0.0016114252474991432,
+          "recorded_pair_count": 243,
+          "used_for_matching_gate": false
+        },
+        "checks": {
+          "abs_mean_signed_gap_at_most_1pp": true,
+          "both_paths_valid": true,
+          "known_exposure_coverage_at_least_99pct": true,
+          "mean_absolute_gap_at_most_2pp": true,
+          "p95_absolute_gap_at_most_5pp": true
+        },
+        "gap_RMSE": 0.009602333049762424,
+        "known_exposure_coverage": 0.9917695473251029,
+        "known_exposure_days": 241,
+        "longest_known_above_5pp_run": 0,
+        "matching_does_not_equal_beta_sector_or_volatility_matching": true,
+        "max_absolute_gap": 0.0434358758365455,
+        "mean_absolute_gap": 0.005332047709172637,
+        "mean_signed_gap": 0.001614474663369982,
+        "p95_absolute_gap": 0.0233949812733703,
+        "passed": true,
+        "session_count": 243,
+        "status": "MATCHED",
+        "threshold_arithmetic": "Decimal_of_serialized_exposure_linear_p95_inclusive_bounds",
+        "unknown_dates": [
+          "2025-04-15",
+          "2025-04-30"
+        ],
+        "unknown_is_not_zero_or_omitted_NAV": true,
+        "unknown_reasons": [
+          {
+            "date": "2025-04-15",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": [
+              "valuation_complete_not_true"
+            ]
+          },
+          {
+            "date": "2025-04-30",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": [
+              "valuation_complete_not_true"
+            ]
+          }
+        ]
+      },
+      "2026": {
+        "above_5pp_dates": [],
+        "accounting_noncash_gap": {
+          "definition": "1-cash/lower_NAV_including_recorded_noncash_assets_not_a_security_risk_substitute",
+          "mean_absolute_gap": 0.004129095365371855,
+          "mean_signed_gap": 0.0008138664694671298,
+          "recorded_pair_count": 189,
+          "used_for_matching_gate": false
+        },
+        "checks": {
+          "abs_mean_signed_gap_at_most_1pp": true,
+          "both_paths_valid": true,
+          "known_exposure_coverage_at_least_99pct": true,
+          "mean_absolute_gap_at_most_2pp": true,
+          "p95_absolute_gap_at_most_5pp": true
+        },
+        "gap_RMSE": 0.007599898954874449,
+        "known_exposure_coverage": 1.0,
+        "known_exposure_days": 189,
+        "longest_known_above_5pp_run": 0,
+        "matching_does_not_equal_beta_sector_or_volatility_matching": true,
+        "max_absolute_gap": 0.0382449342147219,
+        "mean_absolute_gap": 0.004129095365371866,
+        "mean_signed_gap": 0.0008138664694671264,
+        "p95_absolute_gap": 0.02002004846528888,
+        "passed": true,
+        "session_count": 189,
+        "status": "MATCHED",
+        "threshold_arithmetic": "Decimal_of_serialized_exposure_linear_p95_inclusive_bounds",
+        "unknown_dates": [],
+        "unknown_is_not_zero_or_omitted_NAV": true,
+        "unknown_reasons": []
+      },
+      "continuous": {
+        "above_5pp_dates": [],
+        "accounting_noncash_gap": {
+          "definition": "1-cash/lower_NAV_including_recorded_noncash_assets_not_a_security_risk_substitute",
+          "mean_absolute_gap": 0.008530285295515923,
+          "mean_signed_gap": 0.004341083464187151,
+          "recorded_pair_count": 432,
+          "used_for_matching_gate": false
+        },
+        "checks": {
+          "abs_mean_signed_gap_at_most_1pp": true,
+          "both_paths_valid": false,
+          "known_exposure_coverage_at_least_99pct": false,
+          "mean_absolute_gap_at_most_2pp": true,
+          "p95_absolute_gap_at_most_5pp": true
+        },
+        "gap_RMSE": 0.009319049368552254,
+        "known_exposure_coverage": 0.9513888888888888,
+        "known_exposure_days": 411,
+        "longest_known_above_5pp_run": 0,
+        "matching_does_not_equal_beta_sector_or_volatility_matching": true,
+        "max_absolute_gap": 0.0450559105092721,
+        "mean_absolute_gap": 0.005511741497205866,
+        "mean_signed_gap": 0.0011153061572679501,
+        "p95_absolute_gap": 0.02161870175593515,
+        "passed": false,
+        "session_count": 432,
+        "status": "INVALID_PATH",
+        "threshold_arithmetic": "Decimal_of_serialized_exposure_linear_p95_inclusive_bounds",
+        "unknown_dates": [
+          "2025-04-15",
+          "2025-04-30",
+          "2026-09-15",
+          "2026-09-16",
+          "2026-09-17",
+          "2026-09-18",
+          "2026-09-21",
+          "2026-09-22",
+          "2026-09-23",
+          "2026-09-24",
+          "2026-09-28",
+          "2026-09-29",
+          "2026-09-30",
+          "2026-10-08",
+          "2026-10-09",
+          "2026-10-12",
+          "2026-10-13",
+          "2026-10-14",
+          "2026-10-15",
+          "2026-10-16",
+          "2026-10-19"
+        ],
+        "unknown_is_not_zero_or_omitted_NAV": true,
+        "unknown_reasons": [
+          {
+            "date": "2025-04-15",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": [
+              "valuation_complete_not_true"
+            ]
+          },
+          {
+            "date": "2025-04-30",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": [
+              "valuation_complete_not_true"
+            ]
+          },
+          {
+            "date": "2026-09-15",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-16",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-17",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-18",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-21",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-22",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-23",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-24",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-28",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-29",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-09-30",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-08",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-09",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-12",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-13",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-14",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-15",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-16",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true"
+            ],
+            "reference_coverage_gaps": []
+          },
+          {
+            "date": "2026-10-19",
+            "matched_close_present": true,
+            "matched_coverage_gaps": [
+              "valuation_complete_not_true",
+              "accounting_valid_not_true"
+            ],
+            "reference_coverage_gaps": []
+          }
+        ]
+      }
+    }
+  },
+  "native_fits": 0,
+  "periods": [
+    "2025",
+    "2026",
+    "continuous"
+  ],
+  "predictions_regenerated": false,
+  "results_completed_at": "2026-10-21T09:19:23.447076+00:00",
+  "rows": [
+    {
+      "actual_last_valued_session": "2025-12-31",
+      "arm_key": "hold10_cap2",
+      "costs": {
+        "adverse_tick_and_rounding_residual_cny": "1009.69281600",
+        "at_minimum_commission_fill_count": 206,
+        "commission_cny": "1030.00",
+        "cost_addback_performed": false,
+        "fill_count": 206,
+        "minimum_commission_binding_fill_count": 206,
+        "minimum_commission_binding_fraction": 1.0,
+        "minimum_commission_excess_cny": "749.32",
+        "money_reconciliation_passed": true,
+        "nominal_2bp_slippage_cny": "187.11718400",
+        "notional_cny": "935668.69",
+        "proportional_commission_cny": "280.68",
+        "reference_notional_cny": "935585.9200",
+        "slippage_already_in_execution_prices": true,
+        "slippage_bps_of_reference_notional": 12.792090757415417,
+        "slippage_cost_cny": "1196.81",
+        "stamp_tax_cny": "212.83",
+        "total_fee_cny": "1252.25",
+        "trade_friction_cny": "2449.06",
+        "transfer_fee_cny": "9.42"
+      },
+      "metrics": {
+        "accounting_invalid_days": 0,
+        "cash_distribution_rounding_reserved_cny": "0",
+        "commission_cny": "1030.00",
+        "declared_end_reached": true,
+        "final_equity_cny": "106929.40",
+        "incomplete_valuation_days": 2,
+        "max_drawdown_conservative_exact": "-0.0574693019435528346953276311",
+        "mean_invested_fraction": 0.8866200891071673,
+        "one_way_turnover_average_nav": 4.516891297126867,
+        "positive_month_fraction": 0.5833333333333334,
+        "rejected_order_count": 1,
+        "rolling_63_sessions": {
+          "median": 0.028806449346439278,
+          "minimum": -0.032995600000000014,
+          "observations": 181,
+          "positive_fraction": 0.8342541436464088
+        },
+        "session_count": 243,
+        "slippage_cost_cny": "1196.81",
+        "stamp_tax_cny": "212.83",
+        "total_distribution_tax_reserved_cny": "799.57",
+        "total_fee_cny": "1252.25",
+        "total_return_lower_exact": "0.069294",
+        "trade_count": 206,
+        "transfer_fee_cny": "9.42"
+      },
+      "performance_valid": true,
+      "period": "2025",
+      "purpose_costs": {
+        "cash_control": {
+          "commission_cny": "0",
+          "fill_count": 0,
+          "notional_cny": "0",
+          "slippage_cost_cny": "0",
+          "stamp_tax_cny": "0",
+          "total_fee_cny": "0",
+          "transfer_fee_cny": "0"
+        },
+        "core": {
+          "commission_cny": "1030.00",
+          "fill_count": 206,
+          "notional_cny": "935668.69",
+          "slippage_cost_cny": "1196.81",
+          "stamp_tax_cny": "212.83",
+          "total_fee_cny": "1252.25",
+          "transfer_fee_cny": "9.42"
+        }
+      },
+      "risk": {
+        "actual_security_count_is_hard_cap": false,
+        "all_cash_day_count": 0,
+        "complete_day_count": 241,
+        "coverage_complete": false,
+        "incomplete_day_count": 2,
+        "max_actual_security_count": 21,
+        "max_single_nav_fraction": null,
+        "max_top3_nav_fraction": null,
+        "mean_actual_security_count": 20.020576131687243,
+        "mean_risky_nav_fraction": null,
+        "min_effective_stock_count": null,
+        "session_count": 243
+      },
+      "sparse_policy": null,
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2026-10-19",
+      "arm_key": "hold10_cap2",
+      "costs": {
+        "adverse_tick_and_rounding_residual_cny": "622.49845200",
+        "at_minimum_commission_fill_count": 164,
+        "commission_cny": "820.00",
+        "cost_addback_performed": false,
+        "fill_count": 164,
+        "minimum_commission_binding_fill_count": 164,
+        "minimum_commission_binding_fraction": 1.0,
+        "minimum_commission_excess_cny": "611.75",
+        "money_reconciliation_passed": true,
+        "nominal_2bp_slippage_cny": "138.80154800",
+        "notional_cny": "694159.34",
+        "proportional_commission_cny": "208.25",
+        "reference_notional_cny": "694007.7400",
+        "slippage_already_in_execution_prices": true,
+        "slippage_bps_of_reference_notional": 10.969618292729704,
+        "slippage_cost_cny": "761.30",
+        "stamp_tax_cny": "151.32",
+        "total_fee_cny": "978.34",
+        "trade_friction_cny": "1739.64",
+        "transfer_fee_cny": "7.02"
+      },
+      "metrics": {
+        "accounting_invalid_days": 0,
+        "cash_distribution_rounding_reserved_cny": "0.00",
+        "commission_cny": "820.00",
+        "declared_end_reached": true,
+        "final_equity_cny": "101839.64",
+        "incomplete_valuation_days": 0,
+        "max_drawdown_conservative_exact": "-0.1342975903378984024621252040",
+        "mean_invested_fraction": 0.856307820900048,
+        "one_way_turnover_average_nav": 3.4911681519748274,
+        "positive_month_fraction": 0.5,
+        "rejected_order_count": 1,
+        "rolling_63_sessions": {
+          "median": -0.020272562721755816,
+          "minimum": -0.11503019183242957,
+          "observations": 127,
+          "positive_fraction": 0.3543307086614173
+        },
+        "session_count": 189,
+        "slippage_cost_cny": "761.30",
+        "stamp_tax_cny": "151.32",
+        "total_distribution_tax_reserved_cny": "408.05",
+        "total_fee_cny": "978.34",
+        "total_return_lower_exact": "0.0183964",
+        "trade_count": 164,
+        "transfer_fee_cny": "7.02"
+      },
+      "performance_valid": true,
+      "period": "2026",
+      "purpose_costs": {
+        "cash_control": {
+          "commission_cny": "0",
+          "fill_count": 0,
+          "notional_cny": "0",
+          "slippage_cost_cny": "0",
+          "stamp_tax_cny": "0",
+          "total_fee_cny": "0",
+          "transfer_fee_cny": "0"
+        },
+        "core": {
+          "commission_cny": "820.00",
+          "fill_count": 164,
+          "notional_cny": "694159.34",
+          "slippage_cost_cny": "761.30",
+          "stamp_tax_cny": "151.32",
+          "total_fee_cny": "978.34",
+          "transfer_fee_cny": "7.02"
+        }
+      },
+      "risk": {
+        "actual_security_count_is_hard_cap": false,
+        "all_cash_day_count": 0,
+        "complete_day_count": 189,
+        "coverage_complete": true,
+        "incomplete_day_count": 0,
+        "max_actual_security_count": 20,
+        "max_single_nav_fraction": 0.06132866236934022,
+        "max_top3_nav_fraction": 0.16851094364319888,
+        "mean_actual_security_count": 19.973544973544975,
+        "mean_risky_nav_fraction": 0.856307820900048,
+        "min_effective_stock_count": 18.44358036556076,
+        "session_count": 189
+      },
+      "sparse_policy": null,
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2026-10-19",
+      "arm_key": "hold10_cap2",
+      "costs": {
+        "adverse_tick_and_rounding_residual_cny": "1683.81777200",
+        "at_minimum_commission_fill_count": 351,
+        "commission_cny": "1755.00",
+        "cost_addback_performed": false,
+        "fill_count": 351,
+        "minimum_commission_binding_fill_count": 351,
+        "minimum_commission_binding_fraction": 1.0,
+        "minimum_commission_excess_cny": "1263.30",
+        "money_reconciliation_passed": true,
+        "nominal_2bp_slippage_cny": "327.76222800",
+        "notional_cny": "1638995.04",
+        "proportional_commission_cny": "491.70",
+        "reference_notional_cny": "1638811.1400",
+        "slippage_already_in_execution_prices": true,
+        "slippage_bps_of_reference_notional": 12.27462976606322,
+        "slippage_cost_cny": "2011.58",
+        "stamp_tax_cny": "385.95",
+        "total_fee_cny": "2157.35",
+        "trade_friction_cny": "4168.93",
+        "transfer_fee_cny": "16.40"
+      },
+      "metrics": {
+        "accounting_invalid_days": 1,
+        "cash_distribution_rounding_reserved_cny": "0.00",
+        "commission_cny": "1755.00",
+        "declared_end_reached": true,
+        "final_equity_cny": "116379.97",
+        "incomplete_valuation_days": 21,
+        "max_drawdown_conservative_exact": "-0.1182559254710313448675370291",
+        "mean_invested_fraction": 0.8792862608530454,
+        "one_way_turnover_average_nav": 7.67466196951121,
+        "positive_month_fraction": 0.5909090909090909,
+        "rejected_order_count": 5,
+        "rolling_63_sessions": {
+          "median": 0.02661695251849594,
+          "minimum": -0.09891692421672116,
+          "observations": 370,
+          "positive_fraction": 0.7513513513513513
+        },
+        "session_count": 432,
+        "slippage_cost_cny": "2011.58",
+        "stamp_tax_cny": "385.95",
+        "total_distribution_tax_reserved_cny": "1494.37",
+        "total_fee_cny": "2157.35",
+        "total_return_lower_exact": "0.1637997",
+        "trade_count": 351,
+        "transfer_fee_cny": "16.40"
+      },
+      "performance_valid": false,
+      "period": "continuous",
+      "purpose_costs": {
+        "cash_control": {
+          "commission_cny": "0",
+          "fill_count": 0,
+          "notional_cny": "0",
+          "slippage_cost_cny": "0",
+          "stamp_tax_cny": "0",
+          "total_fee_cny": "0",
+          "transfer_fee_cny": "0"
+        },
+        "core": {
+          "commission_cny": "1755.00",
+          "fill_count": 351,
+          "notional_cny": "1638995.04",
+          "slippage_cost_cny": "2011.58",
+          "stamp_tax_cny": "385.95",
+          "total_fee_cny": "2157.35",
+          "transfer_fee_cny": "16.40"
+        }
+      },
+      "risk": {
+        "actual_security_count_is_hard_cap": false,
+        "all_cash_day_count": 0,
+        "complete_day_count": 411,
+        "coverage_complete": false,
+        "incomplete_day_count": 21,
+        "max_actual_security_count": 21,
+        "max_single_nav_fraction": null,
+        "max_top3_nav_fraction": null,
+        "mean_actual_security_count": 20.050925925925927,
+        "mean_risky_nav_fraction": null,
+        "min_effective_stock_count": null,
+        "session_count": 432
+      },
+      "sparse_policy": null,
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2025-12-31",
+      "arm_key": "cap7p5pct",
+      "costs": {
+        "adverse_tick_and_rounding_residual_cny": "721.84958000",
+        "at_minimum_commission_fill_count": 182,
+        "commission_cny": "910.00",
+        "cost_addback_performed": false,
+        "fill_count": 182,
+        "minimum_commission_binding_fill_count": 182,
+        "minimum_commission_binding_fraction": 1.0,
+        "minimum_commission_excess_cny": "711.68",
+        "money_reconciliation_passed": true,
+        "nominal_2bp_slippage_cny": "132.23042000",
+        "notional_cny": "661224.14",
+        "proportional_commission_cny": "198.32",
+        "reference_notional_cny": "661152.1000",
+        "slippage_already_in_execution_prices": true,
+        "slippage_bps_of_reference_notional": 12.918056223371293,
+        "slippage_cost_cny": "854.08",
+        "stamp_tax_cny": "147.85",
+        "total_fee_cny": "1064.52",
+        "trade_friction_cny": "1918.60",
+        "transfer_fee_cny": "6.67"
+      },
+      "metrics": {
+        "accounting_invalid_days": 0,
+        "cash_distribution_rounding_reserved_cny": "0",
+        "commission_cny": "910.00",
+        "declared_end_reached": true,
+        "final_equity_cny": "105768.63",
+        "incomplete_valuation_days": 2,
+        "max_drawdown_conservative_exact": "-0.0476995",
+        "mean_invested_fraction": 0.7879578277771917,
+        "one_way_turnover_average_nav": 3.2120469535328797,
+        "positive_month_fraction": 0.5833333333333334,
+        "rejected_order_count": 1,
+        "rolling_63_sessions": {
+          "median": 0.02911937985961366,
+          "minimum": -0.027716699999999928,
+          "observations": 181,
+          "positive_fraction": 0.8287292817679558
+        },
+        "session_count": 243,
+        "slippage_cost_cny": "854.08",
+        "stamp_tax_cny": "147.85",
+        "total_distribution_tax_reserved_cny": "798.77",
+        "total_fee_cny": "1064.52",
+        "total_return_lower_exact": "0.0576863",
+        "trade_count": 182,
+        "transfer_fee_cny": "6.67"
+      },
+      "performance_valid": true,
+      "period": "2025",
+      "purpose_costs": {
+        "cash_control": {
+          "commission_cny": "0",
+          "fill_count": 0,
+          "notional_cny": "0",
+          "slippage_cost_cny": "0",
+          "stamp_tax_cny": "0",
+          "total_fee_cny": "0",
+          "transfer_fee_cny": "0"
+        },
+        "core": {
+          "commission_cny": "910.00",
+          "fill_count": 182,
+          "notional_cny": "661224.14",
+          "slippage_cost_cny": "854.08",
+          "stamp_tax_cny": "147.85",
+          "total_fee_cny": "1064.52",
+          "transfer_fee_cny": "6.67"
+        }
+      },
+      "risk": {
+        "actual_security_count_is_hard_cap": false,
+        "all_cash_day_count": 0,
+        "complete_day_count": 241,
+        "coverage_complete": false,
+        "incomplete_day_count": 2,
+        "max_actual_security_count": 21,
+        "max_single_nav_fraction": null,
+        "max_top3_nav_fraction": null,
+        "mean_actual_security_count": 20.19341563786008,
+        "mean_risky_nav_fraction": null,
+        "min_effective_stock_count": null,
+        "session_count": 243
+      },
+      "sparse_policy": null,
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2026-10-19",
+      "arm_key": "cap7p5pct",
+      "costs": {
+        "adverse_tick_and_rounding_residual_cny": "441.23754000",
+        "at_minimum_commission_fill_count": 145,
+        "commission_cny": "725.00",
+        "cost_addback_performed": false,
+        "fill_count": 145,
+        "minimum_commission_binding_fill_count": 145,
+        "minimum_commission_binding_fraction": 1.0,
+        "minimum_commission_excess_cny": "572.36",
+        "money_reconciliation_passed": true,
+        "nominal_2bp_slippage_cny": "101.70246000",
+        "notional_cny": "508642.30",
+        "proportional_commission_cny": "152.64",
+        "reference_notional_cny": "508512.3000",
+        "slippage_already_in_execution_prices": true,
+        "slippage_bps_of_reference_notional": 10.677027871302228,
+        "slippage_cost_cny": "542.94",
+        "stamp_tax_cny": "109.86",
+        "total_fee_cny": "840.01",
+        "trade_friction_cny": "1382.95",
+        "transfer_fee_cny": "5.15"
+      },
+      "metrics": {
+        "accounting_invalid_days": 0,
+        "cash_distribution_rounding_reserved_cny": "0.00",
+        "commission_cny": "725.00",
+        "declared_end_reached": true,
+        "final_equity_cny": "102370.37",
+        "incomplete_valuation_days": 0,
+        "max_drawdown_conservative_exact": "-0.1064648824910859491112713568",
+        "mean_invested_fraction": 0.7340639084814522,
+        "one_way_turnover_average_nav": 2.5385243954189907,
+        "positive_month_fraction": 0.5,
+        "rejected_order_count": 0,
+        "rolling_63_sessions": {
+          "median": -0.016758026299545148,
+          "minimum": -0.07971489743876015,
+          "observations": 127,
+          "positive_fraction": 0.3700787401574803
+        },
+        "session_count": 189,
+        "slippage_cost_cny": "542.94",
+        "stamp_tax_cny": "109.86",
+        "total_distribution_tax_reserved_cny": "360.28",
+        "total_fee_cny": "840.01",
+        "total_return_lower_exact": "0.0237037",
+        "trade_count": 145,
+        "transfer_fee_cny": "5.15"
+      },
+      "performance_valid": true,
+      "period": "2026",
+      "purpose_costs": {
+        "cash_control": {
+          "commission_cny": "0",
+          "fill_count": 0,
+          "notional_cny": "0",
+          "slippage_cost_cny": "0",
+          "stamp_tax_cny": "0",
+          "total_fee_cny": "0",
+          "transfer_fee_cny": "0"
+        },
+        "core": {
+          "commission_cny": "725.00",
+          "fill_count": 145,
+          "notional_cny": "508642.30",
+          "slippage_cost_cny": "542.94",
+          "stamp_tax_cny": "109.86",
+          "total_fee_cny": "840.01",
+          "transfer_fee_cny": "5.15"
+        }
+      },
+      "risk": {
+        "actual_security_count_is_hard_cap": false,
+        "all_cash_day_count": 0,
+        "complete_day_count": 189,
+        "coverage_complete": true,
+        "incomplete_day_count": 0,
+        "max_actual_security_count": 21,
+        "max_single_nav_fraction": 0.05721344282920106,
+        "max_top3_nav_fraction": 0.15571637834381263,
+        "mean_actual_security_count": 20.164021164021165,
+        "mean_risky_nav_fraction": 0.7340639084814522,
+        "min_effective_stock_count": 17.258750381515995,
+        "session_count": 189
+      },
+      "sparse_policy": null,
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2026-10-19",
+      "arm_key": "cap7p5pct",
+      "costs": {
+        "adverse_tick_and_rounding_residual_cny": "1217.10795200",
+        "at_minimum_commission_fill_count": 321,
+        "commission_cny": "1605.00",
+        "cost_addback_performed": false,
+        "fill_count": 321,
+        "minimum_commission_binding_fill_count": 321,
+        "minimum_commission_binding_fraction": 1.0,
+        "minimum_commission_excess_cny": "1254.95",
+        "money_reconciliation_passed": true,
+        "nominal_2bp_slippage_cny": "233.37204800",
+        "notional_cny": "1166960.24",
+        "proportional_commission_cny": "350.05",
+        "reference_notional_cny": "1166860.2400",
+        "slippage_already_in_execution_prices": true,
+        "slippage_bps_of_reference_notional": 12.430623225280176,
+        "slippage_cost_cny": "1450.48",
+        "stamp_tax_cny": "276.26",
+        "total_fee_cny": "1893.04",
+        "trade_friction_cny": "3343.52",
+        "transfer_fee_cny": "11.78"
+      },
+      "metrics": {
+        "accounting_invalid_days": 0,
+        "cash_distribution_rounding_reserved_cny": "0.00",
+        "commission_cny": "1605.00",
+        "declared_end_reached": true,
+        "final_equity_cny": "111090.23",
+        "incomplete_valuation_days": 2,
+        "max_drawdown_conservative_exact": "-0.0797016985489789831758788467",
+        "mean_invested_fraction": 0.7593890894452671,
+        "one_way_turnover_average_nav": 5.539995365939903,
+        "positive_month_fraction": 0.5454545454545454,
+        "rejected_order_count": 1,
+        "rolling_63_sessions": {
+          "median": 0.02099923590811581,
+          "minimum": -0.06711868862514858,
+          "observations": 370,
+          "positive_fraction": 0.7189189189189189
+        },
+        "session_count": 432,
+        "slippage_cost_cny": "1450.48",
+        "stamp_tax_cny": "276.26",
+        "total_distribution_tax_reserved_cny": "1307.35",
+        "total_fee_cny": "1893.04",
+        "total_return_lower_exact": "0.1109023",
+        "trade_count": 321,
+        "transfer_fee_cny": "11.78"
+      },
+      "performance_valid": true,
+      "period": "continuous",
+      "purpose_costs": {
+        "cash_control": {
+          "commission_cny": "0",
+          "fill_count": 0,
+          "notional_cny": "0",
+          "slippage_cost_cny": "0",
+          "stamp_tax_cny": "0",
+          "total_fee_cny": "0",
+          "transfer_fee_cny": "0"
+        },
+        "core": {
+          "commission_cny": "1605.00",
+          "fill_count": 321,
+          "notional_cny": "1166960.24",
+          "slippage_cost_cny": "1450.48",
+          "stamp_tax_cny": "276.26",
+          "total_fee_cny": "1893.04",
+          "transfer_fee_cny": "11.78"
+        }
+      },
+      "risk": {
+        "actual_security_count_is_hard_cap": false,
+        "all_cash_day_count": 0,
+        "complete_day_count": 430,
+        "coverage_complete": false,
+        "incomplete_day_count": 2,
+        "max_actual_security_count": 21,
+        "max_single_nav_fraction": null,
+        "max_top3_nav_fraction": null,
+        "mean_actual_security_count": 20.21990740740741,
+        "mean_risky_nav_fraction": null,
+        "min_effective_stock_count": null,
+        "session_count": 432
+      },
+      "sparse_policy": null,
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2025-12-31",
+      "arm_key": "matched_original",
+      "costs": {
+        "adverse_tick_and_rounding_residual_cny": "1145.91878000",
+        "at_minimum_commission_fill_count": 446,
+        "commission_cny": "2230.00",
+        "cost_addback_performed": false,
+        "fill_count": 446,
+        "minimum_commission_binding_fill_count": 446,
+        "minimum_commission_binding_fraction": 1.0,
+        "minimum_commission_excess_cny": "1922.60",
+        "money_reconciliation_passed": true,
+        "nominal_2bp_slippage_cny": "205.00122000",
+        "notional_cny": "1025065.58",
+        "proportional_commission_cny": "307.40",
+        "reference_notional_cny": "1025006.1000",
+        "slippage_already_in_execution_prices": true,
+        "slippage_bps_of_reference_notional": 13.179628882208604,
+        "slippage_cost_cny": "1350.92",
+        "stamp_tax_cny": "239.20",
+        "total_fee_cny": "2479.98",
+        "trade_friction_cny": "3830.90",
+        "transfer_fee_cny": "10.78"
+      },
+      "metrics": {
+        "accounting_invalid_days": 0,
+        "cash_distribution_rounding_reserved_cny": "0",
+        "commission_cny": "2230.00",
+        "declared_end_reached": true,
+        "final_equity_cny": "103797.35",
+        "incomplete_valuation_days": 2,
+        "max_drawdown_conservative_exact": "-0.0520045",
+        "mean_invested_fraction": 0.7895692530246907,
+        "one_way_turnover_average_nav": 5.037178709119158,
+        "positive_month_fraction": 0.5833333333333334,
+        "rejected_order_count": 1,
+        "rolling_63_sessions": {
+          "median": 0.01913452075210298,
+          "minimum": -0.03436479999999997,
+          "observations": 181,
+          "positive_fraction": 0.7292817679558011
+        },
+        "session_count": 243,
+        "slippage_cost_cny": "1350.92",
+        "stamp_tax_cny": "239.20",
+        "total_distribution_tax_reserved_cny": "736.05",
+        "total_fee_cny": "2479.98",
+        "total_return_lower_exact": "0.0379735",
+        "trade_count": 446,
+        "transfer_fee_cny": "10.78"
+      },
+      "performance_valid": true,
+      "period": "2025",
+      "purpose_costs": {
+        "cash_control": {
+          "commission_cny": "1200.00",
+          "fill_count": 240,
+          "notional_cny": "142843.00",
+          "slippage_cost_cny": "243.00",
+          "stamp_tax_cny": "51.43",
+          "total_fee_cny": "1253.29",
+          "transfer_fee_cny": "1.86"
+        },
+        "core": {
+          "commission_cny": "1030.00",
+          "fill_count": 206,
+          "notional_cny": "882222.58",
+          "slippage_cost_cny": "1107.92",
+          "stamp_tax_cny": "187.77",
+          "total_fee_cny": "1226.69",
+          "transfer_fee_cny": "8.92"
+        }
+      },
+      "risk": {
+        "actual_security_count_is_hard_cap": false,
+        "all_cash_day_count": 0,
+        "complete_day_count": 241,
+        "coverage_complete": false,
+        "incomplete_day_count": 2,
+        "max_actual_security_count": 21,
+        "max_single_nav_fraction": null,
+        "max_top3_nav_fraction": null,
+        "mean_actual_security_count": 20.020576131687243,
+        "mean_risky_nav_fraction": null,
+        "min_effective_stock_count": null,
+        "session_count": 243
+      },
+      "sparse_policy": null,
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2026-10-19",
+      "arm_key": "matched_original",
+      "costs": {
+        "adverse_tick_and_rounding_residual_cny": "795.24304600",
+        "at_minimum_commission_fill_count": 400,
+        "commission_cny": "2000.00",
+        "cost_addback_performed": false,
+        "fill_count": 400,
+        "minimum_commission_binding_fill_count": 400,
+        "minimum_commission_binding_fraction": 1.0,
+        "minimum_commission_excess_cny": "1772.11",
+        "money_reconciliation_passed": true,
+        "nominal_2bp_slippage_cny": "151.91695400",
+        "notional_cny": "759692.47",
+        "proportional_commission_cny": "227.89",
+        "reference_notional_cny": "759584.7700",
+        "slippage_already_in_execution_prices": true,
+        "slippage_bps_of_reference_notional": 12.46944432548325,
+        "slippage_cost_cny": "947.16",
+        "stamp_tax_cny": "172.90",
+        "total_fee_cny": "2180.27",
+        "trade_friction_cny": "3127.43",
+        "transfer_fee_cny": "7.37"
+      },
+      "metrics": {
+        "accounting_invalid_days": 0,
+        "cash_distribution_rounding_reserved_cny": "0.00",
+        "commission_cny": "2000.00",
+        "declared_end_reached": true,
+        "final_equity_cny": "99159.36",
+        "incomplete_valuation_days": 0,
+        "max_drawdown_conservative_exact": "-0.1309537119561304093989455786",
+        "mean_invested_fraction": 0.7348777749509193,
+        "one_way_turnover_average_nav": 3.850634145857634,
+        "positive_month_fraction": 0.5,
+        "rejected_order_count": 1,
+        "rolling_63_sessions": {
+          "median": -0.025590408758382588,
+          "minimum": -0.10710219446660518,
+          "observations": 127,
+          "positive_fraction": 0.33070866141732286
+        },
+        "session_count": 189,
+        "slippage_cost_cny": "947.16",
+        "stamp_tax_cny": "172.90",
+        "total_distribution_tax_reserved_cny": "298.50",
+        "total_fee_cny": "2180.27",
+        "total_return_lower_exact": "-0.0084064",
+        "trade_count": 400,
+        "transfer_fee_cny": "7.37"
+      },
+      "performance_valid": true,
+      "period": "2026",
+      "purpose_costs": {
+        "cash_control": {
+          "commission_cny": "1180.00",
+          "fill_count": 236,
+          "notional_cny": "98057.20",
+          "slippage_cost_cny": "238.90",
+          "stamp_tax_cny": "34.49",
+          "total_fee_cny": "1215.16",
+          "transfer_fee_cny": "0.67"
+        },
+        "core": {
+          "commission_cny": "820.00",
+          "fill_count": 164,
+          "notional_cny": "661635.27",
+          "slippage_cost_cny": "708.26",
+          "stamp_tax_cny": "138.41",
+          "total_fee_cny": "965.11",
+          "transfer_fee_cny": "6.70"
+        }
+      },
+      "risk": {
+        "actual_security_count_is_hard_cap": false,
+        "all_cash_day_count": 0,
+        "complete_day_count": 189,
+        "coverage_complete": true,
+        "incomplete_day_count": 0,
+        "max_actual_security_count": 20,
+        "max_single_nav_fraction": 0.07575762481068687,
+        "max_top3_nav_fraction": 0.17166602240310525,
+        "mean_actual_security_count": 19.973544973544975,
+        "mean_risky_nav_fraction": 0.7348777749509193,
+        "min_effective_stock_count": 17.677015923344154,
+        "session_count": 189
+      },
+      "sparse_policy": null,
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2026-10-19",
+      "arm_key": "matched_original",
+      "costs": {
+        "adverse_tick_and_rounding_residual_cny": "1921.05349800",
+        "at_minimum_commission_fill_count": 795,
+        "commission_cny": "3975.00",
+        "cost_addback_performed": false,
+        "fill_count": 795,
+        "minimum_commission_binding_fill_count": 795,
+        "minimum_commission_binding_fraction": 1.0,
+        "minimum_commission_excess_cny": "3448.64",
+        "money_reconciliation_passed": true,
+        "nominal_2bp_slippage_cny": "350.98650200",
+        "notional_cny": "1755079.61",
+        "proportional_commission_cny": "526.36",
+        "reference_notional_cny": "1754932.5100",
+        "slippage_already_in_execution_prices": true,
+        "slippage_bps_of_reference_notional": 12.946594738278568,
+        "slippage_cost_cny": "2272.04",
+        "stamp_tax_cny": "420.36",
+        "total_fee_cny": "4413.43",
+        "trade_friction_cny": "6685.47",
+        "transfer_fee_cny": "18.07"
+      },
+      "metrics": {
+        "accounting_invalid_days": 1,
+        "cash_distribution_rounding_reserved_cny": "0.00",
+        "commission_cny": "3975.00",
+        "declared_end_reached": true,
+        "final_equity_cny": "109669.31",
+        "incomplete_valuation_days": 21,
+        "max_drawdown_conservative_exact": "-0.1068189285053193628548159686",
+        "mean_invested_fraction": 0.7637301729094541,
+        "one_way_turnover_average_nav": 8.4492829120339,
+        "positive_month_fraction": 0.5454545454545454,
+        "rejected_order_count": 5,
+        "rolling_63_sessions": {
+          "median": 0.018820203316270656,
+          "minimum": -0.09132563941080807,
+          "observations": 370,
+          "positive_fraction": 0.6945945945945946
+        },
+        "session_count": 432,
+        "slippage_cost_cny": "2272.04",
+        "stamp_tax_cny": "420.36",
+        "total_distribution_tax_reserved_cny": "1272.90",
+        "total_fee_cny": "4413.43",
+        "total_return_lower_exact": "0.0966931",
+        "trade_count": 795,
+        "transfer_fee_cny": "18.07"
+      },
+      "performance_valid": false,
+      "period": "continuous",
+      "purpose_costs": {
+        "cash_control": {
+          "commission_cny": "2220.00",
+          "fill_count": 444,
+          "notional_cny": "249381.40",
+          "slippage_cost_cny": "460.90",
+          "stamp_tax_cny": "89.60",
+          "total_fee_cny": "2312.53",
+          "transfer_fee_cny": "2.93"
+        },
+        "core": {
+          "commission_cny": "1755.00",
+          "fill_count": 351,
+          "notional_cny": "1505698.21",
+          "slippage_cost_cny": "1811.14",
+          "stamp_tax_cny": "330.76",
+          "total_fee_cny": "2100.90",
+          "transfer_fee_cny": "15.14"
+        }
+      },
+      "risk": {
+        "actual_security_count_is_hard_cap": false,
+        "all_cash_day_count": 0,
+        "complete_day_count": 411,
+        "coverage_complete": false,
+        "incomplete_day_count": 21,
+        "max_actual_security_count": 21,
+        "max_single_nav_fraction": null,
+        "max_top3_nav_fraction": null,
+        "mean_actual_security_count": 20.050925925925927,
+        "mean_risky_nav_fraction": null,
+        "min_effective_stock_count": null,
+        "session_count": 432
+      },
+      "sparse_policy": null,
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2025-12-31",
+      "arm_key": "cadence3_min500",
+      "costs": {
+        "adverse_tick_and_rounding_residual_cny": "1084.11648200",
+        "at_minimum_commission_fill_count": 354,
+        "commission_cny": "1770.00",
+        "cost_addback_performed": false,
+        "fill_count": 354,
+        "minimum_commission_binding_fill_count": 354,
+        "minimum_commission_binding_fraction": 1.0,
+        "minimum_commission_excess_cny": "1471.53",
+        "money_reconciliation_passed": true,
+        "nominal_2bp_slippage_cny": "199.00351800",
+        "notional_cny": "995077.13",
+        "proportional_commission_cny": "298.47",
+        "reference_notional_cny": "995017.5900",
+        "slippage_already_in_execution_prices": true,
+        "slippage_bps_of_reference_notional": 12.895450421132756,
+        "slippage_cost_cny": "1283.12",
+        "stamp_tax_cny": "231.59",
+        "total_fee_cny": "2012.11",
+        "trade_friction_cny": "3295.23",
+        "transfer_fee_cny": "10.52"
+      },
+      "metrics": {
+        "accounting_invalid_days": 0,
+        "cash_distribution_rounding_reserved_cny": "0",
+        "commission_cny": "1770.00",
+        "declared_end_reached": true,
+        "final_equity_cny": "104405.60",
+        "incomplete_valuation_days": 2,
+        "max_drawdown_conservative_exact": "-0.0510592970938283144625566202",
+        "mean_invested_fraction": 0.7924457860816054,
+        "one_way_turnover_average_nav": 4.871111967162775,
+        "positive_month_fraction": 0.5833333333333334,
+        "rejected_order_count": 1,
+        "rolling_63_sessions": {
+          "median": 0.019732402441082764,
+          "minimum": -0.033554299999999926,
+          "observations": 181,
+          "positive_fraction": 0.7348066298342542
+        },
+        "session_count": 243,
+        "slippage_cost_cny": "1283.12",
+        "stamp_tax_cny": "231.59",
+        "total_distribution_tax_reserved_cny": "732.24",
+        "total_fee_cny": "2012.11",
+        "total_return_lower_exact": "0.044056",
+        "trade_count": 354,
+        "transfer_fee_cny": "10.52"
+      },
+      "performance_valid": true,
+      "period": "2025",
+      "purpose_costs": {
+        "cash_control": {
+          "commission_cny": "740.00",
+          "fill_count": 148,
+          "notional_cny": "99609.00",
+          "slippage_cost_cny": "151.00",
+          "stamp_tax_cny": "37.43",
+          "total_fee_cny": "778.91",
+          "transfer_fee_cny": "1.48"
+        },
+        "core": {
+          "commission_cny": "1030.00",
+          "fill_count": 206,
+          "notional_cny": "895468.13",
+          "slippage_cost_cny": "1132.12",
+          "stamp_tax_cny": "194.16",
+          "total_fee_cny": "1233.20",
+          "transfer_fee_cny": "9.04"
+        }
+      },
+      "risk": {
+        "actual_security_count_is_hard_cap": false,
+        "all_cash_day_count": 0,
+        "complete_day_count": 241,
+        "coverage_complete": false,
+        "incomplete_day_count": 2,
+        "max_actual_security_count": 21,
+        "max_single_nav_fraction": null,
+        "max_top3_nav_fraction": null,
+        "mean_actual_security_count": 20.020576131687243,
+        "mean_risky_nav_fraction": null,
+        "min_effective_stock_count": null,
+        "session_count": 243
+      },
+      "sparse_policy": {
+        "cash_control_sessions": 3,
+        "minimum_order_notional_cny": "500"
+      },
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2026-10-19",
+      "arm_key": "cadence3_min500",
+      "costs": {
+        "adverse_tick_and_rounding_residual_cny": "650.17491800",
+        "at_minimum_commission_fill_count": 230,
+        "commission_cny": "1150.00",
+        "cost_addback_performed": false,
+        "fill_count": 230,
+        "minimum_commission_binding_fill_count": 230,
+        "minimum_commission_binding_fraction": 1.0,
+        "minimum_commission_excess_cny": "936.64",
+        "money_reconciliation_passed": true,
+        "nominal_2bp_slippage_cny": "142.22508200",
+        "notional_cny": "711250.01",
+        "proportional_commission_cny": "213.36",
+        "reference_notional_cny": "711125.4100",
+        "slippage_already_in_execution_prices": true,
+        "slippage_bps_of_reference_notional": 11.14290094063718,
+        "slippage_cost_cny": "792.40",
+        "stamp_tax_cny": "160.40",
+        "total_fee_cny": "1317.84",
+        "trade_friction_cny": "2110.24",
+        "transfer_fee_cny": "7.44"
+      },
+      "metrics": {
+        "accounting_invalid_days": 0,
+        "cash_distribution_rounding_reserved_cny": "0.00",
+        "commission_cny": "1150.00",
+        "declared_end_reached": true,
+        "final_equity_cny": "101160.18",
+        "incomplete_valuation_days": 0,
+        "max_drawdown_conservative_exact": "-0.1206128861769086628549464277",
+        "mean_invested_fraction": 0.7447906280906466,
+        "one_way_turnover_average_nav": 3.578165543417253,
+        "positive_month_fraction": 0.5,
+        "rejected_order_count": 1,
+        "rolling_63_sessions": {
+          "median": -0.02122120479852574,
+          "minimum": -0.10050805615089142,
+          "observations": 127,
+          "positive_fraction": 0.36220472440944884
+        },
+        "session_count": 189,
+        "slippage_cost_cny": "792.40",
+        "stamp_tax_cny": "160.40",
+        "total_distribution_tax_reserved_cny": "327.01",
+        "total_fee_cny": "1317.84",
+        "total_return_lower_exact": "0.0116018",
+        "trade_count": 230,
+        "transfer_fee_cny": "7.44"
+      },
+      "performance_valid": true,
+      "period": "2026",
+      "purpose_costs": {
+        "cash_control": {
+          "commission_cny": "330.00",
+          "fill_count": 66,
+          "notional_cny": "44486.00",
+          "slippage_cost_cny": "69.00",
+          "stamp_tax_cny": "21.52",
+          "total_fee_cny": "352.19",
+          "transfer_fee_cny": "0.67"
+        },
+        "core": {
+          "commission_cny": "820.00",
+          "fill_count": 164,
+          "notional_cny": "666764.01",
+          "slippage_cost_cny": "723.40",
+          "stamp_tax_cny": "138.88",
+          "total_fee_cny": "965.65",
+          "transfer_fee_cny": "6.77"
+        }
+      },
+      "risk": {
+        "actual_security_count_is_hard_cap": false,
+        "all_cash_day_count": 0,
+        "complete_day_count": 189,
+        "coverage_complete": true,
+        "incomplete_day_count": 0,
+        "max_actual_security_count": 20,
+        "max_single_nav_fraction": 0.06119926268660518,
+        "max_top3_nav_fraction": 0.16415194088532867,
+        "mean_actual_security_count": 19.973544973544975,
+        "mean_risky_nav_fraction": 0.7447906280906466,
+        "min_effective_stock_count": 17.35178153436919,
+        "session_count": 189
+      },
+      "sparse_policy": {
+        "cash_control_sessions": 3,
+        "minimum_order_notional_cny": "500"
+      },
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2026-10-19",
+      "arm_key": "cadence3_min500",
+      "costs": {
+        "adverse_tick_and_rounding_residual_cny": "1764.60557000",
+        "at_minimum_commission_fill_count": 581,
+        "commission_cny": "2905.00",
+        "cost_addback_performed": false,
+        "fill_count": 581,
+        "minimum_commission_binding_fill_count": 581,
+        "minimum_commission_binding_fraction": 1.0,
+        "minimum_commission_excess_cny": "2397.89",
+        "money_reconciliation_passed": true,
+        "nominal_2bp_slippage_cny": "338.05443000",
+        "notional_cny": "1690427.15",
+        "proportional_commission_cny": "507.11",
+        "reference_notional_cny": "1690272.1500",
+        "slippage_already_in_execution_prices": true,
+        "slippage_bps_of_reference_notional": 12.439771903003903,
+        "slippage_cost_cny": "2102.66",
+        "stamp_tax_cny": "403.03",
+        "total_fee_cny": "3325.73",
+        "trade_friction_cny": "5428.39",
+        "transfer_fee_cny": "17.70"
+      },
+      "metrics": {
+        "accounting_invalid_days": 1,
+        "cash_distribution_rounding_reserved_cny": "0.00",
+        "commission_cny": "2905.00",
+        "declared_end_reached": true,
+        "final_equity_cny": "110692.62",
+        "incomplete_valuation_days": 21,
+        "max_drawdown_conservative_exact": "-0.1052646983888597645966664778",
+        "mean_invested_fraction": 0.7672022626177724,
+        "one_way_turnover_average_nav": 8.089725785548662,
+        "positive_month_fraction": 0.5909090909090909,
+        "rejected_order_count": 5,
+        "rolling_63_sessions": {
+          "median": 0.019531951145528303,
+          "minimum": -0.08922012764041265,
+          "observations": 370,
+          "positive_fraction": 0.7
+        },
+        "session_count": 432,
+        "slippage_cost_cny": "2102.66",
+        "stamp_tax_cny": "403.03",
+        "total_distribution_tax_reserved_cny": "1287.71",
+        "total_fee_cny": "3325.73",
+        "total_return_lower_exact": "0.1069262",
+        "trade_count": 581,
+        "transfer_fee_cny": "17.70"
+      },
+      "performance_valid": false,
+      "period": "continuous",
+      "purpose_costs": {
+        "cash_control": {
+          "commission_cny": "1150.00",
+          "fill_count": 230,
+          "notional_cny": "155154.00",
+          "slippage_cost_cny": "240.00",
+          "stamp_tax_cny": "61.12",
+          "total_fee_cny": "1213.42",
+          "transfer_fee_cny": "2.30"
+        },
+        "core": {
+          "commission_cny": "1755.00",
+          "fill_count": 351,
+          "notional_cny": "1535273.15",
+          "slippage_cost_cny": "1862.66",
+          "stamp_tax_cny": "341.91",
+          "total_fee_cny": "2112.31",
+          "transfer_fee_cny": "15.40"
+        }
+      },
+      "risk": {
+        "actual_security_count_is_hard_cap": false,
+        "all_cash_day_count": 0,
+        "complete_day_count": 411,
+        "coverage_complete": false,
+        "incomplete_day_count": 21,
+        "max_actual_security_count": 21,
+        "max_single_nav_fraction": null,
+        "max_top3_nav_fraction": null,
+        "mean_actual_security_count": 20.050925925925927,
+        "mean_risky_nav_fraction": null,
+        "min_effective_stock_count": null,
+        "session_count": 432
+      },
+      "sparse_policy": {
+        "cash_control_sessions": 3,
+        "minimum_order_notional_cny": "500"
+      },
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2025-12-31",
+      "arm_key": "cadence3_min1000",
+      "costs": {
+        "adverse_tick_and_rounding_residual_cny": "1028.62437800",
+        "at_minimum_commission_fill_count": 236,
+        "commission_cny": "1180.00",
+        "cost_addback_performed": false,
+        "fill_count": 236,
+        "minimum_commission_binding_fill_count": 236,
+        "minimum_commission_binding_fraction": 1.0,
+        "minimum_commission_excess_cny": "893.67",
+        "money_reconciliation_passed": true,
+        "nominal_2bp_slippage_cny": "190.87562200",
+        "notional_cny": "954455.77",
+        "proportional_commission_cny": "286.33",
+        "reference_notional_cny": "954378.1100",
+        "slippage_already_in_execution_prices": true,
+        "slippage_bps_of_reference_notional": 12.777954431498854,
+        "slippage_cost_cny": "1219.50",
+        "stamp_tax_cny": "220.57",
+        "total_fee_cny": "1410.13",
+        "trade_friction_cny": "2629.63",
+        "transfer_fee_cny": "9.56"
+      },
+      "metrics": {
+        "accounting_invalid_days": 0,
+        "cash_distribution_rounding_reserved_cny": "0",
+        "commission_cny": "1180.00",
+        "declared_end_reached": true,
+        "final_equity_cny": "105664.42",
+        "incomplete_valuation_days": 2,
+        "max_drawdown_conservative_exact": "-0.0530886915745676161357518322",
+        "mean_invested_fraction": 0.8547332858099991,
+        "one_way_turnover_average_nav": 4.639004108703164,
+        "positive_month_fraction": 0.5833333333333334,
+        "rejected_order_count": 1,
+        "rolling_63_sessions": {
+          "median": 0.024904747918672143,
+          "minimum": -0.03470929999999994,
+          "observations": 181,
+          "positive_fraction": 0.8011049723756906
+        },
+        "session_count": 243,
+        "slippage_cost_cny": "1219.50",
+        "stamp_tax_cny": "220.57",
+        "total_distribution_tax_reserved_cny": "740.13",
+        "total_fee_cny": "1410.13",
+        "total_return_lower_exact": "0.0566442",
+        "trade_count": 236,
+        "transfer_fee_cny": "9.56"
+      },
+      "performance_valid": true,
+      "period": "2025",
+      "purpose_costs": {
+        "cash_control": {
+          "commission_cny": "145.00",
+          "fill_count": 29,
+          "notional_cny": "38011.57",
+          "slippage_cost_cny": "36.93",
+          "stamp_tax_cny": "19.01",
+          "total_fee_cny": "164.35",
+          "transfer_fee_cny": "0.34"
+        },
+        "core": {
+          "commission_cny": "1035.00",
+          "fill_count": 207,
+          "notional_cny": "916444.20",
+          "slippage_cost_cny": "1182.57",
+          "stamp_tax_cny": "201.56",
+          "total_fee_cny": "1245.78",
+          "transfer_fee_cny": "9.22"
+        }
+      },
+      "risk": {
+        "actual_security_count_is_hard_cap": false,
+        "all_cash_day_count": 0,
+        "complete_day_count": 241,
+        "coverage_complete": false,
+        "incomplete_day_count": 2,
+        "max_actual_security_count": 21,
+        "max_single_nav_fraction": null,
+        "max_top3_nav_fraction": null,
+        "mean_actual_security_count": 20.016460905349795,
+        "mean_risky_nav_fraction": null,
+        "min_effective_stock_count": null,
+        "session_count": 243
+      },
+      "sparse_policy": {
+        "cash_control_sessions": 3,
+        "minimum_order_notional_cny": "1000"
+      },
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2026-10-19",
+      "arm_key": "cadence3_min1000",
+      "costs": {
+        "adverse_tick_and_rounding_residual_cny": "630.90308400",
+        "at_minimum_commission_fill_count": 188,
+        "commission_cny": "940.00",
+        "cost_addback_performed": false,
+        "fill_count": 188,
+        "minimum_commission_binding_fill_count": 188,
+        "minimum_commission_binding_fraction": 1.0,
+        "minimum_commission_excess_cny": "727.52",
+        "money_reconciliation_passed": true,
+        "nominal_2bp_slippage_cny": "141.63691600",
+        "notional_cny": "708327.18",
+        "proportional_commission_cny": "212.48",
+        "reference_notional_cny": "708184.5800",
+        "slippage_already_in_execution_prices": true,
+        "slippage_bps_of_reference_notional": 10.908737945127244,
+        "slippage_cost_cny": "772.54",
+        "stamp_tax_cny": "157.03",
+        "total_fee_cny": "1104.19",
+        "trade_friction_cny": "1876.73",
+        "transfer_fee_cny": "7.16"
+      },
+      "metrics": {
+        "accounting_invalid_days": 0,
+        "cash_distribution_rounding_reserved_cny": "0.00",
+        "commission_cny": "940.00",
+        "declared_end_reached": true,
+        "final_equity_cny": "103643.50",
+        "incomplete_valuation_days": 0,
+        "max_drawdown_conservative_exact": "-0.1189517044421016478703796761",
+        "mean_invested_fraction": 0.7891917351578163,
+        "one_way_turnover_average_nav": 3.531245829450343,
+        "positive_month_fraction": 0.5,
+        "rejected_order_count": 1,
+        "rolling_63_sessions": {
+          "median": -0.013736203647079726,
+          "minimum": -0.10488793325731793,
+          "observations": 127,
+          "positive_fraction": 0.3779527559055118
+        },
+        "session_count": 189,
+        "slippage_cost_cny": "772.54",
+        "stamp_tax_cny": "157.03",
+        "total_distribution_tax_reserved_cny": "374.11",
+        "total_fee_cny": "1104.19",
+        "total_return_lower_exact": "0.036435",
+        "trade_count": 188,
+        "transfer_fee_cny": "7.16"
+      },
+      "performance_valid": true,
+      "period": "2026",
+      "purpose_costs": {
+        "cash_control": {
+          "commission_cny": "115.00",
+          "fill_count": 23,
+          "notional_cny": "31453.60",
+          "slippage_cost_cny": "33.52",
+          "stamp_tax_cny": "15.73",
+          "total_fee_cny": "131.03",
+          "transfer_fee_cny": "0.30"
+        },
+        "core": {
+          "commission_cny": "825.00",
+          "fill_count": 165,
+          "notional_cny": "676873.58",
+          "slippage_cost_cny": "739.02",
+          "stamp_tax_cny": "141.30",
+          "total_fee_cny": "973.16",
+          "transfer_fee_cny": "6.86"
+        }
+      },
+      "risk": {
+        "actual_security_count_is_hard_cap": false,
+        "all_cash_day_count": 0,
+        "complete_day_count": 189,
+        "coverage_complete": true,
+        "incomplete_day_count": 0,
+        "max_actual_security_count": 20,
+        "max_single_nav_fraction": 0.06035078222850058,
+        "max_top3_nav_fraction": 0.1620066157873335,
+        "mean_actual_security_count": 19.952380952380953,
+        "mean_risky_nav_fraction": 0.7891917351578162,
+        "min_effective_stock_count": 17.560077769261575,
+        "session_count": 189
+      },
+      "sparse_policy": {
+        "cash_control_sessions": 3,
+        "minimum_order_notional_cny": "1000"
+      },
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2026-10-19",
+      "arm_key": "cadence3_min1000",
+      "costs": {
+        "adverse_tick_and_rounding_residual_cny": "1697.11679000",
+        "at_minimum_commission_fill_count": 416,
+        "commission_cny": "2080.00",
+        "cost_addback_performed": false,
+        "fill_count": 416,
+        "minimum_commission_binding_fill_count": 416,
+        "minimum_commission_binding_fraction": 1.0,
+        "minimum_commission_excess_cny": "1585.73",
+        "money_reconciliation_passed": true,
+        "nominal_2bp_slippage_cny": "329.48321000",
+        "notional_cny": "1647584.05",
+        "proportional_commission_cny": "494.27",
+        "reference_notional_cny": "1647416.0500",
+        "slippage_already_in_execution_prices": true,
+        "slippage_bps_of_reference_notional": 12.301689060271084,
+        "slippage_cost_cny": "2026.60",
+        "stamp_tax_cny": "391.84",
+        "total_fee_cny": "2488.26",
+        "trade_friction_cny": "4514.86",
+        "transfer_fee_cny": "16.42"
+      },
+      "metrics": {
+        "accounting_invalid_days": 1,
+        "cash_distribution_rounding_reserved_cny": "0.00",
+        "commission_cny": "2080.00",
+        "declared_end_reached": true,
+        "final_equity_cny": "114287.58",
+        "incomplete_valuation_days": 21,
+        "max_drawdown_conservative_exact": "-0.1117063264105587639805177804",
+        "mean_invested_fraction": 0.8180322064231978,
+        "one_way_turnover_average_nav": 7.802157485882051,
+        "positive_month_fraction": 0.5909090909090909,
+        "rejected_order_count": 5,
+        "rolling_63_sessions": {
+          "median": 0.022841590266856615,
+          "minimum": -0.09834148920246533,
+          "observations": 370,
+          "positive_fraction": 0.727027027027027
+        },
+        "session_count": 432,
+        "slippage_cost_cny": "2026.60",
+        "stamp_tax_cny": "391.84",
+        "total_distribution_tax_reserved_cny": "1318.62",
+        "total_fee_cny": "2488.26",
+        "total_return_lower_exact": "0.1428758",
+        "trade_count": 416,
+        "transfer_fee_cny": "16.42"
+      },
+      "performance_valid": false,
+      "period": "continuous",
+      "purpose_costs": {
+        "cash_control": {
+          "commission_cny": "320.00",
+          "fill_count": 64,
+          "notional_cny": "89772.57",
+          "slippage_cost_cny": "81.93",
+          "stamp_tax_cny": "44.91",
+          "total_fee_cny": "365.76",
+          "transfer_fee_cny": "0.85"
+        },
+        "core": {
+          "commission_cny": "1760.00",
+          "fill_count": 352,
+          "notional_cny": "1557811.48",
+          "slippage_cost_cny": "1944.67",
+          "stamp_tax_cny": "346.93",
+          "total_fee_cny": "2122.50",
+          "transfer_fee_cny": "15.57"
+        }
+      },
+      "risk": {
+        "actual_security_count_is_hard_cap": false,
+        "all_cash_day_count": 0,
+        "complete_day_count": 411,
+        "coverage_complete": false,
+        "incomplete_day_count": 21,
+        "max_actual_security_count": 21,
+        "max_single_nav_fraction": null,
+        "max_top3_nav_fraction": null,
+        "mean_actual_security_count": 20.04861111111111,
+        "mean_risky_nav_fraction": null,
+        "min_effective_stock_count": null,
+        "session_count": 432
+      },
+      "sparse_policy": {
+        "cash_control_sessions": 3,
+        "minimum_order_notional_cny": "1000"
+      },
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2025-12-31",
+      "arm_key": "cadence5_min500",
+      "costs": {
+        "adverse_tick_and_rounding_residual_cny": "1073.39640000",
+        "at_minimum_commission_fill_count": 346,
+        "commission_cny": "1730.00",
+        "cost_addback_performed": false,
+        "fill_count": 346,
+        "minimum_commission_binding_fill_count": 346,
+        "minimum_commission_binding_fraction": 1.0,
+        "minimum_commission_excess_cny": "1435.11",
+        "money_reconciliation_passed": true,
+        "nominal_2bp_slippage_cny": "196.60360000",
+        "notional_cny": "983076.50",
+        "proportional_commission_cny": "294.89",
+        "reference_notional_cny": "983018.0000",
+        "slippage_already_in_execution_prices": true,
+        "slippage_bps_of_reference_notional": 12.919397203306552,
+        "slippage_cost_cny": "1270.00",
+        "stamp_tax_cny": "228.67",
+        "total_fee_cny": "1969.07",
+        "trade_friction_cny": "3239.07",
+        "transfer_fee_cny": "10.40"
+      },
+      "metrics": {
+        "accounting_invalid_days": 0,
+        "cash_distribution_rounding_reserved_cny": "0",
+        "commission_cny": "1730.00",
+        "declared_end_reached": true,
+        "final_equity_cny": "103910.93",
+        "incomplete_valuation_days": 2,
+        "max_drawdown_conservative_exact": "-0.0511807233291923301838914885",
+        "mean_invested_fraction": 0.7931286747038523,
+        "one_way_turnover_average_nav": 4.823963566452165,
+        "positive_month_fraction": 0.5833333333333334,
+        "rejected_order_count": 1,
+        "rolling_63_sessions": {
+          "median": 0.017650740458106995,
+          "minimum": -0.03330500000000003,
+          "observations": 181,
+          "positive_fraction": 0.7348066298342542
+        },
+        "session_count": 243,
+        "slippage_cost_cny": "1270.00",
+        "stamp_tax_cny": "228.67",
+        "total_distribution_tax_reserved_cny": "737.52",
+        "total_fee_cny": "1969.07",
+        "total_return_lower_exact": "0.0391093",
+        "trade_count": 346,
+        "transfer_fee_cny": "10.40"
+      },
+      "performance_valid": true,
+      "period": "2025",
+      "purpose_costs": {
+        "cash_control": {
+          "commission_cny": "700.00",
+          "fill_count": 140,
+          "notional_cny": "94065.00",
+          "slippage_cost_cny": "143.00",
+          "stamp_tax_cny": "37.69",
+          "total_fee_cny": "739.09",
+          "transfer_fee_cny": "1.40"
+        },
+        "core": {
+          "commission_cny": "1030.00",
+          "fill_count": 206,
+          "notional_cny": "889011.50",
+          "slippage_cost_cny": "1127.00",
+          "stamp_tax_cny": "190.98",
+          "total_fee_cny": "1229.98",
+          "transfer_fee_cny": "9.00"
+        }
+      },
+      "risk": {
+        "actual_security_count_is_hard_cap": false,
+        "all_cash_day_count": 0,
+        "complete_day_count": 241,
+        "coverage_complete": false,
+        "incomplete_day_count": 2,
+        "max_actual_security_count": 21,
+        "max_single_nav_fraction": null,
+        "max_top3_nav_fraction": null,
+        "mean_actual_security_count": 20.020576131687243,
+        "mean_risky_nav_fraction": null,
+        "min_effective_stock_count": null,
+        "session_count": 243
+      },
+      "sparse_policy": {
+        "cash_control_sessions": 5,
+        "minimum_order_notional_cny": "500"
+      },
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2026-10-19",
+      "arm_key": "cadence5_min500",
+      "costs": {
+        "adverse_tick_and_rounding_residual_cny": "658.42529400",
+        "at_minimum_commission_fill_count": 241,
+        "commission_cny": "1205.00",
+        "cost_addback_performed": false,
+        "fill_count": 241,
+        "minimum_commission_binding_fill_count": 241,
+        "minimum_commission_binding_fraction": 1.0,
+        "minimum_commission_excess_cny": "989.03",
+        "money_reconciliation_passed": true,
+        "nominal_2bp_slippage_cny": "143.95470600",
+        "notional_cny": "719900.13",
+        "proportional_commission_cny": "215.97",
+        "reference_notional_cny": "719773.5300",
+        "slippage_already_in_execution_prices": true,
+        "slippage_bps_of_reference_notional": 11.147673074334923,
+        "slippage_cost_cny": "802.38",
+        "stamp_tax_cny": "162.32",
+        "total_fee_cny": "1374.84",
+        "trade_friction_cny": "2177.22",
+        "transfer_fee_cny": "7.52"
+      },
+      "metrics": {
+        "accounting_invalid_days": 0,
+        "cash_distribution_rounding_reserved_cny": "0.00",
+        "commission_cny": "1205.00",
+        "declared_end_reached": true,
+        "final_equity_cny": "101211.62",
+        "incomplete_valuation_days": 0,
+        "max_drawdown_conservative_exact": "-0.1213910420659429531723389845",
+        "mean_invested_fraction": 0.7452801857429256,
+        "one_way_turnover_average_nav": 3.6232518306586883,
+        "positive_month_fraction": 0.5,
+        "rejected_order_count": 1,
+        "rolling_63_sessions": {
+          "median": -0.022255039223999407,
+          "minimum": -0.10116117882224462,
+          "observations": 127,
+          "positive_fraction": 0.3543307086614173
+        },
+        "session_count": 189,
+        "slippage_cost_cny": "802.38",
+        "stamp_tax_cny": "162.32",
+        "total_distribution_tax_reserved_cny": "319.33",
+        "total_fee_cny": "1374.84",
+        "total_return_lower_exact": "0.0121162",
+        "trade_count": 241,
+        "transfer_fee_cny": "7.52"
+      },
+      "performance_valid": true,
+      "period": "2026",
+      "purpose_costs": {
+        "cash_control": {
+          "commission_cny": "385.00",
+          "fill_count": 77,
+          "notional_cny": "55221.00",
+          "slippage_cost_cny": "82.00",
+          "stamp_tax_cny": "24.48",
+          "total_fee_cny": "410.27",
+          "transfer_fee_cny": "0.79"
+        },
+        "core": {
+          "commission_cny": "820.00",
+          "fill_count": 164,
+          "notional_cny": "664679.13",
+          "slippage_cost_cny": "720.38",
+          "stamp_tax_cny": "137.84",
+          "total_fee_cny": "964.57",
+          "transfer_fee_cny": "6.73"
+        }
+      },
+      "risk": {
+        "actual_security_count_is_hard_cap": false,
+        "all_cash_day_count": 0,
+        "complete_day_count": 189,
+        "coverage_complete": true,
+        "incomplete_day_count": 0,
+        "max_actual_security_count": 20,
+        "max_single_nav_fraction": 0.06128362047693466,
+        "max_top3_nav_fraction": 0.1687331752511795,
+        "mean_actual_security_count": 19.973544973544975,
+        "mean_risky_nav_fraction": 0.7452801857429254,
+        "min_effective_stock_count": 17.44502655281928,
+        "session_count": 189
+      },
+      "sparse_policy": {
+        "cash_control_sessions": 5,
+        "minimum_order_notional_cny": "500"
+      },
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2026-10-19",
+      "arm_key": "cadence5_min500",
+      "costs": {
+        "adverse_tick_and_rounding_residual_cny": "1748.71506000",
+        "at_minimum_commission_fill_count": 565,
+        "commission_cny": "2825.00",
+        "cost_addback_performed": false,
+        "fill_count": 565,
+        "minimum_commission_binding_fill_count": 565,
+        "minimum_commission_binding_fraction": 1.0,
+        "minimum_commission_excess_cny": "2321.33",
+        "money_reconciliation_passed": true,
+        "nominal_2bp_slippage_cny": "335.74494000",
+        "notional_cny": "1678879.70",
+        "proportional_commission_cny": "503.67",
+        "reference_notional_cny": "1678724.7000",
+        "slippage_already_in_execution_prices": true,
+        "slippage_bps_of_reference_notional": 12.416925777049686,
+        "slippage_cost_cny": "2084.46",
+        "stamp_tax_cny": "400.28",
+        "total_fee_cny": "3242.82",
+        "trade_friction_cny": "5327.28",
+        "transfer_fee_cny": "17.54"
+      },
+      "metrics": {
+        "accounting_invalid_days": 1,
+        "cash_distribution_rounding_reserved_cny": "0.00",
+        "commission_cny": "2825.00",
+        "declared_end_reached": true,
+        "final_equity_cny": "111149.03",
+        "incomplete_valuation_days": 21,
+        "max_drawdown_conservative_exact": "-0.1051184292247882891829433355",
+        "mean_invested_fraction": 0.7666166909121649,
+        "one_way_turnover_average_nav": 8.048113923034322,
+        "positive_month_fraction": 0.5909090909090909,
+        "rejected_order_count": 5,
+        "rolling_63_sessions": {
+          "median": 0.02020628589797635,
+          "minimum": -0.08783374095891838,
+          "observations": 370,
+          "positive_fraction": 0.7
+        },
+        "session_count": 432,
+        "slippage_cost_cny": "2084.46",
+        "stamp_tax_cny": "400.28",
+        "total_distribution_tax_reserved_cny": "1281.24",
+        "total_fee_cny": "3242.82",
+        "total_return_lower_exact": "0.1114903",
+        "trade_count": 565,
+        "transfer_fee_cny": "17.54"
+      },
+      "performance_valid": false,
+      "period": "continuous",
+      "purpose_costs": {
+        "cash_control": {
+          "commission_cny": "1070.00",
+          "fill_count": 214,
+          "notional_cny": "148100.00",
+          "slippage_cost_cny": "224.00",
+          "stamp_tax_cny": "60.58",
+          "total_fee_cny": "1132.74",
+          "transfer_fee_cny": "2.16"
+        },
+        "core": {
+          "commission_cny": "1755.00",
+          "fill_count": 351,
+          "notional_cny": "1530779.70",
+          "slippage_cost_cny": "1860.46",
+          "stamp_tax_cny": "339.70",
+          "total_fee_cny": "2110.08",
+          "transfer_fee_cny": "15.38"
+        }
+      },
+      "risk": {
+        "actual_security_count_is_hard_cap": false,
+        "all_cash_day_count": 0,
+        "complete_day_count": 411,
+        "coverage_complete": false,
+        "incomplete_day_count": 21,
+        "max_actual_security_count": 21,
+        "max_single_nav_fraction": null,
+        "max_top3_nav_fraction": null,
+        "mean_actual_security_count": 20.050925925925927,
+        "mean_risky_nav_fraction": null,
+        "min_effective_stock_count": null,
+        "session_count": 432
+      },
+      "sparse_policy": {
+        "cash_control_sessions": 5,
+        "minimum_order_notional_cny": "500"
+      },
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2025-12-31",
+      "arm_key": "cadence5_min1000",
+      "costs": {
+        "adverse_tick_and_rounding_residual_cny": "1012.01713600",
+        "at_minimum_commission_fill_count": 231,
+        "commission_cny": "1155.00",
+        "cost_addback_performed": false,
+        "fill_count": 231,
+        "minimum_commission_binding_fill_count": 231,
+        "minimum_commission_binding_fraction": 1.0,
+        "minimum_commission_excess_cny": "872.26",
+        "money_reconciliation_passed": true,
+        "nominal_2bp_slippage_cny": "188.48286400",
+        "notional_cny": "942487.00",
+        "proportional_commission_cny": "282.74",
+        "reference_notional_cny": "942414.3200",
+        "slippage_already_in_execution_prices": true,
+        "slippage_bps_of_reference_notional": 12.73855855670784,
+        "slippage_cost_cny": "1200.50",
+        "stamp_tax_cny": "217.15",
+        "total_fee_cny": "1381.61",
+        "trade_friction_cny": "2582.11",
+        "transfer_fee_cny": "9.46"
+      },
+      "metrics": {
+        "accounting_invalid_days": 0,
+        "cash_distribution_rounding_reserved_cny": "0",
+        "commission_cny": "1155.00",
+        "declared_end_reached": true,
+        "final_equity_cny": "106042.35",
+        "incomplete_valuation_days": 2,
+        "max_drawdown_conservative_exact": "-0.0534302584181704358556567555",
+        "mean_invested_fraction": 0.8489115293535905,
+        "one_way_turnover_average_nav": 4.581526042054287,
+        "positive_month_fraction": 0.5833333333333334,
+        "rejected_order_count": 1,
+        "rolling_63_sessions": {
+          "median": 0.025813473925891284,
+          "minimum": -0.03441939999999999,
+          "observations": 181,
+          "positive_fraction": 0.8066298342541437
+        },
+        "session_count": 243,
+        "slippage_cost_cny": "1200.50",
+        "stamp_tax_cny": "217.15",
+        "total_distribution_tax_reserved_cny": "789.50",
+        "total_fee_cny": "1381.61",
+        "total_return_lower_exact": "0.0604235",
+        "trade_count": 231,
+        "transfer_fee_cny": "9.46"
+      },
+      "performance_valid": true,
+      "period": "2025",
+      "purpose_costs": {
+        "cash_control": {
+          "commission_cny": "125.00",
+          "fill_count": 25,
+          "notional_cny": "32406.00",
+          "slippage_cost_cny": "35.00",
+          "stamp_tax_cny": "16.19",
+          "total_fee_cny": "141.48",
+          "transfer_fee_cny": "0.29"
+        },
+        "core": {
+          "commission_cny": "1030.00",
+          "fill_count": 206,
+          "notional_cny": "910081.00",
+          "slippage_cost_cny": "1165.50",
+          "stamp_tax_cny": "200.96",
+          "total_fee_cny": "1240.13",
+          "transfer_fee_cny": "9.17"
+        }
+      },
+      "risk": {
+        "actual_security_count_is_hard_cap": false,
+        "all_cash_day_count": 0,
+        "complete_day_count": 241,
+        "coverage_complete": false,
+        "incomplete_day_count": 2,
+        "max_actual_security_count": 21,
+        "max_single_nav_fraction": null,
+        "max_top3_nav_fraction": null,
+        "mean_actual_security_count": 20.020576131687243,
+        "mean_risky_nav_fraction": null,
+        "min_effective_stock_count": null,
+        "session_count": 243
+      },
+      "sparse_policy": {
+        "cash_control_sessions": 5,
+        "minimum_order_notional_cny": "1000"
+      },
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2026-10-19",
+      "arm_key": "cadence5_min1000",
+      "costs": {
+        "adverse_tick_and_rounding_residual_cny": "638.17409400",
+        "at_minimum_commission_fill_count": 194,
+        "commission_cny": "970.00",
+        "cost_addback_performed": false,
+        "fill_count": 194,
+        "minimum_commission_binding_fill_count": 194,
+        "minimum_commission_binding_fraction": 1.0,
+        "minimum_commission_excess_cny": "758.02",
+        "money_reconciliation_passed": true,
+        "nominal_2bp_slippage_cny": "141.30590600",
+        "notional_cny": "706663.13",
+        "proportional_commission_cny": "211.98",
+        "reference_notional_cny": "706529.5300",
+        "slippage_already_in_execution_prices": true,
+        "slippage_bps_of_reference_notional": 11.03251834357157,
+        "slippage_cost_cny": "779.48",
+        "stamp_tax_cny": "157.47",
+        "total_fee_cny": "1134.60",
+        "trade_friction_cny": "1914.08",
+        "transfer_fee_cny": "7.13"
+      },
+      "metrics": {
+        "accounting_invalid_days": 0,
+        "cash_distribution_rounding_reserved_cny": "0.00",
+        "commission_cny": "970.00",
+        "declared_end_reached": true,
+        "final_equity_cny": "102671.20",
+        "incomplete_valuation_days": 0,
+        "max_drawdown_conservative_exact": "-0.1204536214935198645331190215",
+        "mean_invested_fraction": 0.7891651193065933,
+        "one_way_turnover_average_nav": 3.5348691539217056,
+        "positive_month_fraction": 0.5,
+        "rejected_order_count": 1,
+        "rolling_63_sessions": {
+          "median": -0.016106496857201447,
+          "minimum": -0.10450322567390868,
+          "observations": 127,
+          "positive_fraction": 0.3700787401574803
+        },
+        "session_count": 189,
+        "slippage_cost_cny": "779.48",
+        "stamp_tax_cny": "157.47",
+        "total_distribution_tax_reserved_cny": "353.13",
+        "total_fee_cny": "1134.60",
+        "total_return_lower_exact": "0.026712",
+        "trade_count": 194,
+        "transfer_fee_cny": "7.13"
+      },
+      "performance_valid": true,
+      "period": "2026",
+      "purpose_costs": {
+        "cash_control": {
+          "commission_cny": "150.00",
+          "fill_count": 30,
+          "notional_cny": "41634.00",
+          "slippage_cost_cny": "46.00",
+          "stamp_tax_cny": "20.80",
+          "total_fee_cny": "171.21",
+          "transfer_fee_cny": "0.41"
+        },
+        "core": {
+          "commission_cny": "820.00",
+          "fill_count": 164,
+          "notional_cny": "665029.13",
+          "slippage_cost_cny": "733.48",
+          "stamp_tax_cny": "136.67",
+          "total_fee_cny": "963.39",
+          "transfer_fee_cny": "6.72"
+        }
+      },
+      "risk": {
+        "actual_security_count_is_hard_cap": false,
+        "all_cash_day_count": 0,
+        "complete_day_count": 189,
+        "coverage_complete": true,
+        "incomplete_day_count": 0,
+        "max_actual_security_count": 20,
+        "max_single_nav_fraction": 0.06083534514907064,
+        "max_top3_nav_fraction": 0.1629827583852269,
+        "mean_actual_security_count": 19.973544973544975,
+        "mean_risky_nav_fraction": 0.7891651193065933,
+        "min_effective_stock_count": 17.60917606152033,
+        "session_count": 189
+      },
+      "sparse_policy": {
+        "cash_control_sessions": 5,
+        "minimum_order_notional_cny": "1000"
+      },
+      "stopped": null
+    },
+    {
+      "actual_last_valued_session": "2026-10-19",
+      "arm_key": "cadence5_min1000",
+      "costs": {
+        "adverse_tick_and_rounding_residual_cny": "1678.14595600",
+        "at_minimum_commission_fill_count": 411,
+        "commission_cny": "2055.00",
+        "cost_addback_performed": false,
+        "fill_count": 411,
+        "minimum_commission_binding_fill_count": 411,
+        "minimum_commission_binding_fraction": 1.0,
+        "minimum_commission_excess_cny": "1564.01",
+        "money_reconciliation_passed": true,
+        "nominal_2bp_slippage_cny": "327.27404400",
+        "notional_cny": "1636537.22",
+        "proportional_commission_cny": "490.99",
+        "reference_notional_cny": "1636370.2200",
+        "slippage_already_in_execution_prices": true,
+        "slippage_bps_of_reference_notional": 12.255295137307009,
+        "slippage_cost_cny": "2005.42",
+        "stamp_tax_cny": "389.01",
+        "total_fee_cny": "2460.34",
+        "trade_friction_cny": "4465.76",
+        "transfer_fee_cny": "16.33"
+      },
+      "metrics": {
+        "accounting_invalid_days": 1,
+        "cash_distribution_rounding_reserved_cny": "0.00",
+        "commission_cny": "2055.00",
+        "declared_end_reached": true,
+        "final_equity_cny": "113551.50",
+        "incomplete_valuation_days": 21,
+        "max_drawdown_conservative_exact": "-0.1115959291317236104446384785",
+        "mean_invested_fraction": 0.8136115803940696,
+        "one_way_turnover_average_nav": 7.765345156243482,
+        "positive_month_fraction": 0.5454545454545454,
+        "rejected_order_count": 5,
+        "rolling_63_sessions": {
+          "median": 0.02047702308786259,
+          "minimum": -0.09509198725194323,
+          "observations": 370,
+          "positive_fraction": 0.7243243243243244
+        },
+        "session_count": 432,
+        "slippage_cost_cny": "2005.42",
+        "stamp_tax_cny": "389.01",
+        "total_distribution_tax_reserved_cny": "1369.34",
+        "total_fee_cny": "2460.34",
+        "total_return_lower_exact": "0.135515",
+        "trade_count": 411,
+        "transfer_fee_cny": "16.33"
+      },
+      "performance_valid": false,
+      "period": "continuous",
+      "purpose_costs": {
+        "cash_control": {
+          "commission_cny": "300.00",
+          "fill_count": 60,
+          "notional_cny": "81175.00",
+          "slippage_cost_cny": "80.00",
+          "stamp_tax_cny": "40.56",
+          "total_fee_cny": "341.34",
+          "transfer_fee_cny": "0.78"
+        },
+        "core": {
+          "commission_cny": "1755.00",
+          "fill_count": 351,
+          "notional_cny": "1555362.22",
+          "slippage_cost_cny": "1925.42",
+          "stamp_tax_cny": "348.45",
+          "total_fee_cny": "2119.00",
+          "transfer_fee_cny": "15.55"
+        }
+      },
+      "risk": {
+        "actual_security_count_is_hard_cap": false,
+        "all_cash_day_count": 0,
+        "complete_day_count": 411,
+        "coverage_complete": false,
+        "incomplete_day_count": 21,
+        "max_actual_security_count": 21,
+        "max_single_nav_fraction": null,
+        "max_top3_nav_fraction": null,
+        "mean_actual_security_count": 20.050925925925927,
+        "mean_risky_nav_fraction": null,
+        "min_effective_stock_count": null,
+        "session_count": 432
+      },
+      "sparse_policy": {
+        "cash_control_sessions": 5,
+        "minimum_order_notional_cny": "1000"
+      },
+      "stopped": null
+    }
+  ],
+  "source_and_execution_review": {
+    "actual_cash_control_fills": 1106,
+    "actual_historical_close_rows": 6048,
+    "all_original_control_paths_exact": 9,
+    "allocation_minimum_funding_batches": 690,
+    "below_minimum_precheck_drops": 4638,
+    "canonical_result_files": 375,
+    "precheck_drops_are_actual_engine_rejections": false,
+    "source_join_verified_core_plans": 1218,
+    "source_output_unique_files_freshly_SHA_verified": 33312,
+    "strict_prior_actual_session_targets": 912,
+    "unavailable_adverse_price_precheck_drops": 2,
+    "unscheduled_no_target_or_overlay_probe_sessions": 2532
+  },
+  "valid_paths": 15,
+  "verification": {
+    "active_paper_and_native_job_preserved": true,
+    "all_new_tests_included_in_full_suite": true,
+    "execution_cli_exit_code": 1,
+    "execution_phase": "completed",
+    "full_project_tests_passed": 2883,
+    "full_test_duration_seconds": 128.65,
+    "independent_reviews": "passed",
+    "invalid_history_kept_not_software_failure": true,
+    "new_execution_tests": 149,
+    "new_experiment_tests": 64,
+    "new_integration_tests": 43,
+    "new_plot_tests": 34,
+    "skipped": 1,
+    "subtests_passed": 20,
+    "warnings": 296
+  }
+}

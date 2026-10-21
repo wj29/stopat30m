@@ -1,0 +1,111 @@
+{
+  "kind": "a13_sparse_lagged_exposure_design",
+  "schema_version": 1,
+  "declared_at": "2026-10-21T09:03:39.814038+00:00",
+  "any_new_historical_candidate_returns_computed": false,
+  "control_arms": [
+    "hold10_cap2",
+    "cap7p5pct",
+    "matched_original"
+  ],
+  "candidates": [
+    {
+      "key": "cadence3_min500",
+      "cash_control_actual_sessions": 3,
+      "minimum_order_execution_notional_cny": "500"
+    },
+    {
+      "key": "cadence3_min1000",
+      "cash_control_actual_sessions": 3,
+      "minimum_order_execution_notional_cny": "1000"
+    },
+    {
+      "key": "cadence5_min500",
+      "cash_control_actual_sessions": 5,
+      "minimum_order_execution_notional_cny": "500"
+    },
+    {
+      "key": "cadence5_min1000",
+      "cash_control_actual_sessions": 5,
+      "minimum_order_execution_notional_cny": "1000"
+    }
+  ],
+  "periods": [
+    "2025",
+    "2026",
+    "continuous"
+  ],
+  "evaluation_end": "2026-10-19",
+  "initial_cash_cny": "100000.00",
+  "model": "unchanged_original_A5_annual_H5_predictions",
+  "unchanged_core": {
+    "top_k": 20,
+    "keep_rank": 40,
+    "minimum_hold_sessions": 10,
+    "max_exit_intents_per_rebalance": 2,
+    "rebalance_actual_sessions": 5,
+    "original_fees_slippage_lots_T1_limits_tax_members_and_corporate_actions": true
+  },
+  "cash_controller": {
+    "reference": "sealed_A11_cap7p5pct_same_period_consumed_by_A12",
+    "target_for_session_t": "previous_actual_session_reference_known_security_risk_upper_value_divided_by_lower_NAV",
+    "first_scheduled_batch": "original_build_no_overlay_or_reference_read",
+    "cadence_anchor": "zero_based_actual_period_session_number_modulo_cadence_equals_zero_except_initial_zero; no_crossyear_reset",
+    "unscheduled_days": "skip_without_target_or_quote_probe_no_catchup_or_carried_target",
+    "no_trade_band_absolute_fraction": "0.01",
+    "allocation": "exact_A12_proportional_legal_floor_then_one_lot_largest_share_remainder_code_tie_if_total_reference_error_improves",
+    "minimum_filter": "after_original_A12_allocation_and_remainder_drop_whole_orders_below_inclusive_expected_adverse_execution_notional_threshold; no_reallocation_or_accumulated_credits",
+    "minimum_price_basis": "original_engine_fill_price_with_original_slippage_tick_rounding_and_limit_clipping; all_original_trade_permissions_retained",
+    "buy_funding": "apply_original_ST_daily_cap_and_legal_lots_then_reserve_full_proposed_notional_and_rounded_fees_in_original_deficit_notional_desc_code_order; insufficient_full_funding_drops_whole_order_no_resize_no_post_refusal_release",
+    "actual_minimum": "all_cash_control_fills_must_meet_frozen_minimum_actual_execution_notional_or_fail_loudly",
+    "identities": "only_actual_existing_A12_allowed_security_identities_never_new_model_selection",
+    "execution_sequence": "original_core_once_then_optional_overlay_once_no_order_netting_or_post_refusal_reallocation",
+    "core_h10_cap2_exemption": "cash_control_explicit_new_policy_only_core_obeys_model_minimum_holding_and_exit_cap",
+    "holding_origins": "all_actual_core_overlay_fills_update_original_tracker_partial_sells_keep_origin",
+    "target_or_current_risk_unknown": "skip_unknown_no_carry_clipping_or_synthetic_fill",
+    "unpriceable_engine_opening_NAV": "specific_A12_exception_only_fail_closed_preserve_stopped_ledger_no_fake_close",
+    "fees": "original_per_order_rounded_commission_transfer_stamp_and_adverse_slippage_all_actual_paid_once_no_fee_addback",
+    "continuous": "no_year_reset_or_capital_reset_repeat_initial_exemption"
+  },
+  "matching_gate": {
+    "pair": "each_candidate_vs_cap7p5pct_same_period",
+    "both_accounting_paths_valid": true,
+    "known_same_actual_close_security_exposure_coverage_min": 0.99,
+    "abs_mean_signed_gap_max": "0.01",
+    "mean_absolute_gap_max": "0.02",
+    "p95_absolute_gap_max": "0.05",
+    "arithmetic": "unchanged_A12_Decimal_serialized_exposure_linear_p95_inclusive",
+    "unknown": "no_date_subset_or_NAV_trimming_fill_interpolation_zero_risk",
+    "failure": "report_MATCHING_FAILED_or_UNKNOWN_or_INVALID_no_parameter_retuning_or_expanding_grid"
+  },
+  "comparison_gate": {
+    "exploratory_not_new_future_OOS": true,
+    "requires_per_period": "original_cap75_dailyA12_and_candidate_all_financially_valid_candidate_matching_passed",
+    "primary_comparison": "candidate_vs_A12_daily_matching_control_actual_afterfee_return_DD_cost_and_turnover",
+    "joint_isolated_period_diagnostic": "both2025_and_partial2026_matching_passes_and_net_no_lower_DD_no_worse_friction_and_overlay_fillcount_strictly_lower_than_A12_daily",
+    "also_report": "original_and_cap75_actual_net_DD_friction_turnover_exposure_and_dailyA12_matching; any_invalid_continuous_no_formal_promotion",
+    "attribution": "descriptive_net_accounting_bridge_only_not_pure_cash_or_turnover_causal_decomposition",
+    "no_ranking_by_failed_matching_or_invalid_net_profit": true
+  },
+  "budget": {
+    "old_full_reproductions_before_any_new_arms": 9,
+    "new_candidate_ledgers": 12,
+    "reported_ledgers": 21,
+    "native_fits": 0,
+    "regenerated_predictions": 0,
+    "additional_grid_or_zerofee_run": false
+  },
+  "baseline_reproduction": "all_A12_three_control_arms_core_summary_full_finalstate_every_13or14canonical_record_exact_including_known_invalid_paths",
+  "active_paper_action": "continue_existing_top20_unchanged",
+  "automatic_promotion": false,
+  "retrain": false,
+  "repair_old_Cinda_accounting": false,
+  "interpretation": [
+    "historical_windows_already_examined_exploratory_retrospective_not_new_future_OOS",
+    "capital_use_matching_is_not_beta_sector_volatility_or_equal_holdings_risk",
+    "lower_frequency_or_threshold_can_fail_matching_preserve_failures",
+    "costs_and_slippage_already_in_NAV_never_subtract_twice_or_addback",
+    "invalid_Cinda_original_evidence_remains_no_repair_or_enddate_trimming",
+    "no_broker_or_production_parameter_changes"
+  ]
+}
