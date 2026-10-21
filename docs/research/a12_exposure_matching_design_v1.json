@@ -1,0 +1,96 @@
+{
+  "kind": "a12_lagged_exposure_matched_cash_control_design",
+  "schema_version": 1,
+  "declared_at": "2026-10-21T07:50:03.842988+00:00",
+  "any_new_historical_candidate_returns_computed": false,
+  "arms": [
+    "hold10_cap2",
+    "cap7p5pct",
+    "matched_original"
+  ],
+  "periods": [
+    "2025",
+    "2026",
+    "continuous"
+  ],
+  "evaluation_end": "2026-10-19",
+  "initial_cash_cny": "100000.00",
+  "model": "unchanged_original_A5_annual_H5_predictions",
+  "unchanged_core": {
+    "top_k": 20,
+    "keep_rank": 40,
+    "minimum_hold_sessions": 10,
+    "max_exit_intents_per_rebalance": 2,
+    "rebalance_actual_sessions": 5,
+    "original_fees_slippage_lots_T1_limits_tax_members_and_corporate_actions": true
+  },
+  "cash_controller": {
+    "only_new_arm": "matched_original",
+    "reference": "sealed_A11_cap7p5pct_same_period",
+    "target_for_session_t": "previous_actual_session_reference_known_security_risk_upper_value_divided_by_lower_NAV",
+    "source_excludes": "cash_and_cash_dividend_receivables_not_risky_securities",
+    "first_scheduled_batch": "no_overlay_same_original_build_no_prior_period_or_future_mean_target",
+    "target_missing_or_incomplete_or_out_of_range": "skip_overlay_unknown_no_carried_target_or_clipping",
+    "frequency": "every_actual_session_after_any_scheduled_core_execution_before_close",
+    "no_trade_band_absolute_fraction": "0.01",
+    "allocation": "proportional_current_existing_security_value_then_board_legal_floor_and_one_lot_largest_remainder_code_tie_adjustment_only_if_total_target_error_reduced",
+    "identities": "only_actual_current_positions_or_pending_stock_entitlements_never_add_a_new_candidate",
+    "T1_halts_limits_lots_and_fees": "original_engine_unchanged_no_override",
+    "core_h10_cap2_and_retained_no_reweight": "apply_to_core_only_overlay_is_explicit_new_cash_control_exempt_from_model_exit_intent_and_holding_minimum",
+    "execution_sequence": "core_once_then_overlay_once_no_netting_or_second_pass_after_refusal",
+    "market_information": "only_observed_open_quote_and_previously_known_metadata_no_same_day_high_low_close",
+    "unknown_held_opening_risk_or_unbounded_non_cash_claim": "skip_with_unknown_audit_no_old_price_fill",
+    "unpriceable_engine_opening_NAV": "fail_closed_preserve_stopped_new_path_no_synthetic_NAV",
+    "funding": "actual_cash_only_no_transfers_borrowing_interest_or_balance_reset",
+    "fees": "every_core_and_overlay_fill_original_per_order_fees_and_adverse_slippage_actual_payment_no_linear_cost_scaling_or_addback",
+    "holding_origins": "all_actual_core_and_overlay_fills_drive_original_tracker_partial_sells_keep_origin",
+    "continuous": "no_yearly_reset_phase_or_repeat_first_batch_exemption"
+  },
+  "matching_gate": {
+    "pair": "matched_original_vs_cap7p5pct",
+    "both_accounting_paths_valid": true,
+    "known_same_actual_close_security_exposure_coverage_min": 0.99,
+    "abs_mean_signed_gap_max": "0.01",
+    "mean_absolute_gap_max": "0.02",
+    "p95_absolute_gap_max": "0.05",
+    "report_also": [
+      "gap_RMSE",
+      "max_abs_gap",
+      "above5pp_day_count",
+      "longest_above5pp_run",
+      "unknown_dates_and_reasons",
+      "noncash1minus_cash_NAV_gap_separately"
+    ],
+    "unknown": "no_fill_interpolation_drop_from_NAV_or_zero_risk",
+    "failure": "MATCHING_FAILED_or_UNKNOWN_REPORT_NO_POST_RESULT_TUNING"
+  },
+  "budget": {
+    "reported_ledgers": 9,
+    "old_two_arms_full_reproductions_before_new_arms": 6,
+    "native_fits": 0,
+    "regenerated_predictions": 0,
+    "additional_parameter_or_zero_fee_grid": false
+  },
+  "baseline_reproduction": "all_A11_two_original_arms_core_summary_full_final_state_and_every_13_or14_canonical_record_exact",
+  "attribution": {
+    "requires": "all_three_period_paths_financially_valid_and_matching_gate_passes_for_that_period",
+    "raw_net_gap": "cap75_net_minus_original_net",
+    "cash_control_related_net_change": "matched_original_net_minus_original_net_including_all_overlay_cost_and_path_changes",
+    "remaining_matched_net_gap": "cap75_net_minus_matched_original_net",
+    "identity": "two_signed_changes_sum_to_raw_net_gap_no_fee_addback",
+    "interpretation": "descriptive_cash_control_association_and_remaining_strategy_path_cost_difference_not_pure_cash_or_turnover_causal_alpha",
+    "drawdown": "compare_actual_full_curves_not_additive_decomposition",
+    "same_capital_usage": "not_beta_sector_volatility_or_full_risk_matching"
+  },
+  "interpretation": [
+    "historical_windows_previously_examined_not_new_future_OOS",
+    "old_Cinda_unpriced_equity_and_invalid_terminal_paths_unchanged",
+    "actual_board_T1_refusal_and_overlay_cost_can_prevent_matching",
+    "never_select_day_subset_to_claim_full_period_profit",
+    "unknown_exposure_coverage_explicit_no_zero_or_synthetic_prices"
+  ],
+  "active_paper_action": "continue_existing_top20_unchanged",
+  "automatic_promotion": false,
+  "retrain": false,
+  "repair_old_Cinda_accounting": false
+}
