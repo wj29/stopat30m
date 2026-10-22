@@ -1,0 +1,91 @@
+{
+  "already_blocked_open_preserved": "2026-10-22",
+  "calendar_coverage_end": "2026-12-31",
+  "candidate_proofs_changed": false,
+  "cash_cny": "14258.12",
+  "completed_at": "2026-10-22T04:12:13.123604+00:00",
+  "current_after_cost_return_and_drawdown": null,
+  "evidence": {
+    "factor_revision_contract.json": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/repairs/a15_seam_recovery_20261022_v1/factor_revision_contract.json",
+      "sha256": "e412b91b3f85dc6e9439a4c8b1d821affcf17b9983b3f3951b9a294288b84c85"
+    },
+    "independent_engineering_review_v3.json": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/repairs/a15_seam_recovery_20261022_v1/independent_engineering_review_v3.json",
+      "sha256": "d2840ce581e146bda77ec07252f8147dc031b14640db10f46bbc34e295a76c13"
+    },
+    "inference_smoke_immutable_original_manifest_binding.json": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/repairs/a15_seam_recovery_20261022_v1/inference_smoke_immutable_original_manifest_binding.json",
+      "sha256": "203dacdea53d5403b6e0cc229936703ef5379df6a4a3802f5df5807534f2e042"
+    },
+    "migration_verification.json": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/repairs/a15_seam_recovery_20261022_v1/migration_verification.json",
+      "sha256": "df229cc8923a5278b1ce2b67e10b1bb4fd0c0ef8b63c04070df3ac06cf959309"
+    },
+    "native_restoration_verification.json": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/repairs/a15_seam_recovery_20261022_v1/native_restoration_verification.json",
+      "sha256": "adc4eb1959c00654e298d9d2b735c5ff7dff4009067233025cea4368a66598b2"
+    },
+    "offline_full_pool_audit.json": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/repairs/a15_seam_recovery_20261022_v1/offline_full_pool_audit.json",
+      "sha256": "d79fe6fd028f2e57ea2002abd58dd13dead209a3c672812b76a485c74d1ae41e"
+    },
+    "post_migration_readonly_smoke.json": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/repairs/a15_seam_recovery_20261022_v1/post_migration_readonly_smoke.json",
+      "sha256": "75315eb241737a5ccf61b821af5f2e5abd37f3946a7455364fd68bebdcc8936d"
+    },
+    "recovery_declaration.json": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/repairs/a15_seam_recovery_20261022_v1/recovery_declaration.json",
+      "sha256": "1ea72b6aec4ca1554b33eba8cb4573eba3aa7537b25fed915ba1492fc2c119c2"
+    },
+    "test_report.json": {
+      "path": "/Users/wujiang/workspace/stopat30m/output/research/ashare/repairs/a15_seam_recovery_20261022_v1/test_report.json",
+      "sha256": "25419aa1d363fcd2b86dc7bf67d75f9da665232fe5fd02f0207288025a5dfab9"
+    }
+  },
+  "execution_policy_and_holding_clock_unchanged": true,
+  "explicit_factor_revision_instruments": [
+    "SH601898",
+    "SH688016",
+    "SZ000563",
+    "SZ300433",
+    "SZ300595"
+  ],
+  "first_new_complete_close_still_required": true,
+  "held_rights_current_day_preflight_count": 20,
+  "historical_fills_or_close_NAV_backfilled": false,
+  "kind": "a15_source_seam_recovery_summary",
+  "minimum_valid_overlap": 30,
+  "model_retrained_or_switched": false,
+  "model_sha256": "775962e66eda59931b80a43c273deb27a11ea968c11e49f96cb8da30745a5e7b",
+  "native_task": {
+    "enabled": true,
+    "label": "com.stopat30m.lowturnover.14dafa86b1e6",
+    "last_exit_code": 0,
+    "loaded": true,
+    "next_native_close_attempt": "2026-10-22T19:00:00+08:00",
+    "plist_unchanged": true,
+    "running": false
+  },
+  "not_a_new_historical_performance_qualification": true,
+  "original_model_real_offline_predictions": 1300,
+  "original_seven_field_tolerances_preserved": true,
+  "paper_dir": "/Users/wujiang/workspace/stopat30m/output/research/ashare/forward/low_turnover_20261020_v1",
+  "permanent_gap_sessions": [
+    "2026-10-21"
+  ],
+  "preflight_does_not_replace_tonight_fresh_rights": true,
+  "repair_directory": "/Users/wujiang/workspace/stopat30m/output/research/ashare/repairs/a15_seam_recovery_20261022_v1",
+  "source_verified_through": "2026-10-21",
+  "status": "strict_offline_validated_same_account_migrated_native_daily_task_restored_awaiting_new_real_close",
+  "stock_count": 1300,
+  "target_and_actual_position_count": 20,
+  "test_results": {
+    "skipped": 1,
+    "subtests_passed": 52,
+    "test_count": 3294,
+    "warnings": 297
+  },
+  "unrevised_max_abs_prediction_delta": 0.0,
+  "unrevised_prediction_count_unchanged": 1295
+}

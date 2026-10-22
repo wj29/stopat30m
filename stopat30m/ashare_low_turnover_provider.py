@@ -24,7 +24,8 @@ from .ashare_paper_provider import AsharePaperProvider, _proof, _unique
 from .data.ashare_daily import _rows
 from .data.ashare_execution_data import EXECUTION_FIELDS
 from .data.ashare_daily_update import _board
-from .data.qlib_incremental import BridgePolicy, CanonicalIncrement, audit_bridge, publish_increment, read_qlib_security
+from .data.qlib_continuation import (BridgePolicy, CanonicalIncrement, NormalizationContinuation,
+    audit_bridge, publish_increment, read_qlib_security)
 from .data.qlib_snapshot import guard_qlib_output_path, load_qlib_snapshot, prepare_qlib_directory
 from .data.research_calendar import Calendar, iso_day, natural_days
 
@@ -326,9 +327,19 @@ class AshareLowTurnoverProvider:
         for path in sorted((self.output_dir/"daily").glob("*/refresh_result.json")):
             value = self._load_result(path)
             if value["session"] < session or value["session"] == session and not before:
-                choices.append((value["session"],value,path))
+                choices.append((value["session"],0,value,path))
+        # An explicit recovery may bind a new, independently verified sibling
+        # source version. Original refreshes, signals and observations stay put.
+        from .ashare_low_turnover_recovery import source_repair
+        _, state = self._state()
+        repaired = source_repair(state)
+        if repaired is not None:
+            path = Path(_proof(repaired["path"], repaired["sha256"])["path"])
+            value = self._load_result(path)
+            if value["session"] < session or value["session"] == session and not before:
+                choices.append((value["session"],1,value,path))
         if choices:
-            _, value, path = max(choices, key=lambda x:x[0])
+            _, _, value, path = max(choices, key=lambda x:(x[0],x[1]))
             return value, path
         snapshot = load_qlib_snapshot(self.initial_snapshot_path)
         symbols, proofs = self._universe()
@@ -362,6 +373,57 @@ class AshareLowTurnoverProvider:
             "is_st":is_st,"status_session":session,"source":"baostock.identity+observed_daily_or_live_status",
             "known_at":stamp,"listing_known_at":stamp,"status_known_at":stamp,
             "announcement_pit_verified":False,"delisting_period":bool(out and out <= session)}
+
+    @staticmethod
+    def _normalization_continuation(parent):
+        """Reconstruct the exact previous source batch from archived originals.
+
+        A supplier unit is inherited only through the increment receipt that
+        belongs to this immutable parent. No prior scale is guessed from the
+        current failure, and historical supplier revisions are not repaired
+        here.
+        """
+        path = parent.dataset_dir/"incremental_manifest.json"
+        if not path.exists():
+            return None, []
+        increment = json.loads(path.read_bytes())
+        evidence = increment.get("source_evidence", {})
+        if "verified_factor_revision" in evidence:
+            from .data.qlib_factor_revision import load_verified_revision_batch
+            contract = evidence["verified_factor_revision"]
+            _proof(contract["path"],contract["sha256"])
+            previous, proofs = load_verified_revision_batch(contract["path"])
+            if (previous.evidence != evidence or previous.generation != increment.get("generation")
+                    or previous.source != increment.get("source")):
+                raise ValueError("Derived parent source differs from its verified revision contract")
+            return NormalizationContinuation(previous,_proof(path)["sha256"]),_unique([_proof(path),*proofs.values()])
+        receipts = [item for item in evidence.get("bound_inputs", [])
+            if Path(item["path"]).name == "capture.json"]
+        if len(receipts) != 1:
+            raise ValueError("Parent increment lacks one exact original capture receipt")
+        record = receipts[0]
+        receipt_path = Path(_proof(record["path"],record["sha256"])["path"])
+        receipt = json.loads(receipt_path.read_bytes())
+        if (receipt.get("status") != "complete" or receipt.get("failures")
+                or receipt.get("generation") != increment.get("generation")):
+            raise ValueError("Parent source capture is not the published complete generation")
+        raw_parts, hfq_parts, proofs = [], [], [_proof(path),_proof(receipt_path)]
+        for inst in sorted(increment.get("securities", {})):
+            raw, bound = _read_original(receipt_path.parent,receipt,inst+"_raw");proofs += bound
+            hfq, bound = _read_original(receipt_path.parent,receipt,inst+"_hfq");proofs += bound
+            raw["instrument"] = inst;hfq["instrument"] = inst
+            raw_parts.append(raw);hfq_parts.append(hfq)
+        if not raw_parts:
+            raise ValueError("Published parent increment has no audited source securities")
+        days = set((parent.dataset_dir/"calendars/day.txt").read_text().splitlines())
+        rows = pd.DataFrame([{"date":day,"is_open":int(day in days)}
+            for day in natural_days(receipt["start_date"],receipt["session"])])
+        provenance = increment["calendar_provenance"]
+        previous = CanonicalIncrement.from_frames(pd.concat(raw_parts,ignore_index=True),
+            pd.concat(hfq_parts,ignore_index=True),source=increment["source"],generation=receipt["generation"],
+            calendar_rows=rows,calendar_source=provenance["source"],calendar_source_url=provenance["source_url"],
+            requested_start=receipt["start_date"],requested_end=receipt["session"],evidence=evidence)
+        return NormalizationContinuation(previous,_proof(path)["sha256"]),_unique(proofs)
 
     def _refresh_close(self, parent_path, session, instruments, calendar):
         parent = load_qlib_snapshot(parent_path)
@@ -430,15 +492,20 @@ class AshareLowTurnoverProvider:
                 source="baostock", generation=receipt["generation"],calendar_rows=pd.DataFrame(calendar_rows),
                 calendar_source="verified_parent_sessions+"+calendar.source,calendar_source_url=calendar.source_url,
                 requested_start=start,requested_end=session,evidence=source)
-            bridge = audit_bridge(parent.dataset_dir,batch,POLICY)
+            continuation, continuation_proofs = self._normalization_continuation(parent)
+            proofs += continuation_proofs
+            bridge = audit_bridge(parent.dataset_dir,batch,POLICY,continuation=continuation)
             dataset = work/"dataset"
             if dataset.exists():
                 staged = json.loads((dataset/"incremental_manifest.json").read_bytes())
                 if (staged.get("source_bars_sha256") != bridge["source_bars_sha256"]
-                        or staged.get("source_evidence") != source or staged.get("policy") != json.loads(json.dumps(bridge["policy"]))):
+                        or staged.get("source_evidence") != source or staged.get("policy") != json.loads(json.dumps(bridge["policy"]))
+                        or staged.get("normalization_continuation") != bridge.get("normalization_continuation")
+                        or any(staged.get("securities",{}).get(inst,{}).get("normalization_scale") != row["normalization_scale"]
+                            for inst,row in bridge["securities"].items())):
                     raise ValueError("Existing staged increment binds different source bytes or seam policy")
             else:
-                publish_increment(parent.dataset_dir,batch,dataset,POLICY,pilot_only=False)
+                publish_increment(parent.dataset_dir,batch,dataset,POLICY,pilot_only=False,continuation=continuation)
             # Each input is rechecked before the new immutable version is exposed.
             for proof in proofs:
                 _proof(proof["path"],proof["sha256"])

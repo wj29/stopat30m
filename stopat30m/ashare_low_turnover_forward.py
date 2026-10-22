@@ -32,6 +32,8 @@ def _proof(path):
 def implementation_proofs():
     from stopat30m import ashare_low_turnover_candidate, ashare_low_turnover_provider
     from stopat30m import ashare_optimization_execution, ashare_paper_provider
+    from stopat30m import ashare_low_turnover_recovery, ashare_paper_report, ashare_low_turnover_recovery_close
+    from stopat30m.data import qlib_factor_revision, qlib_continuation
     from stopat30m.data import (ashare_daily_update, ashare_live, ashare_actions,
         qlib_incremental, qlib_snapshot, baostock_market_validated, baostock_validated,
         baostock_paced, baostock_bounded, ashare_daily, ashare_execution_data, research_calendar)
@@ -43,7 +45,9 @@ def implementation_proofs():
          ashare_daily_update.__file__, ashare_live.__file__, ashare_actions.__file__,
          qlib_incremental.__file__, qlib_snapshot.__file__, baostock_market_validated.__file__,
          baostock_validated.__file__, baostock_paced.__file__, baostock_bounded.__file__,
-         ashare_daily.__file__, ashare_execution_data.__file__, research_calendar.__file__)}
+         ashare_daily.__file__, ashare_execution_data.__file__, research_calendar.__file__,
+         ashare_low_turnover_recovery.__file__, ashare_paper_report.__file__,
+         ashare_low_turnover_recovery_close.__file__, qlib_factor_revision.__file__, qlib_continuation.__file__)}
 
 
 def _candidate(manifest):
@@ -127,6 +131,8 @@ def _read_paper(root):
     root = Path(root).resolve()
     manifest = json.loads((root/"manifest.json").read_bytes())
     state = json.loads((root/"state.json").read_bytes())
+    from .ashare_low_turnover_recovery import verify_recovery_binding
+    verify_recovery_binding(root, manifest, state)
     if (manifest.get("kind") != KIND or manifest.get("policy") != POLICY
             or manifest.get("strategy") != STRATEGY
             or manifest.get("manifest_sha256") != legacy._digest({k:v for k,v in manifest.items() if k != "manifest_sha256"})
@@ -238,7 +244,11 @@ def _close_operation(root, manifest, state, candidate, calendar, batch, clock):
     before = execution.PortfolioState.from_dict(state["accounts"]["model"])
     runtime = deepcopy(manifest)
     runtime["first_possible_execution"] = state["rebalance_anchor"] or calendar.next_session(batch["session"])
-    receipt = legacy._close_operation(root, runtime, state, candidate, calendar, batch, clock)
+    operation = legacy._close_operation
+    if "engineering_recovery" in state:
+        from .ashare_low_turnover_recovery_close import close_after_explicit_recovery
+        operation = close_after_explicit_recovery
+    receipt = operation(root, runtime, state, candidate, calendar, batch, clock)
     after = execution.PortfolioState.from_dict(state["accounts"]["model"])
     tracker.after_corporate_actions(before, after, receipt["corporate_actions"]["model"], batch["session"])
     positions = tracker.close(after, batch["session"])
@@ -256,6 +266,8 @@ def _close_operation(root, manifest, state, candidate, calendar, batch, clock):
     receipt.update(signal_sha256=signal["signal_sha256"], holding_ages=positions,
         rebalance_anchor=state["rebalance_anchor"],ignored_no_entitlement_actions=ignored)
     _save_tracker(state, tracker)
+    from .ashare_low_turnover_recovery import activate_after_close
+    activate_after_close(state,receipt=receipt,signal=signal,batch=batch,now=clock)
     return receipt
 
 
@@ -369,7 +381,8 @@ def run_low_turnover(paper_dir, *, phase, provider, now=None):
 
         if phase == "close" and local.time() < time(15, 5):
             return {"status": "not_completed_session", "session": session, "phase": phase, "network_called": False}
-        if phase == "open" and state.get("observation_gaps"):
+        from .ashare_low_turnover_recovery import pending_gaps
+        if phase == "open" and pending_gaps(state):
             receipt = {"status": "blocked_observation_gap_no_fill", "session": session, "phase": phase,
                 "recorded_at": clock.isoformat(), "network_called": False,
                 "observation_gaps": state["observation_gaps"], "live_order": False}

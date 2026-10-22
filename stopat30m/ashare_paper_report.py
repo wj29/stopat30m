@@ -262,7 +262,9 @@ def _monitoring(status, opens, valuations, initial):
         if any(not row["valuation_complete"] for row in rows if row["nav_lower"] is not None):
             reasons.append("partial_valuation_history")
         if state.get("observation_gaps"):
-            reasons.append("permanent_observation_gap")
+            from .ashare_low_turnover_recovery import pending_gaps as _pending_observation_gaps
+            reasons.append("permanent_observation_gap" if _pending_observation_gaps(state)
+                else "historical_observation_gap_retained_audited_future_recovery")
         if not any(row["trade_count"] for row in rows):
             reasons.append("no_committed_fills_not_profit_evidence")
         accounts[name] = {"status": "diagnostic" if reasons else "observed_after_cost_monitoring",
@@ -370,7 +372,9 @@ def _build_report(paper_dir):
             else:
                 pending.append(execution)
     next_execution = min(pending) if pending else manifest["first_possible_execution"] if not signals and manifest["first_possible_execution"] >= today else None
-    if state.get("observation_gaps"):
+    from .ashare_low_turnover_recovery import pending_gaps as _pending_observation_gaps
+    pending_gaps = _pending_observation_gaps(state)
+    if pending_gaps:
         next_execution = None
     report = {"kind": "isolated_ashare_paper_summary", "paper_dir": status["path"],
         "created_at": manifest["created_at"], "model_sha256": status["model_sha256"],
@@ -379,7 +383,8 @@ def _build_report(paper_dir):
         "next_possible_execution_session": next_execution,
         "expired_unexecuted_signal_sessions": sorted(set(expired)),
         "observation_gaps": state.get("observation_gaps", {}),
-        "new_orders_frozen_by_observation_gap": bool(state.get("observation_gaps")),
+        "new_orders_frozen_by_observation_gap": bool(pending_gaps),
+        "unresolved_operational_gaps": pending_gaps,
         "next_execution_is_conditional": True, "last_failure": state["last_failure"],
         "last_success": state["last_success"], "live_order_count": 0, "real_account_accessed": False,
         "limitations": [
