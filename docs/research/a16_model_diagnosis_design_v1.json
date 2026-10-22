@@ -1,0 +1,141 @@
+{
+  "automatic_model_promotion": false,
+  "baseline_definitions": {
+    "HASH": "float(int(sha256(UTF8(a16-static-hash-v1|{seed}|{instrument})).hexdigest()[:13],16))/2**52; descending_code_ascending_ties",
+    "MOM60": "adjusted_close[t]/adjusted_close[t-60_actual_sessions]-1",
+    "REV20": "-(adjusted_close[t]/adjusted_close[t-20_actual_sessions]-1)",
+    "hash_seeds": [
+      1103,
+      2207,
+      3301,
+      4409,
+      5519
+    ],
+    "hash_unchanged_over_dates_years_families": true,
+    "no_skill_interpretation": "persistent_static_identity_priority_buyhold_control_not_turnover_or_risk_matched_null_no_seed_winner_selection_no_pvalue",
+    "original": "byte_identical_A5_annual_H5_100round_models_and_saved_scores",
+    "regularized300": "exact_previously_selected_A14_frozen_annual_scores_no_new_fit_or_predict"
+  },
+  "broker_orders": 0,
+  "current_paper": "unchanged_original_A5_H5_20_positions_account_cash_holding_clock_phase_ledger_source_guards_and_native_scheduler",
+  "declared_at": "2026-10-22T09:25:59.680473+00:00",
+  "evidence_decision": {
+    "all_seen_years": "research_pipeline_already_viewed_2023_2026; no_retrospective_relabel_as_untouched_test",
+    "categories": [
+      "no_new_fit",
+      "targeted_research_worthy",
+      "insufficient_evidence"
+    ],
+    "criteria": "joint_same_date_head_advantage_uncertainty_costed_returns_DD_quarters_and_continuous_carry; do_not_choose_by_one_metric_or_best_reset_year",
+    "further_fit": "only_if_clear_model_specific_repeatable_weakness_yields_bounded_predeclared_objective_test_no_blind_capacity_or_seed_grid",
+    "no_claim_of_pure_alpha": "capital_market_risk_sector_size_not_fully_matched; dated_index_groups_are_not_sector_or_marketcap_neutrality"
+  },
+  "execution": {
+    "cash_control": "none",
+    "continuous_accounts": "actual_cash_holdings_and_phase_carried_no_annual_resets",
+    "fees_slippage_tax_T1_lots_limits_actions": "unchanged_original_source_family_execution_ledger",
+    "initial_cash_cny": "100000.00",
+    "keep_rank": 40,
+    "max_exit_intents": 2,
+    "minimum_hold_actual_sessions": 10,
+    "missing_actions_or_terminal_equity": "whole_invalid_path_kept_no_repair_or_end_trim_no_selection_claim",
+    "rebalance_actual_sessions": 5,
+    "top_k": 20
+  },
+  "kind": "a16_frozen_model_simple_baseline_diagnosis_design",
+  "ledger_count": 54,
+  "ledger_gate": "all12_original_and_regularized_A14_summaries_finalstates_and_every_record_exactly_reproduced_before_any42_new_benchmark_ledgers",
+  "missing_history_endpoint": "no_sentinel_bottom_zero_or_future_fill; leave_NaN_and_exclude_from_that_strategy_rank_only_when_exact_declared_positive_history_endpoint_is_unobserved; observed_endpoints_but_missing_score_raise; disclose_counts",
+  "net_diagnosis": [
+    "afterfee_total_return_lower",
+    "conservative_upper_peak_maxdrawdown",
+    "actual_turnover",
+    "commission_transfer_stamp_slippage",
+    "tax_reserve_separate_already_in_NAV",
+    "mean_invested_fraction",
+    "monthly_quarterly_continuous_segment_returns",
+    "positive_month_fraction",
+    "rolling63_and126_actual_session_returns_descriptive_correlated_windows",
+    "invalid_path_and_bounded_valuation_counts"
+  ],
+  "new_benchmark_ledgers": 42,
+  "new_fits": 0,
+  "new_native_predictions": 0,
+  "new_results_computed": false,
+  "no_new_model_training_in_this_study": true,
+  "random_group_reporting": "all5_fixed_seeds_individually_valid_invalid_counts_and_valid_median_mean_min_max_with_explicit_denominator_no_bestseed_no_pvalue",
+  "ranking_universe": "original_annual_model_signal_index_and_actual_signal_date_historical_members_no_future_label_or_future_membership_filter",
+  "reproduced_ledgers": 12,
+  "schema_version": 1,
+  "scope": "offline_fixed_predictions_reconstructed_historical_out_of_time_not_new_untouched_or_future_OOS",
+  "selection": "none_all_predeclared_results_reported_no_parameter_reselection",
+  "signal_diagnosis": {
+    "bootstrap": {
+      "block_actual_sessions": 20,
+      "confidence": 0.95,
+      "kind": "paired_moving_block_exploratory_CI",
+      "minimum_distinct_complete_blocks": 3,
+      "minimum_observed_pairs": 40,
+      "missing": "retain_original_complete_session_axis_and_masks_not_compact_nonmissing_dates",
+      "no_independent_day_profit_probability_or_multiple_test_corrected_significance_claim": true,
+      "replications": 2000,
+      "seed": 20261022
+    },
+    "deciles": "labelled_only_descriptive_distinct_from_top20_before_labels",
+    "entry": "next_actual_open",
+    "exit": "sixth_actual_open_after_signal",
+    "gross_labels_not_costed_portfolio_returns": true,
+    "groups": [
+      "union",
+      "csi300",
+      "csi1000",
+      "signal_close_affordable_nonST_trading"
+    ],
+    "horizon_actual_sessions": 5,
+    "incomplete_top20": "unknown_no_zero_or_replacement_disclose_coverage",
+    "maturity": "original_score_quality_per_period_dates_no_endpoint_after_declared_period_end",
+    "metrics": [
+      "Pearson_IC",
+      "Spearman_RankIC",
+      "top20_gross_label_excess_vs_same_day_pool",
+      "top_minus_bottom20",
+      "score_deciles",
+      "quarter_and_month_stability",
+      "paired_same_date_top20_excess_difference"
+    ],
+    "same_original_A14_date_reproduction_required": true,
+    "top_selection": "rank_all_finite_legal_signal_scores_then_take20_before_reading_future_label_missingness"
+  },
+  "source_families": {
+    "primary": {
+      "evaluation_end": "2024-12-31",
+      "periods": [
+        "2023",
+        "2024",
+        "continuous"
+      ],
+      "separate_continuous_account": "2023_2024_no_reset"
+    },
+    "stability": {
+      "evaluation_end": "2026-10-19",
+      "periods": [
+        "2025",
+        "2026",
+        "continuous"
+      ],
+      "separate_continuous_account": "2025_2026_no_reset"
+    }
+  },
+  "source_training_declaration": "output/research/ashare/experiments/a14_model_debug_training_protocol_20261021_v1.json",
+  "strategies": [
+    "original",
+    "regularized300",
+    "MOM60",
+    "REV20",
+    "HASH1103",
+    "HASH2207",
+    "HASH3301",
+    "HASH4409",
+    "HASH5519"
+  ]
+}
